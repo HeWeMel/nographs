@@ -60,7 +60,7 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-root_doc = 'content'
+root_doc = 'index'
 html_show_sourcelink = False
 default_role = 'any'
 
