@@ -1,0 +1,9 @@
+pip>=21.3.1
+wheel>=0.37.1
+twine>=3.7.1
+coverage>=6.3
+docutils>=0.17.1
+# docutils>=0.18.1
+black
+sphinx-rtd-theme
+sphinx
