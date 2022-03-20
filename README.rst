@@ -107,8 +107,9 @@ We learn that we need to examine the graph at least till vertex 17 to find the
 shortest path from 0 to 5. It is not easy to see that from the definition
 of the graph...
 
-The graph is shown in the following picture. Arrows denote directed edges.
-The edges in red show shortest paths from 0 to other vertices.
+A part of the graph, the vertices up to 41, is shown in the following picture.
+Arrows denote directed edges. The edges in red show shortest paths from
+0 to other vertices.
 
 Welcome to NoGraphs!
 
