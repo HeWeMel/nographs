@@ -1,5 +1,5 @@
-NoGraphs: Graph analysis on the fly
-===================================
+`NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
+=========================================================================
 
 NoGraphs simplifies the analysis of graphs that can not or should not be fully
 computed, stored or adapted, e.g. infinite graphs, large graphs and graphs with
