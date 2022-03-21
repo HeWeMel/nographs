@@ -13,7 +13,7 @@ setup(
     long_description_content_type="text/x-rst",
     url="https://github.com/HeWeMel/nographs",
     author="Dr. Helmut Melcher",
-    # author_email='author@example.com',  # Optional
+    author_email='HeWeMel@web.de',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     # install_requires=[],
