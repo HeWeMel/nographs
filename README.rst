@@ -1,6 +1,6 @@
-|PyPI version fury.io| |PyPI license| |PyPI pyversions| |PyPI status| |Documentation Status| |Code style| |GitHub issues|
+|PyPI version| |PyPI status| |PyPI pyversions| |Documentation Status| |Code style| |GitHub issues| |PyPI license|
 
-.. |PyPI version fury.io| image:: https://badge.fury.io/py/nographs.svg
+.. |PyPI version| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
 
 .. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
