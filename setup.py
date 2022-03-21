@@ -34,7 +34,8 @@ setup(
     ],
     keywords='graph,search,traverse,analysis,lazy,infinite,large,adapt',
     python_requires='>=3.9, <4',
-    project_urls={  # Optional
+    project_urls={
+        'Documentation': 'https://nographs.readthedocs.io/',
         'Source': 'https://github.com/hewemel/nographs/',
         'Bug Reports': 'https://github.com/hewemel/nographs/issues',
         # 'Say Thanks!': 'http://saythanks.io/to/HeWeMel',
