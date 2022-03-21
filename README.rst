@@ -6,11 +6,11 @@
 .. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
 
-.. |PyPI pyversions| image:: https://img.shields.io/pypi/pyversions/ansicolortags.svg
-   :target: https://pypi.python.org/pypi/ansicolortags/
+.. |PyPI pyversions| image:: https://img.shields.io/pypi/pyversions/nographs.svg
+   :target: https://pypi.python.org/pypi/nographs/
 
-.. |PyPI status| image:: https://img.shields.io/pypi/status/ansicolortags.svg
-   :target: https://pypi.python.org/pypi/ansicolortags/
+.. |PyPI status| image:: https://img.shields.io/pypi/status/nographs.svg
+   :target: https://pypi.python.org/pypi/nographs/
 
 `NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
 =========================================================================
