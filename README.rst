@@ -1,4 +1,4 @@
-|PyPI version fury.io| |PyPI license| |PyPI pyversions| |PyPI status| |Documentation Status| |GitHub issues|
+|PyPI version fury.io| |PyPI license| |PyPI pyversions| |PyPI status| |Documentation Status| |Code style| |GitHub issues|
 
 .. |PyPI version fury.io| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
