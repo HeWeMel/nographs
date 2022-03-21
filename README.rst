@@ -1,4 +1,4 @@
-|PyPI version fury.io| |PyPI license| |PyPI pyversions| |PyPI status|
+|PyPI version fury.io| |PyPI license| |PyPI pyversions| |PyPI status| |Documentation Status|
 
 .. |PyPI version fury.io| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
@@ -11,6 +11,9 @@
 
 .. |PyPI status| image:: https://img.shields.io/pypi/status/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
+
+.. |Documentation Status| image:: https://readthedocs.org/projects/nographs/badge/?version=latest
+   :target: http://nographs.readthedocs.io/?badge=latest
 
 `NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
 =========================================================================
