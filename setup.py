@@ -39,6 +39,7 @@ setup(
         'Bug Reports': 'https://github.com/hewemel/nographs/issues',
         # 'Say Thanks!': 'http://saythanks.io/to/HeWeMel',
     },
+    license_files='LICENSE',
 )
 
 # long_description='%s\n%s' % (
