@@ -18,6 +18,10 @@
 .. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
    :target: https://GitHub.com/HeWeMel/nographs/issues/
 
+.. |Code style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+
+
 `NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
 =========================================================================
 
