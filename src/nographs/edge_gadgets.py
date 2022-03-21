@@ -9,8 +9,9 @@ from typing import Union
 # ---------- functions for handling test data given as some kind of edges -------------
 
 
-def adapt_edge_index(index: Union[Mapping, Sequence], *, add_inverted: bool, labeled: bool
-                     ) -> Callable:
+def adapt_edge_index(
+    index: Union[Mapping, Sequence], *, add_inverted: bool, labeled: bool
+) -> Callable:
     """
     Reads a test graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple or list,
     if you use integers as your vertices) and provide a neighbor function from that data.
@@ -35,17 +36,25 @@ def adapt_edge_index(index: Union[Mapping, Sequence], *, add_inverted: bool, lab
 
     if add_inverted:
         if isinstance(index, Mapping):
-            return adapt_edge_iterable((
-                (v1,) + e_to if labeled else (v1, e_to)
-                for v1, edges_to in index.items()
-                for e_to in edges_to
-            ), add_inverted=add_inverted, labeled=labeled)
+            return adapt_edge_iterable(
+                (
+                    (v1,) + e_to if labeled else (v1, e_to)
+                    for v1, edges_to in index.items()
+                    for e_to in edges_to
+                ),
+                add_inverted=add_inverted,
+                labeled=labeled,
+            )
         if isinstance(index, Sequence):
-            return adapt_edge_iterable((
-                (v1,) + e_to if labeled else (v1, e_to)
-                for edges_to, v1 in zip(index, itertools.count())
-                for e_to in edges_to
-            ), add_inverted=add_inverted, labeled=labeled)
+            return adapt_edge_iterable(
+                (
+                    (v1,) + e_to if labeled else (v1, e_to)
+                    for edges_to, v1 in zip(index, itertools.count())
+                    for e_to in edges_to
+                ),
+                add_inverted=add_inverted,
+                labeled=labeled,
+            )
         raise ValueError("graph must be Mapping or Sequence")
 
     def get(vertex, _):
@@ -59,8 +68,9 @@ def adapt_edge_index(index: Union[Mapping, Sequence], *, add_inverted: bool, lab
     return get
 
 
-def adapt_edge_iterable(edges: Iterable[Sequence], *, add_inverted: bool, labeled: bool
-                        ) -> Callable:
+def adapt_edge_iterable(
+    edges: Iterable[Sequence], *, add_inverted: bool, labeled: bool
+) -> Callable:
     """
     Reads a graph from an Iterable of edges and provide a neighbor function from that data.
     Typically used only for test purposes.

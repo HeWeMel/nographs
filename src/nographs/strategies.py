@@ -82,6 +82,7 @@ class NoIterator:
 
 # ----------- traversal strategies for unweighted graphs with or without edge labels ----------
 
+
 class Traversal(ABC):
     """
     Abstract Class. Its subclasses provide methods to iterate through vertices and edges using some
@@ -89,8 +90,13 @@ class Traversal(ABC):
     """
 
     @abstractmethod
-    def __init__(self, next_edge_or_vertex: Callable, labeled_edges: bool,
-                 is_tree: bool, vertex_to_id: Optional[VertexToID]):
+    def __init__(
+        self,
+        next_edge_or_vertex: Callable,
+        labeled_edges: bool,
+        is_tree: bool,
+        vertex_to_id: Optional[VertexToID],
+    ):
         # attributes of graph adaptation
         self._next_edge_or_vertex = next_edge_or_vertex
         self._labeled_edges = labeled_edges
@@ -109,7 +115,9 @@ class Traversal(ABC):
         self._predecessors = None
         self._edge_data = None
 
-    def __iter__(self) -> VertexIterator:  # Do to a sphinx error, the enclosing [] necessary
+    def __iter__(
+        self,
+    ) -> VertexIterator:  # Do to a sphinx error, the enclosing [] necessary
         """
         Returns the iterator of a started traversal. This allows for using a `Traversal` in *for*
         loops or as parameter to a call of function *next()*.
@@ -127,7 +135,7 @@ class Traversal(ABC):
 
     def __next__(self) -> Vertex:
         """Returns the next vertex reported by the (started) traversal. Delegates to the iterator
-        of the traversal. """
+        of the traversal."""
         return next(self._generator)
 
     def go_for_vertices_in(
@@ -173,8 +181,7 @@ class Traversal(ABC):
 
         return my_generator()
 
-    def go_to(self, vertex: Vertex, fail_silently: bool = False
-              ) -> Optional[Vertex]:
+    def go_to(self, vertex: Vertex, fail_silently: bool = False) -> Optional[Vertex]:
         """
         For a started traversal, it walks through the graph, stops at *vertex* and returns it.
         If the traversal ends (traversal iterator is exhausted) without having found *vertex*,
@@ -256,7 +263,9 @@ class _TraversalWithLabels(Traversal, ABC):
         super().__init__(next_edges, True, is_tree, vertex_to_id)
 
 
-CurrentTraversalClass = TypeVar("CurrentTraversalClass", bound="_TraversalWithOrWithoutLabels")
+CurrentTraversalClass = TypeVar(
+    "CurrentTraversalClass", bound="_TraversalWithOrWithoutLabels"
+)
 
 
 class _TraversalWithOrWithoutLabels(Traversal, ABC):
@@ -337,7 +346,7 @@ class _TraversalWithOrWithoutLabels(Traversal, ABC):
         self.visited = _define_visited(
             already_visited,
             _iter_start_ids(self._start_vertices, self._vertex_to_id),
-            self._is_tree
+            self._is_tree,
         )
         super()._start()
         return self
@@ -415,7 +424,7 @@ class TraversalBreadthFirst(_TraversalWithOrWithoutLabels):
         visited = self.visited
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         # two lists used as FIFO queue with just two buckets
         # (using a queue and counting down size of current depth horizon is slower, and
@@ -438,7 +447,8 @@ class TraversalBreadthFirst(_TraversalWithOrWithoutLabels):
         while to_visit:
             for vertex in to_visit:
                 if calculation_limit and not (
-                        calculation_limit := calculation_limit - 1):
+                    calculation_limit := calculation_limit - 1
+                ):
                     raise RuntimeError("Number of visited vertices reached limit")
 
                 for edge_or_vertex in next_edge_or_vertex(vertex, prev_traversal):
@@ -463,7 +473,11 @@ class TraversalBreadthFirst(_TraversalWithOrWithoutLabels):
             self.depth += 1
             prev_traversal.depth += 1
             to_visit, next_to_visit, to_visit_append, next_to_visit_append = (
-                next_to_visit, to_visit, next_to_visit_append, to_visit_append)
+                next_to_visit,
+                to_visit,
+                next_to_visit_append,
+                to_visit_append,
+            )
             next_to_visit.clear()
 
     def go_for_depth_range(self, start: int, stop: int) -> VertexIterator:
@@ -567,7 +581,7 @@ class TraversalDepthFirst(_TraversalWithOrWithoutLabels):
         visited = self.visited
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         depth = 0
         to_visit = list(self._start_vertices)  # list used as stack
@@ -582,7 +596,9 @@ class TraversalDepthFirst(_TraversalWithOrWithoutLabels):
         while to_visit:
             vertex = to_visit.pop()  # visit first added vertex first
 
-            if not is_tree and vertex is None:  # Reached marker: end of vertices in same depth
+            if (
+                not is_tree and vertex is None
+            ):  # Reached marker: end of vertices in same depth
                 depth -= 1
                 continue
 
@@ -597,14 +613,17 @@ class TraversalDepthFirst(_TraversalWithOrWithoutLabels):
                     visited_add(n_id)
                     self.depth = depth
                     yield vertex
-                    to_visit_append(None)  # Marker: reached by pop means leaving the vertex
+                    to_visit_append(
+                        None
+                    )  # Marker: reached by pop means leaving the vertex
             else:  # start vertices can be expanded (but not yielded) although being visited
                 self.depth = depth
                 if not is_tree:
-                    to_visit_append(None)  # Marker: reached by pop means leaving the vertex
+                    to_visit_append(
+                        None
+                    )  # Marker: reached by pop means leaving the vertex
 
-            if calculation_limit and not (
-                    calculation_limit := calculation_limit - 1):
+            if calculation_limit and not (calculation_limit := calculation_limit - 1):
                 raise RuntimeError("Number of visited vertices reached limit")
 
             for edge_or_vertex in next_edge_or_vertex(vertex, self):
@@ -712,7 +731,7 @@ class TraversalTopologicalSort(_TraversalWithOrWithoutLabels):
         visited = self.visited
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         # Initialization
         self.depth = 0
@@ -728,8 +747,11 @@ class TraversalTopologicalSort(_TraversalWithOrWithoutLabels):
         # slower
         if is_tree:
             # Initialization
-            to_visit = list(itertools.chain.from_iterable(
-                itertools.zip_longest(self._start_vertices, [])))
+            to_visit = list(
+                itertools.chain.from_iterable(
+                    itertools.zip_longest(self._start_vertices, [])
+                )
+            )
 
             # Get references of methods (avoid object resolution)
             to_visit_extend = to_visit.extend
@@ -747,7 +769,8 @@ class TraversalTopologicalSort(_TraversalWithOrWithoutLabels):
                 vertex = to_visit[-1]
 
                 if calculation_limit and not (
-                        calculation_limit := calculation_limit - 1):
+                    calculation_limit := calculation_limit - 1
+                ):
                     raise RuntimeError("Number of visited vertices reached limit")
 
                 for edge_or_vertex in next_edge_or_vertex(vertex, self):
@@ -765,7 +788,9 @@ class TraversalTopologicalSort(_TraversalWithOrWithoutLabels):
                         if edge_data_exists:
                             edge_data[n_id] = edge_or_vertex[1:]
 
-                    to_visit_extend((neighbor, None))  # Vertex, and marker "not expanded so far"
+                    to_visit_extend(
+                        (neighbor, None)
+                    )  # Vertex, and marker "not expanded so far"
 
                 self.depth += 1
         else:
@@ -806,7 +831,8 @@ class TraversalTopologicalSort(_TraversalWithOrWithoutLabels):
 
                 # We "expand" the vertex
                 if calculation_limit and not (
-                        calculation_limit := calculation_limit - 1):
+                    calculation_limit := calculation_limit - 1
+                ):
                     raise RuntimeError("Number of visited vertices reached limit")
 
                 for edge_or_vertex in next_edge_or_vertex(vertex, self):
@@ -977,7 +1003,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
         ) = args
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         # At start, most of the distances from a vertex to a start vertex are not known. If
         # accessed for comparison for possibly better distances, infinity is used, if no other
@@ -1035,8 +1061,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
             if path_edge_count > 0:  # do not yield start vertex
                 yield vertex
 
-            if calculation_limit and not (
-                    calculation_limit := calculation_limit - 1):
+            if calculation_limit and not (calculation_limit := calculation_limit - 1):
                 raise RuntimeError("Number of visited vertices reached limit")
 
             n_path_edge_count = path_edge_count + 1
@@ -1252,7 +1277,7 @@ class TraversalAStar(_TraversalWithLabels):
         heuristic = self._heuristic
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         # At start, most of the distances from a vertex to a start vertex are not known. If
         # accessed for comparison for possibly better distances, infinity is used, if no other
@@ -1319,8 +1344,7 @@ class TraversalAStar(_TraversalWithLabels):
             if path_edge_count > 0:  # do not yield start vertex
                 yield vertex
 
-            if calculation_limit and not (
-                    calculation_limit := calculation_limit - 1):
+            if calculation_limit and not (calculation_limit := calculation_limit - 1):
                 raise RuntimeError("Number of visited vertices reached limit")
 
             n_path_edge_count = path_edge_count + 1
@@ -1452,7 +1476,7 @@ class TraversalMinimumSpanningTree(_TraversalWithLabels):
         ) = args
 
         # Create booleans (avoid checks with "is")
-        edge_data_exists = (edge_data is not None)
+        edge_data_exists = edge_data is not None
 
         # At start, only the start vertices are regarded as visited
         visited = set(_iter_start_ids(self._start_vertices, vertex_to_id))
@@ -1462,9 +1486,7 @@ class TraversalMinimumSpanningTree(_TraversalWithLabels):
         # slows down the to_visit loop for large sets of start vertices.
         # Note: A calculation limit below 0 leads nowhere ever to an exception. Also here.
         if calculation_limit is not None and calculation_limit >= 0:
-            if (
-                calculation_limit := calculation_limit - len(self._start_vertices)
-            ) < 0:
+            if (calculation_limit := calculation_limit - len(self._start_vertices)) < 0:
                 raise RuntimeError("Number of visited vertices reached limit")
 
         # So far, the edges from the start vertices are to be visited as candidates for edges of a
@@ -1508,8 +1530,7 @@ class TraversalMinimumSpanningTree(_TraversalWithLabels):
             self.edge = (vertex,) + to_edge
             yield to_vertex
 
-            if calculation_limit and not (
-                    calculation_limit := calculation_limit - 1):
+            if calculation_limit and not (calculation_limit := calculation_limit - 1):
                 raise RuntimeError("Number of visited vertices reached limit")
 
             for n_to_edge in next_edges(to_vertex, self):

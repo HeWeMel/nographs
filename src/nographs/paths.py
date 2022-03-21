@@ -87,7 +87,7 @@ class Paths(ABC):
 
     @abstractmethod
     def __getitem__(self, vertex: [Vertex]) -> tuple:
-        """ Returns the path that ends at *vertex* as a tuple. The orientation
+        """Returns the path that ends at *vertex* as a tuple. The orientation
         of the path is from first to last vertex / edge. In case of a labeled path, the
         edges are returned, for an unlabeled path the vertices.
 
@@ -133,7 +133,9 @@ class PathsOfUnlabeledEdges(Paths):
 
 
 class PathsOfLabeledEdges(Paths):
-    def __init__(self, predecessor: dict, edge_data: dict, vertex_to_id: Optional[VertexToID]):
+    def __init__(
+        self, predecessor: dict, edge_data: dict, vertex_to_id: Optional[VertexToID]
+    ):
         """
         :param predecessor: The predecessor information of the paths will be stored in
            the given dictionary.

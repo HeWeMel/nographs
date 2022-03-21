@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import itertools
 import operator
-from collections.abc import Generator, Sequence, Mapping, Container, Callable, Iterable, Hashable
+from collections.abc import (
+    Generator,
+    Sequence,
+    Mapping,
+    Container,
+    Callable,
+    Iterable,
+    Hashable,
+)
 from numbers import Real
 from typing import Optional, Any
 
@@ -62,7 +70,10 @@ class Position(tuple[int]):
         return Position(coordinates)
 
     @staticmethod
-    def moves(dimensions: int = 2, diagonals: bool = False, zero_move: bool = False,
+    def moves(
+        dimensions: int = 2,
+        diagonals: bool = False,
+        zero_move: bool = False,
     ) -> Vectors:
         """
         Generate vectors of moves to neighbor coordinates in a n-dimensional
@@ -170,7 +181,7 @@ class Array:
         field[position[-1]] = content
 
     def items(self) -> Generator[tuple[Position, Any]]:
-        """ Iterates positions and content."""
+        """Iterates positions and content."""
         # Attention: Method signature is manually documented, update also there
 
         def _items_in_dimension(area, dimensions):
@@ -263,8 +274,3 @@ class Array:
                     yield neighbor, weight
 
         return next_edges
-
-
-# if __name__ == "__main__":
-#     import doctest
-#     doctest.testmod()
