@@ -1,3 +1,9 @@
+|PyPI version fury.io|
+
+.. |PyPI version fury.io| image:: https://badge.fury.io/py/nographs.svg
+   :target: https://pypi.python.org/pypi/nographs/
+
+
 `NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
 =========================================================================
 
