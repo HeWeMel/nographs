@@ -1,4 +1,4 @@
-|PyPI version| |PyPI status| |PyPI pyversions| |Documentation Status| |Code style| |GitHub issues| |PyPI license|
+|PyPI version| |PyPI status| |PyPI pyversions| |CodeCov| |Documentation Status| |Code style| |GitHub issues| |PyPI license|
 
 .. |PyPI version| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
@@ -20,6 +20,8 @@
 
 .. |Code style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
+
+.. |CodeCov| image:: https://img.shields.io/codecov/c/github/hewemel/nographs
 
 
 `NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
