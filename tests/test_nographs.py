@@ -32,4 +32,5 @@ if __name__ == "__main__":
     # Stop recording coverage, create HTML from results
     cov.stop()
     cov.save()
+    cov.xml_report()
     cov.html_report()
