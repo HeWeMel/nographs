@@ -23,7 +23,7 @@ if __name__ == "__main__":
     test_suite.addTests(doctest.DocTestSuite("test_code"))
 
     # Unittests from doc tests
-    p = pathlib.Path('docs/source')
+    p = pathlib.Path('./docs/source')
     for file_path in p.glob('*.rst'):
         test_suite.addTests(doctest.DocFileSuite(str(file_path.resolve())))
 
