@@ -34,11 +34,10 @@ jobs:
         # Override language selection
         with:
           languages: python
+          setup-python-dependencies: false
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
-        with:
-          setup-python-dependencies: false
 
   test-pip:
     needs: skip_duplicate
