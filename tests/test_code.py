@@ -1,5 +1,5 @@
-import collections
-import nographs as nog
+import collections  # noqa: F401
+import nographs as nog  # noqa: F401
 
 
 # --- Utility functions ---
@@ -9,9 +9,6 @@ def edges(next_edges_or_vertices, vertices):
     # outputs in a dict.
     return dict((vertex, next_edges_or_vertices(vertex, None))
                 for vertex in vertices)
-
-
-# --- Tests ---
 
 
 class ExamplesFromDocs:
@@ -26,7 +23,8 @@ class ExamplesFromDocs:
     ...     else:
     ...         if i > 5:
     ...             yield i - 6, 1
-    >>> traversal = nog.TraversalShortestPaths(spiral_graph).start_from(0, build_paths=True)
+    >>> traversal = nog.TraversalShortestPaths(spiral_graph).start_from(
+    ...    0, build_paths=True)
     >>> traversal.go_to(5)
     5
     >>> traversal.distance
@@ -44,12 +42,15 @@ class ExamplesFromDocs:
     ...    'F': (('G', 2),)
     ... }
 
-    >>> next_vertices = nog.adapt_edge_index(edges_weighted_dict,add_inverted=False,labeled=True)
+    >>> next_vertices = nog.adapt_edge_index(
+    ...     edges_weighted_dict,add_inverted=False,labeled=True)
     >>> edges(next_vertices, edges_weighted_dict.keys()) == edges_weighted_dict
     True
 
-    >>> next_vertices = nog.adapt_edge_index(edges_weighted_dict,add_inverted=True,labeled=True)
-    >>> edges(next_vertices, edges_weighted_dict.keys())  # doctest: +NORMALIZE_WHITESPACE
+    >>> next_vertices = nog.adapt_edge_index(
+    ...     edges_weighted_dict,add_inverted=True,labeled=True)
+    >>> edges(next_vertices, edges_weighted_dict.keys()
+    ...      )  # doctest: +NORMALIZE_WHITESPACE
     {'A': [('B', 1), ('C', 2)], 'B': [('A', 1), ('C', 5), ('D', 5), ('E', 1)],
      'C': [('A', 2), ('B', 5), ('D', 2), ('E', 1), ('F', 5)],
      'D': [('B', 5), ('C', 2), ('F', 2), ('G', 5)],
@@ -75,9 +76,11 @@ class ExamplesFromDocs:
 
     >>> next_vertices = nog.adapt_edge_index(
     ...    edges_weighted_sequence,add_inverted=True,labeled=True)
-    >>> edges(next_vertices, range(len(edges_weighted_sequence)))  # doctest: +NORMALIZE_WHITESPACE
+    >>> edges(next_vertices, range(len(edges_weighted_sequence))
+    ...     )  # doctest: +NORMALIZE_WHITESPACE
     {0: [(1, 1), (2, 2)], 1: [(0, 1), (2, 5), (3, 5), (4, 1)],
-     2: [(0, 2), (1, 5), (3, 2), (4, 1), (5, 5)], 3: [(1, 5), (2, 2), (5, 2), (6, 5)],
+     2: [(0, 2), (1, 5), (3, 2), (4, 1), (5, 5)], 3: [(1, 5), (2, 2), (5, 2),
+     (6, 5)],
      4: [(2, 1), (5, 5), (1, 1)], 5: [(2, 5), (3, 2), (4, 5), (6, 2)]}
 
 
@@ -98,7 +101,8 @@ class ExamplesFromDocs:
 
     >>> next_vertices = nog.adapt_edge_index(
     ...    edges_unweighted_dict,add_inverted=True,labeled=False)
-    >>> edges(next_vertices, edges_weighted_dict.keys())  # doctest: +NORMALIZE_WHITESPACE
+    >>> edges(next_vertices, edges_weighted_dict.keys()
+    ...      )  # doctest: +NORMALIZE_WHITESPACE
     {'A': ['B', 'C'], 'B': ['A', 'C', 'D', 'E'], 'C': ['A', 'B', 'D', 'E', 'F'],
      'D': ['B', 'C', 'F', 'G'], 'E': ['C', 'F', 'B'], 'F': ['C', 'D', 'E', 'G']}
 
@@ -115,13 +119,14 @@ class ExamplesFromDocs:
 
     >>> next_vertices = nog.adapt_edge_index(
     ...    edges_unweighted_sequence,add_inverted=False,labeled=False)
-    >>> tuple(edges(next_vertices, range(len(edges_weighted_sequence))).values()) \
-        == edges_unweighted_sequence
+    >>> tuple(edges(next_vertices, range(len(edges_weighted_sequence))).values()
+    ...     ) == edges_unweighted_sequence
     True
 
     >>> next_vertices = nog.adapt_edge_index(
     ...    edges_unweighted_sequence,add_inverted=True,labeled=False)
-    >>> edges(next_vertices, range(len(edges_weighted_sequence)))  # doctest: +NORMALIZE_WHITESPACE
+    >>> edges(next_vertices, range(len(edges_weighted_sequence))
+    ...      )  # doctest: +NORMALIZE_WHITESPACE
     {0: [1, 2], 1: [0, 2, 3, 4], 2: [0, 1, 3, 4, 5], 3: [1, 2, 5, 6],
      4: [2, 5, 1], 5: [2, 3, 4, 6]}
     """
@@ -133,8 +138,8 @@ class ExamplesFromDocs:
 class PathHandling:
     # noinspection PyShadowingNames
     """-- Error handling in Paths --
-     Path detects illegal calls with None as vertex and with non-existing vertices.
-     Iteration works for both types of paths both with vertices and with edges.
+    Path detects illegal calls with None as vertex and with non-existing vertices.
+    Iteration works for both types of paths both with vertices and with edges.
 
     -- Unlabeled paths --
 
@@ -154,9 +159,11 @@ class PathHandling:
     RuntimeError: Paths: No path for given vertex.
 
     >>> path_unlabeled.append_edge(0, 1, None)
-    >>> path_unlabeled[1]  # Calls p.iter_vertices_from_start and p.iter_vertices_to_start
+    >>> # Calls p.iter_vertices_from_start and p.iter_vertices_to_start
+    >>> path_unlabeled[1]
     (0, 1)
-    >>> tuple(path_unlabeled.iter_edges_from_start(1))  # Also calls p.iter_edges_to_start
+    >>> # Also calls p.iter_edges_to_start
+    >>> tuple(path_unlabeled.iter_edges_from_start(1))
     ((0, 1),)
 
     >>> path_unlabeled.append_edge(1, 2, None)
@@ -185,7 +192,8 @@ class PathHandling:
     >>> path_labeled.append_edge(0, 1, (0, "labeled"))
     >>> path_labeled[1]  # Calls p.iter_edges_from_start and p.iter_edges_to_start
     ((0, 1, 'labeled'),)
-    >>> tuple(path_labeled.iter_vertices_from_start(1))  # Also calls p.iter_vertices_to_start
+    >>> # Also calls p.iter_vertices_to_start
+    >>> tuple(path_labeled.iter_vertices_from_start(1))
     (0, 1)
 
     >>> path_labeled.append_edge(1, 2, (0, "labeled"))
@@ -256,8 +264,9 @@ class GraphWithOneEdgeAndPathVariants:
     """-- Graph with one edge --
     Start vertex not reported (exception: topological sorting). First edge followed.
     Paths not build if not demanded, and build if demanded.
-    Labeled paths not allowed for unlabeled edges, and build for labeled edges, if demanded.
-    Calculation limit raises Exception at exactly correct number of visited vertices.
+    Labeled paths not allowed for unlabeled edges, and build for labeled edges, if
+    demanded. Calculation limit raises Exception at exactly correct number of visited
+    vertices.
 
     >>> def test(traversal, with_is_labeled):
     ...     print(list(traversal.start_from(0)))
@@ -266,7 +275,8 @@ class GraphWithOneEdgeAndPathVariants:
     ...     _ = traversal.start_from(0, build_paths=True).go_to(1)
     ...     print(traversal.paths[1])
     ...     if with_is_labeled:
-    ...        _ = traversal.start_from(0, build_paths=True, labeled_paths=True).go_to(1)
+    ...        _ = traversal.start_from(0, build_paths=True, labeled_paths=True
+    ...                                ).go_to(1)
     ...        print(traversal.paths[1])
 
     # -- Unlabeled graph --
@@ -298,10 +308,12 @@ class GraphWithOneEdgeAndPathVariants:
     1
     (0, 1)
 
-    >>> nog.TraversalBreadthFirst(next_vertices).start_from(0, build_paths=True, labeled_paths=True)
+    >>> nog.TraversalBreadthFirst(next_vertices).start_from(
+    ...    0, build_paths=True, labeled_paths=True)
     Traceback (most recent call last):
     RuntimeError: A labeled path can only be computed from labeled edges.
-    >>> nog.TraversalDepthFirst(next_vertices).start_from(0, build_paths=True, labeled_paths=True)
+    >>> nog.TraversalDepthFirst(next_vertices).start_from(
+    ...    0, build_paths=True, labeled_paths=True)
     Traceback (most recent call last):
     RuntimeError: A labeled path can only be computed from labeled edges.
     >>> nog.TraversalTopologicalSort(next_vertices).start_from(
@@ -404,7 +416,8 @@ class GraphWithOneEdgeAndPathVariants:
     >>> _ = traversal.start_from(heuristic, 0, build_paths=True).go_to(1)
     >>> traversal.paths[1]
     (0, 1)
-    >>> _ = traversal.start_from(heuristic, 0, build_paths=True, labeled_paths=True).go_to(1)
+    >>> _ = traversal.start_from(heuristic, 0, build_paths=True, labeled_paths=True
+    ...        ).go_to(1)
     >>> traversal.paths[1]
     ((0, 1, 1),)
 
@@ -419,10 +432,10 @@ class GraphWithOneEdgeAndPathVariants:
 class GraphWithOneEdgeAndVertexToId:
     # noinspection PyShadowingNames
     """-- Graph with one edge, parameter vertex_to_id used --
-    For the test, vertices are given as list [int] to have something that is not hashable.
-    Start vertex not reported (exception: topological sorting). First edge followed.
-    Paths not build if not demanded, and build if demanded.
-    Labeled paths not allowed for unlabeled edges, and build for labeled edges, if demanded.
+    For the test, vertices are given as list [int] to have something that is not
+    hashable. Start vertex not reported (exception: topological sorting). First edge
+    followed. Paths not build if not demanded, and build if demanded. Labeled paths
+    not allowed for unlabeled edges, and build for labeled edges, if demanded.
     Calculation limit raises Exception at exactly correct number of visited vertices.
 
     >>> def next_vertices(v, _):
@@ -460,7 +473,8 @@ class GraphWithOneEdgeAndVertexToId:
     ...     traversal.paths is None
     ...     _ = traversal.start_from([0], build_paths=True).go_to([1])
     ...     traversal.paths[[1]]
-    ...     _ = traversal.start_from([0], build_paths=True, labeled_paths=True).go_to([1])
+    ...     _ = traversal.start_from([0], build_paths=True, labeled_paths=True
+    ...             ).go_to([1])
     ...     traversal.paths[[1]]
     TraversalBreadthFirst
     [[1]]
@@ -491,7 +505,8 @@ class GraphWithOneEdgeAndVertexToId:
 
     >>> def heuristic(v):
     ...    return 1 if v == [0] else 0  # heuristic with perfect estimation
-    >>> traversal = nog.TraversalAStar(next_edges=next_edges, vertex_to_id=lambda l: l[0])
+    >>> traversal = nog.TraversalAStar(
+    ...     next_edges=next_edges, vertex_to_id=lambda l: l[0])
     >>> list(traversal.start_from(heuristic, [0]))
     [[1]]
     >>> traversal.paths is None
@@ -499,7 +514,8 @@ class GraphWithOneEdgeAndVertexToId:
     >>> _ = traversal.start_from(heuristic, [0], build_paths=True).go_to([1])
     >>> traversal.paths[[1]]
     ([0], [1])
-    >>> _ = traversal.start_from(heuristic, [0], build_paths=True, labeled_paths=True).go_to([1])
+    >>> _ = traversal.start_from(heuristic, [0], build_paths=True, labeled_paths=True
+    ...        ).go_to([1])
     >>> traversal.paths[[1]]
     (([0], [1], 1),)
     """
@@ -507,11 +523,12 @@ class GraphWithOneEdgeAndVertexToId:
 
 class NormalGraphTraversalsWithOrWithoutLabels:
     # noinspection PyShadowingNames
-    """-- Small example graph, 3 Traversal strategies that can work with and wihout labels --
-    Correct traversal of TraversalBreadthFirst, TraversalDepthFirst, TraversalTopologicalSort.
-    For: graph without labels and graph with labeles.
-    Without and with vertices defined as already visited (only tested for graph without labels).
-    (Uses implementation descisions:
+    """
+    -- Small example graph, 3 Traversal strategies that can work with and wihout
+    labels -- Correct traversal of TraversalBreadthFirst, TraversalDepthFirst,
+    TraversalTopologicalSort. For: graph without labels and graph with labeles.
+    Without and with vertices defined as already visited (only tested for graph
+    without labels). (Uses implementation descisions:
     - TraversalBreadthFirst traverses edges in given order
     - TraversalDepthFirst and TraversalTopologicalSort traverse edges in reversed order)
 
@@ -534,7 +551,8 @@ class NormalGraphTraversalsWithOrWithoutLabels:
     ...     for vertex in traversal:
     ...         print(f"Reported: {vertex=} {traversal.depth=}")
     ...         print(f"  traversal.paths[vertex]={traversal.paths[vertex]}")
-    ...     print("All paths:", [traversal.paths[vertex] for vertex in range(4) if vertex!=1])
+    ...     print("All paths:", [traversal.paths[vertex]
+    ...                          for vertex in range(4) if vertex!=1])
     ...     print("Already visited:", already_visited)
     ...     return traversal
 
@@ -625,7 +643,8 @@ class NormalGraphTraversalsWithOrWithoutLabels:
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.depth=} {traversal.visited=}")
-    ...     return ((1, 2), (2, 1)) if vertex == 0 else (((3, 2),) if vertex in (1, 2) else ())
+    ...     return ((1, 2), (2, 1)) if vertex == 0 else (
+    ...            ((3, 2),) if vertex in (1, 2) else ())
 
     >>> def this_test(strategy):
     ...     traversal = strategy(next_edges=next_edges).start_from(0, build_paths=True)
@@ -683,7 +702,8 @@ class NormalGraphTraversalsWithOrWithoutLabels:
     ...     return (2*vertex, 2*vertex+1) if 1 <= vertex <= 3 else ()
 
     >>> def this_test(strategy):
-    ...     traversal = strategy(next_vertices, is_tree=True).start_from(1, build_paths=True)
+    ...     traversal = strategy(next_vertices, is_tree=True).start_from(
+    ...          1, build_paths=True)
     ...     for vertex in traversal:
     ...         print(f"Reported: {vertex=} {traversal.depth=} {traversal.visited=}")
     ...         print(f"  traversal.paths[vertex]={traversal.paths[vertex]}")
@@ -766,7 +786,8 @@ class NormalGraphTraversalsWithLabels:
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.distance=} {traversal.depth=}")
-    ...     return ((1, 2), (2, 1)) if vertex == 0 else (((3, 2),) if vertex in (1, 2) else ())
+    ...     return ((1, 2), (2, 1)) if vertex == 0 else (
+    ...            ((3, 2),) if vertex in (1, 2) else ())
 
     >>> traversal = nog.TraversalShortestPaths(next_edges=next_edges)
     >>> traversal = traversal.start_from(0, build_paths=True)
@@ -775,8 +796,8 @@ class NormalGraphTraversalsWithLabels:
     ...     reported.append(vertex)
     ...     print(f"Reported: {vertex=} {traversal.distance=} {traversal.depth=}")
     ...     print("distances for reported vertices: " +
-    ...           f"{str({vertex: traversal.distances[vertex] for vertex in reported})} " +
-    ...           f"traversal.paths={traversal.paths[vertex]}")
+    ...        f"{str({vertex: traversal.distances[vertex] for vertex in reported})} " +
+    ...        f"traversal.paths={traversal.paths[vertex]}")
     Next called: vertex=0 traversal.distance=0 traversal.depth=0
     Reported: vertex=2 traversal.distance=1 traversal.depth=1
     distances for reported vertices: {2: 0} traversal.paths=(0, 2)
@@ -790,13 +811,15 @@ class NormalGraphTraversalsWithLabels:
     >>> print("All paths:", [traversal.paths[vertex] for vertex in range(4)])
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
 
-    Start vertex starts with distance 2, and we pretend to have a path to 1 with distance 0.
-    Effect: All reported distances are 2 higher than in the test before, because the traversal
-    starts at distance 2, and vertex 1 is not visited and reported at all, because no path
-    can be found that beats this "already found" low distance.
+    Start vertex starts with distance 2, and we pretend to have a path to 1 with
+    distance 0. Effect: All reported distances are 2 higher than in the test before,
+    because the traversal starts at distance 2, and vertex 1 is not visited and
+    reported at all, because no path can be found that beats this "already found" low
+    distance.
     >>> infinity = float('infinity')
     >>> known_distances = collections.defaultdict(lambda: infinity, ((0, 2), (1, 0)))
-    >>> traversal = traversal.start_from(0, build_paths=True, known_distances=known_distances)
+    >>> traversal = traversal.start_from(
+    ...     0, build_paths=True, known_distances=known_distances)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.distance=} {traversal.depth=} "
     ...         + f"traversal.paths={traversal.paths[vertex]}")
@@ -805,7 +828,8 @@ class NormalGraphTraversalsWithLabels:
     Next called: vertex=2 traversal.distance=3 traversal.depth=1
     Reported: vertex=3 traversal.distance=5 traversal.depth=2 traversal.paths=(0, 2, 3)
     Next called: vertex=3 traversal.distance=5 traversal.depth=2
-    >>> print("All paths:", [traversal.paths[vertex] for vertex in range(4) if vertex != 1])
+    >>> print("All paths:", [traversal.paths[vertex]
+    ...                     for vertex in range(4) if vertex != 1])
     All paths: [(0,), (0, 2), (0, 2, 3)]
     >>> print("Known distances:", dict(known_distances))
     Known distances: {0: 0, 1: 0, 2: 0, 3: 0}
@@ -813,7 +837,8 @@ class NormalGraphTraversalsWithLabels:
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.edge=}")
-    ...     return ((1, 2), (2, 1)) if vertex == 0 else (((3, 3),) if vertex in (1, 2) else ())
+    ...     return ((1, 2), (2, 1)) if vertex == 0 else (
+    ...            ((3, 3),) if vertex in (1, 2) else ())
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=next_edges)
     >>> traversal = traversal.start_from(0, build_paths=True)
     >>> for vertex in traversal:
@@ -833,21 +858,25 @@ class NormalGraphTraversalsWithLabels:
     Test TraversaAStar. Typically, one would use go_to(3) for our goal vertex 3, but for
     the test purposes we continue to iterate the rest of the graph.
     >>> def heuristic(v):
-    ...    return {0:6, 1:1, 2:2, 3:0, 4:infinity}[v]  # makes 2nd best path visited first
+    ...    # makes 2nd best path visited first
+    ...    return {0:6, 1:1, 2:2, 3:0, 4:infinity}[v]
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.path_length=} {traversal.depth=}")
-    ...     return {0: ((1, 3), (2, 3), (4, 1)), 1: ((3, 3),), 2: ((3, 2),), 3:(), 4:()}[vertex]
+    ...     return {0: ((1, 3), (2, 3), (4, 1)), 1: ((3, 3),), 2: ((3, 2),), 3:(), 4:()
+    ...            }[vertex]
     >>> traversal = nog.TraversalAStar(next_edges=next_edges)
     >>> traversal = traversal.start_from(heuristic, 0, build_paths=True)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.path_length=} {traversal.depth=} "
-    ...         + f"traversal.paths={traversal.paths[vertex]}")
+    ...           + f"traversal.paths={traversal.paths[vertex]}"
+    ...          )  # doctest: +NORMALIZE_WHITESPACE
     Next called: vertex=0 traversal.path_length=0 traversal.depth=0
     Reported: vertex=1 traversal.path_length=3 traversal.depth=1 traversal.paths=(0, 1)
     Next called: vertex=1 traversal.path_length=3 traversal.depth=1
     Reported: vertex=2 traversal.path_length=3 traversal.depth=1 traversal.paths=(0, 2)
     Next called: vertex=2 traversal.path_length=3 traversal.depth=1
-    Reported: vertex=3 traversal.path_length=5 traversal.depth=2 traversal.paths=(0, 2, 3)
+    Reported: vertex=3 traversal.path_length=5 traversal.depth=2 traversal.paths=(0,
+    2, 3)
     Next called: vertex=3 traversal.path_length=5 traversal.depth=2
     Reported: vertex=4 traversal.path_length=1 traversal.depth=1 traversal.paths=(0, 4)
     Next called: vertex=4 traversal.path_length=1 traversal.depth=1
@@ -855,23 +884,28 @@ class NormalGraphTraversalsWithLabels:
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3), (0, 4)]
 
     Variant of the test with option known_distances.
-    For the start vertex, we define a start distance. Effect: All distances are now 2 higher.
-    For vertex 1, we define an artificial and low distance of 0. Effect: it is not visited.
+    For the start vertex, we define a start distance. Effect: All distances are now 2
+    higher. For vertex 1, we define an artificial and low distance of 0. Effect: it is
+    not visited.
     >>> known_distances = collections.defaultdict(lambda: infinity, ((0, 2),(1, 0)))
     >>> known_path_length_guesses = collections.defaultdict(lambda: infinity)
     >>> traversal = traversal.start_from(heuristic, 0, build_paths=True,
-    ...     known_distances=known_distances, known_path_length_guesses=known_path_length_guesses)
+    ...     known_distances=known_distances,
+    ...     known_path_length_guesses=known_path_length_guesses)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.path_length=} {traversal.depth=} "
-    ...         + f"traversal.paths={traversal.paths[vertex]}")
+    ...           + f"traversal.paths={traversal.paths[vertex]}"
+    ...           )  # doctest: +NORMALIZE_WHITESPACE
     Next called: vertex=0 traversal.path_length=2 traversal.depth=0
     Reported: vertex=2 traversal.path_length=5 traversal.depth=1 traversal.paths=(0, 2)
     Next called: vertex=2 traversal.path_length=5 traversal.depth=1
-    Reported: vertex=3 traversal.path_length=7 traversal.depth=2 traversal.paths=(0, 2, 3)
+    Reported: vertex=3 traversal.path_length=7 traversal.depth=2 traversal.paths=(0, 2,
+    3)
     Next called: vertex=3 traversal.path_length=7 traversal.depth=2
     Reported: vertex=4 traversal.path_length=3 traversal.depth=1 traversal.paths=(0, 4)
     Next called: vertex=4 traversal.path_length=3 traversal.depth=1
-    >>> print("All paths:", [traversal.paths[vertex] for vertex in range(5) if vertex!=1])
+    >>> print("All paths:",
+    ...       [traversal.paths[vertex] for vertex in range(5) if vertex!=1])
     All paths: [(0,), (0, 2), (0, 2, 3), (0, 4)]
     >>> print("Distance at goal:", known_distances[3])
     Distance at goal: 7
@@ -885,9 +919,11 @@ class NormalGraphTraversalsWithLabels:
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.depth=} {traversal.distance=}")
-    ...     return ((2*vertex, 2*vertex), (2*vertex+1, 2*vertex+1)) if 1 <= vertex <= 3 else ()
+    ...     return (((2*vertex, 2*vertex), (2*vertex+1, 2*vertex+1)) if 1 <= vertex <= 3
+    ...             else ())
     >>> def this_test(strategy):
-    ...     traversal = strategy(next_edges, is_tree=True).start_from(1, build_paths=True)
+    ...     traversal = strategy(next_edges, is_tree=True).start_from(
+    ...         1, build_paths=True)
     ...     for vertex in traversal:
     ...         print(f"Reported: {vertex=} {traversal.depth=} {traversal.distance=} " +
     ...             f"traversal.paths={traversal.paths[vertex]}")
@@ -910,34 +946,41 @@ class NormalGraphTraversalsWithLabels:
     All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
     All distances: {1: 0}
 
-    >>> this_test(nog.TraversalMinimumSpanningTree)
+    >>> this_test(nog.TraversalMinimumSpanningTree)  # doctest: +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
-    TypeError: TraversalMinimumSpanningTree.__init__() got an unexpected keyword argument 'is_tree'
+    TypeError: TraversalMinimumSpanningTree.__init__() got an unexpected keyword
+    argument 'is_tree'
 
     Test TraversaAStar. Typically, one would use go_to(6) for our goal vertex 6, but for
     the test purposes we continue to iterate the rest of the graph.
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.depth=} {traversal.path_length=}")
-    ...     return ((2*vertex, 2*vertex), (2*vertex+1, 2*vertex+1)) if 1 <= vertex <= 3 else ()
+    ...     return (((2*vertex, 2*vertex), (2*vertex+1, 2*vertex+1)) if 1 <= vertex <= 3
+    ...             else ())
     >>> def heuristic(v):
     ...    return {6:0, 3:3}.get(v, 11)
     >>> traversal = nog.TraversalAStar(next_edges=next_edges)
     >>> traversal = traversal.start_from(heuristic, 1, build_paths=True)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.depth=} {traversal.path_length=} "
-    ...         + f"traversal.paths={traversal.paths[vertex]}")
+    ...           + f"traversal.paths={traversal.paths[vertex]}"
+    ...          )  # doctest: +NORMALIZE_WHITESPACE
     Next called: vertex=1 traversal.depth=0 traversal.path_length=0
     Reported: vertex=3 traversal.depth=1 traversal.path_length=3 traversal.paths=(1, 3)
     Next called: vertex=3 traversal.depth=1 traversal.path_length=3
-    Reported: vertex=6 traversal.depth=2 traversal.path_length=9 traversal.paths=(1, 3, 6)
+    Reported: vertex=6 traversal.depth=2 traversal.path_length=9 traversal.paths=(1, 3,
+    6)
     Next called: vertex=6 traversal.depth=2 traversal.path_length=9
     Reported: vertex=2 traversal.depth=1 traversal.path_length=2 traversal.paths=(1, 2)
     Next called: vertex=2 traversal.depth=1 traversal.path_length=2
-    Reported: vertex=4 traversal.depth=2 traversal.path_length=6 traversal.paths=(1, 2, 4)
+    Reported: vertex=4 traversal.depth=2 traversal.path_length=6 traversal.paths=(1, 2,
+    4)
     Next called: vertex=4 traversal.depth=2 traversal.path_length=6
-    Reported: vertex=5 traversal.depth=2 traversal.path_length=7 traversal.paths=(1, 2, 5)
+    Reported: vertex=5 traversal.depth=2 traversal.path_length=7 traversal.paths=(1, 2,
+    5)
     Next called: vertex=5 traversal.depth=2 traversal.path_length=7
-    Reported: vertex=7 traversal.depth=2 traversal.path_length=10 traversal.paths=(1, 3, 7)
+    Reported: vertex=7 traversal.depth=2 traversal.path_length=10 traversal.paths=(1, 3,
+    7)
     Next called: vertex=7 traversal.depth=2 traversal.path_length=10
     """
 
@@ -958,8 +1001,9 @@ class SpecialCases:
 class MultipleStartVerticesTraversalsWithOrWithoutLabels:
     # noinspection PyShadowingNames
     """-- Traversal with multiple start vertices, first 3 traversal strategies --
-    Correct traversal of TraversalBreadthFirst, TraversalDepthFirst, TraversalTopologicalSort
-    in case of multiple start vertices. No traversal in case of no start vertex.
+    Correct traversal of TraversalBreadthFirst, TraversalDepthFirst,
+    TraversalTopologicalSort in case of multiple start vertices. No traversal in case
+    of no start vertex.
     (Uses implementation descisions:
     - All strategies travers start vertices in given order
     - TraversalBreadthFirst traverses edges in given order
@@ -972,13 +1016,16 @@ class MultipleStartVerticesTraversalsWithOrWithoutLabels:
     >>> for strategy in (nog.TraversalBreadthFirst, nog.TraversalDepthFirst,
     ...                  nog.TraversalTopologicalSort):
     ...     print("- Strategy:", strategy.__name__, "-")
-    ...     sv = iter((0,1))  # an iterator (can be iterated only once) should be enough for lib
-    ...     traversal = strategy(next_vertices).start_from(start_vertices=sv, build_paths=True)
+    ...     # an iterator (can be iterated only once) should be enough for lib
+    ...     sv = iter((0,1))
+    ...     traversal = strategy(next_vertices).start_from(
+    ...         start_vertices=sv, build_paths=True)
     ...     for vertex in traversal:
     ...         print(f"Reported: {vertex=} {traversal.depth=} "
     ...             + f"traversal.paths={traversal.paths[vertex]}")
     ...     print("All paths:", [traversal.paths[vertex] for vertex in range(5)])
-    ...     traversal = strategy(next_vertices).start_from(start_vertices=(), build_paths=True)
+    ...     traversal = strategy(next_vertices).start_from(
+    ...         start_vertices=(), build_paths=True)
     ...     list(traversal)
     ...     print()
     - Strategy: TraversalBreadthFirst -
@@ -1023,18 +1070,21 @@ class MultipleStartVerticesTraversalsWithOrWithoutLabels:
     1. Labeled edges
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.depth=}")
-    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()}[vertex]
+    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()
+    ...            }[vertex]
     >>> for strategy in (nog.TraversalBreadthFirst, nog.TraversalDepthFirst,
     ...                  nog.TraversalTopologicalSort):
     ...     print("- Strategy:", strategy.__name__, "-")
     ...     traversal = strategy(next_edges=next_edges)
-    ...     sv = iter((0,1))  # an iterator (can be iterated only once) should be enough for lib
+    ...     # an iterator (can be iterated only once) should be enough for lib
+    ...     sv = iter((0,1))
     ...     traversal = traversal.start_from(start_vertices=sv, build_paths=True)
     ...     for vertex in traversal:
     ...         print(f"Reported: {vertex=} {traversal.depth=} "
     ...             + f"traversal.paths={traversal.paths[vertex]}")
     ...     print("All paths:", [traversal.paths[vertex] for vertex in range(4)])
-    ...     traversal = strategy(next_vertices).start_from(start_vertices=(), build_paths=True)
+    ...     traversal = strategy(next_vertices).start_from(
+    ...         start_vertices=(), build_paths=True)
     ...     list(traversal)
     ...     print()
     - Strategy: TraversalBreadthFirst -
@@ -1081,13 +1131,16 @@ class MultipleStartVerticesTraversalsWithOrWithoutLabels:
 class MultipleStartVerticesTraversalsWithLabels:
     # noinspection PyShadowingNames
     """-- Traversal with multiple start vertex, last 3 traversal strategies --
-    Correct traversal in case of multiple start vertices. No traversal in case of no start vertex.
+    Correct traversal in case of multiple start vertices. No traversal in case of no
+    start vertex.
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.distance=} {traversal.depth=}")
-    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()}[vertex]
+    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()
+    ...            }[vertex]
     >>> traversal = nog.TraversalShortestPaths(next_edges=next_edges)
-    >>> sv = iter((0,1))  # an iterator (can be iterated only once) should be enough for lib
+    ... # an iterator (can be iterated only once) should be enough for lib
+    >>> sv = iter((0,1))
     >>> traversal = traversal.start_from(start_vertices=sv, build_paths=True)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.distance=} {traversal.depth=} "
@@ -1108,9 +1161,11 @@ class MultipleStartVerticesTraversalsWithLabels:
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.edge=}")
-    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()}[vertex]
+    ...     return {0: ((2, 1),), 1: ((3, 1),), 2: ((3, 1), (4, 1)), 3: ((4, 1),), 4: ()
+    ...            }[vertex]
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=next_edges)
-    >>> sv = iter((0,1))  # an iterator (can be iterated only once) should be enough for lib
+    >>> # an iterator (can be iterated only once) should be enough for lib
+    >>> sv = iter((0,1))
     >>> traversal = traversal.start_from(start_vertices=sv, build_paths=True)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.edge=}"
@@ -1130,21 +1185,26 @@ class MultipleStartVerticesTraversalsWithLabels:
     []
 
     >>> def heuristic(vertex):
-    ...    return {0:3, 1:2, 2:2, 3:1, 4:9, 5:0}[vertex] # heuristic with perfect estimation
+    ...    # heuristic with perfect estimation
+    ...    return {0:3, 1:2, 2:2, 3:1, 4:9, 5:0}[vertex]
     >>> def next_edges(vertex, traversal):
-    ...     print(f"Next called: {vertex=} {traversal.path_length=} {traversal.depth=}")
-    ...     return {0: ((2, 1),), 1: ((3, 1), (4, 1)), 2: ((3, 1),), 3: ((5, 1),), 4: (), 5:()
-    ...         }[vertex]
+    ...     print(f"Next called: {vertex=} {traversal.path_length=} {traversal.depth=}"
+    ...          )
+    ...     return {0: ((2, 1),), 1: ((3, 1), (4, 1)), 2: ((3, 1),), 3: ((5, 1),),
+    ...             4: (), 5:()}[vertex]
     >>> traversal = nog.TraversalAStar(next_edges=next_edges)
-    >>> sv = iter((0,1))  # an iterator (can be iterated only once) should be enough for lib
+    >>> # an iterator (can be iterated only once) should be enough for lib
+    >>> sv = iter((0,1))
     >>> traversal = traversal.start_from(heuristic, start_vertices=sv, build_paths=True)
     >>> for vertex in traversal:
     ...     print(f"Reported: {vertex=} {traversal.path_length=} {traversal.depth=} "
-    ...         + f"traversal.paths={traversal.paths[vertex]}")
+    ...           + f"traversal.paths={traversal.paths[vertex]}"
+    ...          )  # doctest: +NORMALIZE_WHITESPACE
     Next called: vertex=1 traversal.path_length=0 traversal.depth=0
     Reported: vertex=3 traversal.path_length=1 traversal.depth=1 traversal.paths=(1, 3)
     Next called: vertex=3 traversal.path_length=1 traversal.depth=1
-    Reported: vertex=5 traversal.path_length=2 traversal.depth=2 traversal.paths=(1, 3, 5)
+    Reported: vertex=5 traversal.path_length=2 traversal.depth=2 traversal.paths=(1, 3,
+    5)
     Next called: vertex=5 traversal.path_length=2 traversal.depth=2
     Next called: vertex=0 traversal.path_length=0 traversal.depth=0
     Reported: vertex=2 traversal.path_length=1 traversal.depth=1 traversal.paths=(0, 2)
@@ -1161,12 +1221,13 @@ class MultipleStartVerticesTraversalsWithLabels:
 
 class InitiationForgotten:
     # noinspection PyTypeChecker
-    """Check if the library detects the mistake that start_from or one of the go_... methods are
-    called on a traversal class instead of an object, i.e., the round brackets after the class name
-    have been forgotten.
+    """Check if the library detects the mistake that start_from or one of the
+    go_... methods are called on a traversal class instead of an object, i.e., the
+    round brackets after the class name have been forgotten.
 
-    In the following test code, such calls are intentionally made, an since these are typing
-    errors, that code inspection is disabled for them in the line on top of the class.
+    In the following test code, such calls are intentionally made, an since these are
+    typing errors, that code inspection is disabled for them in the line on top of the
+    class.
 
     >>> nog.TraversalBreadthFirst.start_from(None)
     Traceback (most recent call last):
@@ -1276,8 +1337,8 @@ class EdgeGadgets:
     ...       "path edge count:", traversal.depth, "path:", traversal.paths[vertex])
     vertex: G distance: 8 path edge count: 4 path: ('A', 'C', 'D', 'F', 'G')
     >>>
-    >>> # The generated next_vertices function returns the empty list if no edges where given
-    >>> # for it in the dict.
+    >>> # The generated next_vertices function returns the empty list if no edges where
+    >>> # given for it in the dict.
     >>> next_vertices("G", None)
     ()
 
@@ -1297,7 +1358,8 @@ class EdgeGadgets:
     ...       "path edge count:", traversal.depth, "path:", traversal.paths[vertex])
     vertex: 6 distance: 8 path edge count: 4 path: (0, 2, 3, 5, 6)
     >>>
-    >>> # The generated next_vertices function returns the empty list if the index is out of range
+    >>> # The generated next_vertices function returns the empty list if the index is
+    >>> # out of range
     >>> next_vertices(7, None)
     ()
 
@@ -1312,13 +1374,15 @@ class EdgeGadgets:
     ... }
     >>> next_vertices = nog.adapt_edge_index(edges,add_inverted=True,labeled=True)
     >>> traversal = nog.TraversalMinimumSpanningTree(next_vertices)
-    >>> [traversal.edge for vertex in traversal.start_from("A")]
-    [('A', 'B', 1), ('B', 'E', 1), ('B', 'F', 1), ('E', 'D', 1), ('D', 'C', 1), ('F', 'G', 2)]
-    >>> # Note, that the minimum spanning tree contains edge ('D', 'C') in the direction not
-    >>> # directly listed in the input.
+    >>> [traversal.edge for vertex in traversal.start_from("A")
+    ... ]  # doctest: +NORMALIZE_WHITESPACE
+    [('A', 'B', 1), ('B', 'E', 1), ('B', 'F', 1), ('E', 'D', 1), ('D', 'C', 1),
+    ('F', 'G', 2)]
+    >>> # Note, that the minimum spanning tree contains edge ('D', 'C') in the direction
+    >>> # not directly listed in the input.
 
-    >>> # Access same testing graph, but the weighted undirected edges are given as list, vertices
-    >>> # are int
+    >>> # Access same testing graph, but the weighted undirected edges are given as
+    >>> # list, vertices are int
     >>> edges = [
     ...     ((1, 1), (2, 2)),
     ...     ((4, 1), (3, 4), (5, 1)),
@@ -1331,14 +1395,15 @@ class EdgeGadgets:
     >>> traversal = nog.TraversalMinimumSpanningTree(next_vertices)
     >>> [traversal.edge for vertex in traversal.start_from(0)]
     [(0, 1, 1), (1, 4, 1), (1, 5, 1), (4, 3, 1), (3, 2, 1), (5, 6, 2)]
-    >>> # Note, that the minimum spanning tree contains edge (3, 2) in the direction not
-    >>> # directly listed in the input.
+    >>> # Note, that the minimum spanning tree contains edge (3, 2) in the direction
+    >>> # not directly listed in the input.
     >>> next_vertices = nog.adapt_edge_index(set(),add_inverted=True,labeled=False)
     Traceback (most recent call last):
     ValueError: graph must be Mapping or Sequence
 
     # ------------ adapt_edge_iterable -------------
-    >>> # Access testing data, where weighted directed edges are given as flat unsorted edge list
+    >>> # Access testing data, where weighted directed edges are given as flat unsorted
+    >>> # edge list
     >>> edges = [
     ...     ('A', 'B', 1), ('A', 'C', 2),
     ...     ('B', 'C', 5), ('B', 'D', 5),
@@ -1355,7 +1420,8 @@ class EdgeGadgets:
     ...       "path edge count:", traversal.depth, "path:", traversal.paths[vertex])
     vertex: G distance: 8 path edge count: 4 path: ('A', 'C', 'D', 'F', 'G')
     >>>
-    >>> # Access testing data, where weighted undirected edges are given as flat edge list
+    >>> # Access testing data, where weighted undirected edges are given as flat edge
+    >>> # list
     >>> edges = [
     ...     ('A', 'B', 1), ('A', 'C', 2),
     ...     ('B', 'E', 1), ('B', 'D', 4), ('B', 'F', 1),
@@ -1366,10 +1432,12 @@ class EdgeGadgets:
     ... ]
     >>> next_vertices = nog.adapt_edge_iterable(edges,add_inverted=True,labeled=True)
     >>> traversal = nog.TraversalMinimumSpanningTree(next_vertices)
-    >>> [traversal.edge for vertex in traversal.start_from("A")]
-    [('A', 'B', 1), ('B', 'E', 1), ('B', 'F', 1), ('E', 'D', 1), ('D', 'C', 1), ('F', 'G', 2)]
-    >>> # Note, that the minimum spanning tree contains edge ('D', 'C') in the direction not
-    >>> # directly listed in the input.
+    >>> [traversal.edge for vertex in traversal.start_from("A")
+    ... ]  # doctest: +NORMALIZE_WHITESPACE
+    [('A', 'B', 1), ('B', 'E', 1), ('B', 'F', 1), ('E', 'D', 1), ('D', 'C', 1),
+    ('F', 'G', 2)]
+    >>> # Note, that the minimum spanning tree contains edge ('D', 'C') in the
+    >>> # direction not directly listed in the input.
 
     """
     # inspection PyShadowingNames
@@ -1409,8 +1477,3 @@ class ArrayTests:
     >>> traversal.depth, traversal.paths[found]
     (3, ((0, 0), (0, 1), (1, 2), (2, 1)))
     """
-
-# if __name__ == "__main__":
-#     import doctest
-#
-#     doctest.testmod()

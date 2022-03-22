@@ -97,10 +97,11 @@ class Position(tuple[int]):
     ) -> Generator[Position]:
         # noinspection PyShadowingNames
         """
-        Generate coordinates of direct neighbors of a given position in a n-dimensional matrix.
-        If pairs of lower and upper limits per coordinate are given, the generated coordinates are
-        filtered or wrapped (if wrap == True) to stay within the limits. Diagonal neighbors are
-        omitted on request. The neighbors are generated in sorted order.
+        Generate coordinates of direct neighbors of a given position in a n-dimensional
+        matrix. If pairs of lower and upper limits per coordinate are given, the
+        generated coordinates are filtered or wrapped (if wrap == True) to stay within
+        the limits. Diagonal neighbors are omitted on request. The neighbors are
+        generated in sorted order.
         """
         # inspection PyShadowingNames
         for move in moves:

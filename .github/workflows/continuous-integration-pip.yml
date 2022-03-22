@@ -76,15 +76,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install flake8
           pip install black
       - name: Lint with flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # all Python source files should follow PEP8
-          flake8 nographs
-          # exit-zero treats all errors as warnings.
-          flake8 . --count --exit-zero --max-complexity=10 --statistics
+          # stop the build if there are flake8 errors (E203,W505 not compatible to black)
+          flake8 src test --count --extend-ignore=E203,W503 --max-line-length=88 --show-source --statistics
       - name: Install from source (required for the pre-commit tests)
         run: pip install .
       - name: Test with pytest
