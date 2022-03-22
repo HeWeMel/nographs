@@ -25,7 +25,8 @@ if __name__ == "__main__":
     # Unittests from doc tests
     p = pathlib.Path('./docs/source')
     for file_path in p.glob('*.rst'):
-        test_suite.addTests(doctest.DocFileSuite(str(file_path.resolve())))
+        test_suite.addTests(doctest.DocFileSuite(
+            str(file_path), module_relative=False))
 
     unittest.TextTestRunner().run(test_suite)
 
