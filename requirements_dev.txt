@@ -7,3 +7,4 @@ docutils>=0.17.1
 black
 sphinx-rtd-theme
 sphinx
+flake8
