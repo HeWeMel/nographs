@@ -1,34 +1,35 @@
-|PyPI version| |PyPI status| |PyPI pyversions| |CI (tests, flake8)| |CodeCov| |Documentation Status| |Code style| |GitHub issues| |PyPI license|
+|PyPI version| |PyPI status| |PyPI pyversions| |PyPI license| |CI| |CodeCov| |Documentation Status| |Code style| |GitHub issues|
 
 .. |PyPI version| image:: https://badge.fury.io/py/nographs.svg
-   :target: https://pypi.python.org/pypi/nographs/
-
-.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
-   :target: https://pypi.python.org/pypi/nographs/
-
-.. |PyPI pyversions| image:: https://img.shields.io/pypi/pyversions/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
 
 .. |PyPI status| image:: https://img.shields.io/pypi/status/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
 
+.. |PyPI pyversions| image:: https://img.shields.io/pypi/pyversions/nographs.svg
+   :target: https://pypi.python.org/pypi/nographs/
+
+.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
+   :target: https://github.com/HeWeMel/nographs/blob/main/LICENSE
+
+.. |CI| image:: https://github.com/hewemel/nographs/workflows/CI%20(pip)/badge.svg?branch=main
+   :target: https://github.com/hewemel/nographs/actions?query=workflow%3ACI%20(pip)
+
+.. |CodeCov| image:: https://img.shields.io/codecov/c/gh/HeWeMel/NoGraphs/main
+   :target: https://codecov.io/gh/HeWeMel/NoGraphs
+
 .. |Documentation Status| image:: https://readthedocs.org/projects/nographs/badge/?version=latest
    :target: http://nographs.readthedocs.io/?badge=latest
-
-.. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
-   :target: https://GitHub.com/HeWeMel/nographs/issues/
 
 .. |Code style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
 
-.. |CodeCov| image:: https://img.shields.io/codecov/c/github/hewemel/nographs
-
-.. |CI (tests, flake8)| image:: https://github.com/hewemel/nographs/workflows/CI%20(pip)/badge.svg?branch=main
-   :target: https://github.com/hewemel/nographs/actions?query=workflow%3ACI%20(pip)
+.. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
+   :target: https://GitHub.com/HeWeMel/nographs/issues/
 
 
-`NoGraphs <https://nographs.readthedocs.io>`__: Graph analysis on the fly
-=========================================================================
+NoGraphs: Graph analysis on the fly
+===================================
 
 NoGraphs simplifies the analysis of graphs that can not or should not be fully
 computed, stored or adapted, e.g. infinite graphs, large graphs and graphs with
@@ -40,7 +41,7 @@ not with diagrams.)
 The approach: Graphs are
 **computed and/or adapted in application code on the fly**
 (when needed and as far as needed). Also,
-**the analysis and the reporting of results by the library happens on the fly**
+**the analysis and the reporting of results by the library happen on the fly**
 (when, and as far as, results can already be derived).
 
 Think of it as *graph analysis - the lazy (evaluation) way*.
@@ -67,26 +68,22 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   traversals of vertex equivalence classes on the fly. It is even
   possible to replace some of the internal data structures
   and to interfere with them during the search.
-- Implementation: Pure Python (>=3.9). It introduces no further dependencies.
-  Runtime and memory performance have been goals.
-- Source: Available `here <https://github.com/HeWeMel/nographs>`__.
-- Licence: `MIT <https://github.com/HeWeMel/nographs/blob/main/LICENSE>`__.
+- Implementation: Pure Python, no dependencies, runtime and memory
+  performance have been goals.
 
 **Documentation**
 
-- The `homepage of the project and its documentation can be found here <https://nographs.readthedocs.io>`__
-- The `installation is described here <https://nographs.readthedocs.io/en/latest/installation.html>`__.
-- The `tutorial <https://nographs.readthedocs.io/en/latest/concept_and_examples.html>`__ explains how the library can be used
-  and contains many `examples <https://nographs.readthedocs.io/en/latest/concept_and_examples.html#examples>`__.
-- The `API reference <https://nographs.readthedocs.io/en/latest/api.html>`__ documents
-  the classes, functions, signatures and types of the library.
+- `Homepage of the documentation <https://nographs.readthedocs.io>`__
+- `Installation guide <https://nographs.readthedocs.io/en/latest/installation.html>`__
+- `Tutorial <https://nographs.readthedocs.io/en/latest/concept_and_examples.html>`__
+  (contains many `examples <https://nographs.readthedocs.io/en/latest/concept_and_examples.html#examples>`__)
+- `API reference <https://nographs.readthedocs.io/en/latest/api.html>`__
 
 **Example**
 
 Our graph is directed, weighted and has infinitely many edges. These edges are
 defined in application code by the following function. For a vertex *i*
-(here: an integer) as the first of two
-parameters, it yields the edges that start at *i* as tuples
+(first parameter, here: an integer), it yields the edges that start at *i* as tuples
 *(end_vertex, edge_weight)*. What a strange graph - we do not know how it
 looks like...
 
@@ -123,7 +120,7 @@ while doing so, and to stop when visiting vertex 5.
     >>> traversal.start_from(0, build_paths=True).go_to(5)
     5
 
-The state data of this vertex visit contains our result:
+The state data of this vertex visit contains our results:
 
 .. code-block:: python
 
@@ -140,8 +137,20 @@ A part of the graph, the vertices up to 41, is shown in the following picture.
 Arrows denote directed edges. The edges in red show shortest paths from
 0 to other vertices.
 
-Welcome to NoGraphs!
-
 .. image:: https://nographs.readthedocs.io/en/latest/_images/nographs_example_graph.PNG
    :class: with-shadow
    :width: 600px
+
+**And now?**
+
+You can imagine an infinite generator of primes, defined by just a graph and
+a call to a standard graph algorithm? Or a graph that defines an infinite set
+of Towers of Hanoi problems in a generic way, without fixing the number of
+towers, disk sizes, and the start and goal configuration - and a specific
+problem instance is solved by just one library call? Or graphs that are dynamically
+computed based on other graphs, or on analysis results about other graphs,
+or even on partial analysis results from already processed parts of the same graph?
+
+Let's `build it <https://nographs.readthedocs.io/en/latest/installation.html>`__.
+
+Welcome to NoGraphs!
