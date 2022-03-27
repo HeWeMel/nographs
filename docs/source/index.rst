@@ -60,11 +60,9 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 **Documentation**
 
-- The `installation is described here <installation>`.
-- The `tutorial <concept_and_examples>` explains how the library can be used
-  and contains many `examples <examples>`.
-- The `API reference <api>` documents
-  the classes, functions, signatures and types of the library.
+- `Installation guide <installation>`.
+- `Tutorial <concept_and_examples>` (contains many `examples <examples>`).
+- `API reference <api>`
 
 **Example**
 
@@ -124,6 +122,18 @@ of the graph...
 A part of the graph, the vertices up to 41, is shown in the following picture.
 Arrows denote directed edges. The edges in red show shortest paths from
 0 to other vertices.
+
+**And now?**
+
+You can imagine an infinite generator of primes, defined by just a graph and
+a call to a standard graph algorithm? Or a graph that defines an infinite set
+of Towers of Hanoi problems in a generic way, without fixing the number of
+towers, disk sizes, and the start and goal configuration - and a specific
+problem instance is solved by just one library call? Or graphs that are dynamically
+computed based on other graphs, or on analysis results about other graphs,
+or even on partial analysis results from already processed parts of the same graph?
+
+Let's `build it <installation>`.
 
 Welcome to NoGraphs!
 

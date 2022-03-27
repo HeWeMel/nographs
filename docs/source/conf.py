@@ -76,7 +76,8 @@ autodoc_typehints_format = 'short'
 # and to add the resolved typing manually in the autodoc_type_aliases.)
 aliases = ('Vertex', 'NextVertices', 'NextEdges', 'VertexToID', 'Vector', 'Limits')
 autodoc_type_aliases = {alias: alias for alias in aliases} | {
-  'VertexIterator': 'Iterator[Vertex]'} | {
+  'VertexIterator': 'Iterator[Vertex]',
+  'EdgeIterator': 'Iterator[Edge]',
   'Vectors': 'Sequence[Vector]'}
 
 autoclass_content = "both"

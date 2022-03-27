@@ -25,7 +25,7 @@ class Position(tuple[int]):
 
     @classmethod
     def at(cls, *coordinates: int):
-        """Factory method that creates a position from integer *coordinates*
+        """Factory method. Create a position from integer *coordinates*
         given as separate parameters."""
         return Position(coordinates)
 
@@ -34,16 +34,16 @@ class Position(tuple[int]):
         return Position(map(sum, zip(self, other)))
 
     def __sub__(self, other: Vector) -> Position:
-        """Subtract the *other* vector from the position"""
+        """Subtract the *other* vector from the position."""
         return Position(map(operator.sub, self, other))
 
     def manhattan_distance(self, other: Vector) -> int:
         """Manhattan distance of the *other* vector from the
-        given position vector"""
+        given position vector."""
         return sum(abs(coordinate_diff) for coordinate_diff in self - other)
 
     def is_in_cuboid(self, limits: Limits) -> bool:
-        """Returns true if each coordinate of the position is inside
+        """Return true if each coordinate of the position is inside
         the respective range defined by the *limits* sequence.
         """
         return all(
@@ -133,7 +133,7 @@ class Array:
 
     def size(self) -> Sequence[int]:
         # noinspection PyShadowingNames
-        """Calculates the size of the array per dimension."""
+        """Calculate the size of the array per dimension."""
         # inspection PyShadowingNames
         size = []
         area = self.content
@@ -143,14 +143,14 @@ class Array:
         return size
 
     def limits(self) -> Limits:
-        """Calculates coordinate limits per dimension as tuples
+        """Calculate coordinate limits per dimension as tuples
         (from, to). Since the array consists of nested sequences,
         *from* is always zero and *to* equals the size of the array
         in this dimension."""
         return [(0, upper) for upper in self.size()]
 
     def mutable_copy(self) -> Array:
-        """Creates a mutable copy of the array."""
+        """Create a mutable copy of the array."""
 
         def _writable(area, dimensions):
             if dimensions > 1:
@@ -161,7 +161,7 @@ class Array:
         return Array(_writable(self.content, self.dimensions), self.dimensions)
 
     def __getitem__(self, position: Vector):
-        """Gets the content at the given position. This allows for using
+        """Get the content at the given position. This allows for using
         the expression syntax *array[...]*."""
         i = self.content
         for coordinate in position:
@@ -170,7 +170,7 @@ class Array:
 
     def __setitem__(self, position: Vector, content: Any):
         # noinspection PyShadowingNames
-        """Sets the content at the given position. Assumption: The nested
+        """Set the content at the given position. Assumption: The nested
         sequence the array is build upon is mutable in its last dimension
         (i.e., a list). Allows for using the assignment syntax
         *array[...] = ...* ."""
@@ -181,7 +181,7 @@ class Array:
         field[position[-1]] = content
 
     def items(self) -> Iterator[tuple[Position, Any]]:
-        """Iterates positions and content."""
+        """Iterate positions and content."""
         # Attention: Method signature is manually documented, update also there
 
         def _items_in_dimension(area, dimensions):
@@ -203,7 +203,7 @@ class Array:
         )
 
     def findall(self, content: Iterable[Any]) -> tuple[Position, ...]:
-        """Finds content in array and return found positions.
+        """Find content in array and return found positions.
         The content is given in some container, i.e., a set.
         """
         # Attention: Method signature is manually documented, update also there
@@ -231,8 +231,8 @@ class Array:
         diagonals: bool = False,
     ) -> Callable:
         # noinspection PyShadowingNames
-        """Returns a NextVertices function for traversal strategies, based on
-        your choice of when positions qualifies as neighbors (goals of a
+        """Return a NextVertices function for traversal strategies, based on
+        given choice of when positions qualifies as neighbors (goals of a
         move) of a given position (options *wrap* and *diagonals*) and whether
         such a move is allowed w.r.t. the content of the array at this
         position (parameter *forbidden*).
@@ -256,8 +256,8 @@ class Array:
         diagonals: bool = False,
     ) -> Callable:
         # noinspection PyShadowingNames
-        """Returns a NextEdges function for traversal strategies, based on
-        your choice of when positions qualifies as neighbors (goals of a
+        """Return a NextEdges function for traversal strategies, based on
+        given choice of when positions qualifies as neighbors (goals of a
         move) of a given position (options *wrap* and *diagonals*) and what
         weight such a move has w.r.t. the content of the matrix at this
         position (parameter *content_to_weight*, and no assigned weight means

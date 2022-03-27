@@ -15,12 +15,23 @@ Basic types
    If your vertices are not Hashable, you need to provide a `VertexToID` function
    as parameter *vertex_to_id* when creating a `Traversal`.
 
+.. data:: nographs.Edge
+
+   alias of Sequence
+
+   Structure: *start_vertex, end_vertex, additional_data_elements...*
+
+   In case of a weighted edge, the weight will be given as first element
+   of the additional data elements.
+
+   Used in analysis results of the library.
+
 .. data:: nographs.NextVertices
 
    alias of Callable[[Vertex, Traversal], Iterable[Vertex]]
 
    For a given `Vertex` and a `Traversal`, your NextVertices function reports
-   (positively) connected neighbor vertices in the form of an Iterable.
+   (positively) connected neighbor vertices.
 
    Used for `adapting graphs with unlabeled edges <unlabeled_graphs>`.
 
@@ -28,15 +39,21 @@ Basic types
 
    alias of Callable[[Vertex, Traversal], Iterable[Sequence]]
 
-   For a given `Vertex` and a `Traversal`, your NextEdges function reports outgoing
-   edges in the form of an Iterable of Sequences.
+   For a given `Vertex` and a `Traversal`, your NextEdges function reports
+   *outgoing edges*, each in the form of a sequence with the following
+   elements:
 
-   Each sequence describes an edge. It starts with the vertex the edge leads to. In
-   case of a weighted edge, the weight is the next element. You can provide further
-   elements, and they will be included in traversal results, if you demand this by
-   using option *labeled_paths* of method *start_from* of the `Traversal`.
+   - *end_vertex* of the edge
+   - optionally, a *weight*
+   - optionally, further elements with *additional data*.
+
+   Note: Since each outgoing edge starts at the given vertex, this information
+   is not repeated here (compare `edges <nographs.Edge>`).
 
    Used for `adapting graphs with labeled edges <labeled_graphs>`.
+
+   Your additional data will be included in traversal results, if you demand
+   this by using option *labeled_paths* of method *start_from* of the `Traversal`.
 
 .. data:: nographs.VertexToID
 
@@ -48,8 +65,9 @@ Basic types
    equality comparison) if and only if the two vertices are to be regarded as
    the same vertex in the sense of your graph.
 
-   A VertexToID function can be used as parameter *vertex_to_id* when
-   creating a `Traversal`. Typical use cases:
+   Used as parameter *vertex_to_id* when creating a `Traversal`.
+
+   Typical use cases:
 
    a) You want to use objects, that are not hashable, as you vertices. The
    identifiers will stand in for the vertices when hashes are needed.

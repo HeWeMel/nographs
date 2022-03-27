@@ -13,8 +13,8 @@ def adapt_edge_index(
     index: Union[Mapping, Sequence], *, add_inverted: bool, labeled: bool
 ) -> Callable:
     """
-    Reads a test graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple
-    or list, if you use integers as your vertices) and provide a neighbor function
+    Read a test graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple
+    or list, if integers are used as the vertices) and provide a neighbor function
     from that data. Typically only used for test purposes.
 
     :param index: Mapping or Sequence with vertices as key resp. index. For each
@@ -74,7 +74,7 @@ def adapt_edge_iterable(
     edges: Iterable[Sequence], *, add_inverted: bool, labeled: bool
 ) -> Callable:
     """
-    Reads a graph from an Iterable of edges and provide a neighbor function from that
+    Read a graph from an Iterable of edges and provide a neighbor function from that
     data. Typically used only for test purposes.
 
     :param edges: The edges of your graph, each as Sequence (start_vertex, end_vertex,

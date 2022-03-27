@@ -4,13 +4,20 @@ import collections
 import itertools
 import copy
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator, Iterable, Hashable
+from collections.abc import Callable, Iterator, Sequence, Iterable, Hashable
 from heapq import heapify, heappop, heappush
 from numbers import Real
 from typing import TypeVar, Optional, Any
 
-from nographs import Vertex, VertexIterator, NextVertices, NextEdges, VertexToID
+from nographs import Vertex, VertexToID, VertexIterator
 from nographs import Paths, PathsOfUnlabeledEdges, PathsOfLabeledEdges
+
+
+# --------------- types -------------
+
+# Warning: The following types are manually documented in api.rst
+NextVertices = Callable[[Vertex, "Traversal"], Iterable[Vertex]]
+NextEdges = Callable[[Vertex, "Traversal"], Iterable[Sequence]]
 
 
 # --------------- internal support functions -------------
@@ -132,7 +139,7 @@ class Traversal(ABC):
         self,
     ) -> VertexIterator:  # Type alias needed do to a sphinx limitation
         """
-        Returns the iterator of a started traversal. This allows for using a
+        Return the iterator of a started traversal. This allows for using a
         `Traversal` in *for* loops or as parameter to a call of function
         *next()*.
 
@@ -151,7 +158,9 @@ class Traversal(ABC):
         return self._generator
 
     def __next__(self) -> Vertex:
-        """Returns the next vertex reported by the (started) traversal.
+        """Returns the next vertex reported by the (started) traversal. This
+        allows for calls like *next(traversal)*.
+
         Delegates to the iterator of the traversal."""
         return next(self._generator)
 
@@ -159,7 +168,7 @@ class Traversal(ABC):
         self, vertices: VertexIterator, fail_silently: bool = False
     ) -> VertexIterator:
         """
-        For a started traversal, the method returns an iterator that fetches vertices
+        For a started traversal, return an iterator that fetches vertices
         from the traversal, reports a vertex if it is in *vertices*, and stops when
         all of the *vertices* have been found and reported. If the iterator has no
         more vertices to report (graph is exhausted) without having found all of the
@@ -201,9 +210,9 @@ class Traversal(ABC):
 
     def go_to(self, vertex: Vertex, fail_silently: bool = False) -> Optional[Vertex]:
         """
-        For a started traversal, it walks through the graph, stops at *vertex* and
-        returns it. If the traversal ends (traversal iterator is exhausted) without
-        having found *vertex*, KeyError is raised, or None is returned,
+        For a started traversal, walk through the graph, stop at *vertex* and
+        return it. If the traversal ends (traversal iterator is exhausted) without
+        having found *vertex*, raise KeyError, or return None,
         if fail_silently is True.
 
         When *vertex* is reported, specific attributes of the traversal object
@@ -323,7 +332,7 @@ class _TraversalWithOrWithoutLabels(Traversal, ABC):
         already_visited: Optional[set] = None,
     ) -> CurrentTraversalClass:
         """
-        Starts the traversal at a vertex or a set of vertices and sets parameters.
+        Start the traversal at a vertex or a set of vertices and set parameters.
 
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
@@ -512,7 +521,7 @@ class TraversalBreadthFirst(_TraversalWithOrWithoutLabels):
 
     def go_for_depth_range(self, start: int, stop: int) -> VertexIterator:
         """
-        For a started traversal, it returns an iterator. During the traversal,
+        For a started traversal, it return an iterator. During the traversal,
         the iterator skips vertices as long as their depth is lower than *start*.
         From then on, is reports the found vertices. It stops when the reached depth
         is equal to or higher than *stop*.
@@ -992,6 +1001,8 @@ class TraversalShortestPaths(_TraversalWithLabels):
         known_distances: Optional[dict[Hashable, Real]] = None,
     ) -> TraversalShortestPaths:
         """
+        Start the traversal at a vertex or a set of vertices and set parameters.
+
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
@@ -1155,7 +1166,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
 
     def go_for_distance_range(self, start: int, stop: int) -> VertexIterator:
         """
-        For a started traversal, it returns an iterator.  During the traversal,
+        For a started traversal, return an iterator. During the traversal,
         the iterator skips vertices as long as their distance is lower than *start*.
         From then on, is reports the found vertices. It stops when the reached
         distance is equal to or higher than *stop*.
@@ -1268,6 +1279,8 @@ class TraversalAStar(_TraversalWithLabels):
         known_path_length_guesses: Optional[dict[Hashable, Real]] = None,
     ) -> TraversalAStar:
         """
+        Start the traversal at a vertex or a set of vertices and set parameters.
+
         :param heuristic: The admissible and consistent heuristic function that
             estimates the cost of the cheapest path from a given vertex to the goal
             (resp. one of the goals).
@@ -1505,6 +1518,8 @@ class TraversalMinimumSpanningTree(_TraversalWithLabels):
         calculation_limit: Optional[int] = None,
     ) -> TraversalMinimumSpanningTree:
         """
+        Start the traversal at a vertex or a set of vertices and set parameters.
+
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
