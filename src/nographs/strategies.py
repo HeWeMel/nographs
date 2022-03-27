@@ -49,19 +49,21 @@ def _define_visited(
     return already_visited
 
 
+def _create_no_paths(labeled_path: bool):
+    """ Create setting of paths, predecessors and edge_data for
+    case that no paths should be built."""
+    if labeled_path:
+        raise RuntimeError("Option labeled_paths without option build_paths.")
+    return None, None, None
+
+
 def _create_paths(
-    build_paths: bool,
     labeled_path: bool,
     labeled_edges: bool,
     vertex_to_id: Optional[VertexToID],
-) -> tuple[Optional[Paths], Optional[dict], Optional[dict]]:
-    """Translate from configuration of path generation to a function
-    initializing the required thing"""
-
-    if not build_paths:
-        if labeled_path:
-            raise RuntimeError("Option labeled_paths without option build_paths.")
-        return None, None, None
+) -> tuple[Paths, dict, Optional[dict]]:
+    """Translate from configuration of path generation to setting of
+    paths, predecessors and edge_data. """
 
     predecessors = dict[Any, Any]()
     if not labeled_path:
@@ -248,21 +250,22 @@ class Traversal(ABC):
                 raise RuntimeError("Neither start_vertex and start_vertices provided.")
             self._start_vertices = start_vertices
 
-        # Note: Detection of wrong option combinations for paths is implemented in
-        # _create_paths
-        self._labeled_paths = labeled_paths
-        self.paths, self._predecessors, self._edge_data = _create_paths(
-            build_paths, labeled_paths, self._labeled_edges, self._vertex_to_id
-        )
-
         self._start_vertices = tuple(self._start_vertices)  # copy from iterable
+        self._labeled_paths = labeled_paths
+
+        # Note: Detection of wrong option combinations for paths is implemented in
+        # _create_paths and _create_no_paths.
         if build_paths:
-            # If build_paths is True, _create_paths provide a paths container
-            assert isinstance(self._predecessors, dict)  # todo: solution not nice
+            self.paths, self._predecessors, self._edge_data = _create_paths(
+                labeled_paths, self._labeled_edges, self._vertex_to_id
+            )
             self._predecessors.update(
                 (vertex, None)
                 for vertex in _iter_start_ids(self._start_vertices, self._vertex_to_id)
             )
+        else:
+            self.paths, self._predecessors, self._edge_data = _create_no_paths(
+                labeled_paths)
 
         self._calculation_limit = calculation_limit
 
