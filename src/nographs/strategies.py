@@ -379,7 +379,11 @@ class _TraversalWithOrWithoutLabels(Traversal, ABC):
             calculation_limit,
         )
 
-        assert isinstance(self._start_vertices, Iterable)  # todo: solution not nice
+        # _start_from sets _start_vertices, case None is not possible here.
+        # We give this hint for mypy, because the following would be illegal
+        # otherwise.
+        assert isinstance(self._start_vertices, Iterable)
+
         self.visited = _define_visited(
             already_visited,
             _iter_start_ids(self._start_vertices, self._vertex_to_id),
