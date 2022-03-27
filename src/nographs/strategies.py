@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Iterable, Hashable
 from heapq import heapify, heappop, heappush
 from numbers import Real
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, Any
 
 from nographs import Vertex, VertexIterator, NextVertices, NextEdges, VertexToID
 from nographs import Paths, PathsOfUnlabeledEdges, PathsOfLabeledEdges
@@ -17,7 +17,7 @@ from nographs import Paths, PathsOfUnlabeledEdges, PathsOfLabeledEdges
 
 
 def _iter_start_ids(
-    start_vertices: Iterator[Vertex],
+    start_vertices: Iterable[Vertex],
     vertex_to_id: Optional[Callable[[Vertex], Hashable]],
 ) -> Iterable[Hashable]:
     if vertex_to_id:
@@ -56,7 +56,7 @@ def _create_paths(
             raise RuntimeError("Option labeled_paths without option build_paths.")
         return None, None, None
 
-    predecessors = dict()
+    predecessors = dict[Any, Any]()
     if not labeled_path:
         return (
             PathsOfUnlabeledEdges(predecessors, vertex_to_id),
@@ -67,7 +67,7 @@ def _create_paths(
     if not labeled_edges:
         raise RuntimeError("A labeled path can only be computed from labeled edges.")
 
-    edge_data = dict()
+    edge_data = dict[Any, Any]()
     return (
         PathsOfLabeledEdges(predecessors, edge_data, vertex_to_id),
         predecessors,
@@ -77,6 +77,19 @@ def _create_paths(
 
 class NoIterator:
     def __next__(self):
+        """
+        >>> next(NoIterator())
+        Traceback (most recent call last):
+        RuntimeError: Traversal not started, iteration not possible
+        """
+        raise RuntimeError("Traversal not started, iteration not possible")
+
+    def __iter__(self):
+        """
+        >>> iter(NoIterator())
+        Traceback (most recent call last):
+        RuntimeError: Traversal not started, iteration not possible
+        """
         raise RuntimeError("Traversal not started, iteration not possible")
 
 
@@ -104,20 +117,20 @@ class Traversal(ABC):
         self._vertex_to_id = vertex_to_id
 
         # general attributes set and needed by all traversal strategies
-        self._generator = NoIterator()
-        self._start_vertices = None
-        self._build_paths = None
-        self._labeled_paths = None
-        self._calculation_limit = None
+        self._generator: Iterator = NoIterator()
+        self._start_vertices: Optional[Iterable[Vertex]] = None
+        self._build_paths: Optional[bool] = None
+        self._labeled_paths: Optional[bool] = None
+        self._calculation_limit: Optional[int] = None
 
         # attributes for path data, needed by all traversal strategies
-        self.paths = None
-        self._predecessors = None
-        self._edge_data = None
+        self.paths: Optional[Paths] = None
+        self._predecessors: Optional[dict[Vertex, Any]] = None
+        self._edge_data: Optional[dict[Vertex, Any]] = None
 
     def __iter__(
         self,
-    ) -> VertexIterator:  # Do to a sphinx error, the enclosing [] necessary
+    ) -> VertexIterator:  # Type alias needed do to a sphinx limitation
         """
         Returns the iterator of a started traversal. This allows for using a
         `Traversal` in *for* loops or as parameter to a call of function
@@ -133,6 +146,8 @@ class Traversal(ABC):
         documentation of the respective subclass of `Traversal`)."""
         if not isinstance(type(self), type(Traversal)):
             raise RuntimeError("Method go can only be called on a Traversal object.")
+        # if self._generator is None:
+        #     raise RuntimeError("Traversal not started, iteration not possible")
         return self._generator
 
     def __next__(self) -> Vertex:
@@ -233,6 +248,8 @@ class Traversal(ABC):
 
         self._start_vertices = tuple(self._start_vertices)  # copy from iterable
         if build_paths:
+            # If build_paths is True, _create_paths provide a paths container
+            assert isinstance(self._predecessors, dict)  # todo: solution not nice
             self._predecessors.update(
                 (vertex, None)
                 for vertex in _iter_start_ids(self._start_vertices, self._vertex_to_id)
@@ -293,7 +310,7 @@ class _TraversalWithOrWithoutLabels(Traversal, ABC):
             labeled_edges = True
         super().__init__(next_edge_or_vertex, labeled_edges, is_tree, vertex_to_id)
 
-        self.visited = None
+        self.visited: Optional[set] = None
 
     def start_from(
         self: CurrentTraversalClass,
@@ -350,6 +367,7 @@ class _TraversalWithOrWithoutLabels(Traversal, ABC):
             calculation_limit,
         )
 
+        assert isinstance(self._start_vertices, Iterable)  # todo: solution not nice
         self.visited = _define_visited(
             already_visited,
             _iter_start_ids(self._start_vertices, self._vertex_to_id),
@@ -961,7 +979,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
         super().__init__(next_edges, is_tree, vertex_to_id)
         self.distance = None
         self.depth = None
-        self.distances = None
+        self.distances: Optional[dict] = None
 
     def start_from(
         self,
@@ -1233,9 +1251,9 @@ class TraversalAStar(_TraversalWithLabels):
         self.path_length = None
         self.depth = None
 
-        self._heuristic = None
-        self._known_distances = None
-        self._known_path_length_guesses = None
+        self._heuristic: Optional[Callable] = None
+        self._known_distances: Optional[dict] = None
+        self._known_path_length_guesses: Optional[dict] = None
 
     def start_from(
         self,

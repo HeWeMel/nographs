@@ -3,12 +3,11 @@ from __future__ import annotations
 import itertools
 import operator
 from collections.abc import (
-    Generator,
     Sequence,
     Mapping,
-    Container,
     Callable,
     Iterable,
+    Iterator,
     Hashable,
 )
 from numbers import Real
@@ -30,11 +29,11 @@ class Position(tuple[int]):
         given as separate parameters."""
         return Position(coordinates)
 
-    def __add__(self, other: Vector) -> [Position]:
+    def __add__(self, other: Vector) -> Position:  # type: ignore[override]
         """Add the *other* vector to the position"""
         return Position(map(sum, zip(self, other)))
 
-    def __sub__(self, other: Vector) -> [Position]:
+    def __sub__(self, other: Vector) -> Position:
         """Subtract the *other* vector from the position"""
         return Position(map(operator.sub, self, other))
 
@@ -94,7 +93,7 @@ class Position(tuple[int]):
         moves: Iterable[Vector],
         limits: Optional[Limits] = None,
         wrap: bool = False,
-    ) -> Generator[Position]:
+    ) -> Iterator[Position]:
         # noinspection PyShadowingNames
         """
         Generate coordinates of direct neighbors of a given position in a n-dimensional
@@ -181,7 +180,7 @@ class Array:
             field = field[coordinate]
         field[position[-1]] = content
 
-    def items(self) -> Generator[tuple[Position, Any]]:
+    def items(self) -> Iterator[tuple[Position, Any]]:
         """Iterates positions and content."""
         # Attention: Method signature is manually documented, update also there
 
@@ -203,7 +202,7 @@ class Array:
             )
         )
 
-    def findall(self, content: Container[Any]) -> tuple[Position]:
+    def findall(self, content: Iterable[Any]) -> tuple[Position, ...]:
         """Finds content in array and return found positions.
         The content is given in some container, i.e., a set.
         """
@@ -211,7 +210,7 @@ class Array:
 
         content_set = set(content)
 
-        def find_in_dimension(p_matrix, p_dimensions) -> Generator[tuple[int]]:
+        def find_in_dimension(p_matrix, p_dimensions) -> Iterator[tuple[int, ...]]:
             if p_dimensions == 1:
                 for coordinate, cell_content in enumerate(p_matrix):
                     if cell_content in content_set:
@@ -227,10 +226,10 @@ class Array:
 
     def next_vertices_from_forbidden(
         self,
-        forbidden: [Iterable[Hashable]],
+        forbidden: Iterable[Hashable],
         wrap: bool = False,
         diagonals: bool = False,
-    ) -> [Callable]:
+    ) -> Callable:
         # noinspection PyShadowingNames
         """Returns a NextVertices function for traversal strategies, based on
         your choice of when positions qualifies as neighbors (goals of a
@@ -252,10 +251,10 @@ class Array:
 
     def next_edges_from_cell_weights(
         self,
-        content_to_weight: [Mapping[Any, Real]],
+        content_to_weight: Mapping[Any, Real],
         wrap: bool = False,
         diagonals: bool = False,
-    ) -> [Callable]:
+    ) -> Callable:
         # noinspection PyShadowingNames
         """Returns a NextEdges function for traversal strategies, based on
         your choice of when positions qualifies as neighbors (goals of a

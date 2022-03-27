@@ -8,3 +8,4 @@ black
 sphinx-rtd-theme
 sphinx
 flake8
+mypy

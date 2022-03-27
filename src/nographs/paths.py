@@ -32,13 +32,13 @@ class Paths(ABC):
         self._vertex_to_id = vertex_to_id
 
     @abstractmethod
-    def append_edge(self, from_vertex: [Vertex], to_vertex_id: Hashable, to_edge: Any):
+    def append_edge(self, from_vertex: Vertex, to_vertex_id: Hashable, to_edge: Any):
         """Create a new path that starts with the existing path to
         from_vertex and ends with the given vertex (resp. id). In case,
         to_edge provides additional edge data, it is stored in the path,too.
         """
 
-    def __contains__(self, vertex: [Vertex]) -> bool:
+    def __contains__(self, vertex: Vertex) -> bool:
         """Returns whether a path for *vertex* exists in the *Paths*
         container. This allows for expressions like *vertex in paths*."""
         if vertex is None:
@@ -46,7 +46,7 @@ class Paths(ABC):
         vertex_id = self._vertex_to_id(vertex) if self._vertex_to_id else vertex
         return vertex_id in self._predecessor
 
-    def iter_vertices_to_start(self, vertex: [Vertex]) -> Iterator[Vertex]:
+    def iter_vertices_to_start(self, vertex: Vertex) -> Iterator[Vertex]:
         """Iterate the vertices in the path to *vertex* from the last to the
         first."""
         if vertex not in self:  # Included: check that vertex is not None
@@ -57,7 +57,7 @@ class Paths(ABC):
             vertex_id = self._vertex_to_id(vertex) if self._vertex_to_id else vertex
             vertex = self._predecessor.get(vertex_id)
 
-    def iter_vertices_from_start(self, vertex: [Vertex]) -> Iterator[Vertex]:
+    def iter_vertices_from_start(self, vertex: Vertex) -> Iterator[Vertex]:
         """Iterate the vertices in the path to *vertex* from the first to the
         last. Internally, a list of all the vertices is created and then
         reversed and iterated."""
@@ -65,12 +65,12 @@ class Paths(ABC):
 
     @abstractmethod
     def _edge(
-        self, from_vertex: [Vertex], to_vertex: [Vertex], to_vertex_id: Hashable
-    ) -> tuple[Any]:
+        self, from_vertex: Vertex, to_vertex: Vertex, to_vertex_id: Hashable
+    ) -> tuple:
         """Create an edge tuple out of its elements. To be overridden in sub
         classes."""
 
-    def iter_edges_to_start(self, vertex: [Vertex]) -> Iterator[tuple]:
+    def iter_edges_to_start(self, vertex: Vertex) -> Iterator[tuple]:
         """Iterate the edges of the path to *vertex* from the last to the
         first."""
         if vertex not in self:  # Included: check that vertex is not None
@@ -87,14 +87,14 @@ class Paths(ABC):
             yield self._edge(from_vertex, to_vertex, to_vertex_id)
             to_vertex = from_vertex
 
-    def iter_edges_from_start(self, vertex: [Vertex]) -> Iterator[tuple]:
+    def iter_edges_from_start(self, vertex: Vertex) -> Iterator[tuple]:
         """Iterate the edges of the path to *vertex* from the first to the
         last. Internally, a list of all the edges is created and then
         reversed and iterated."""
         return reversed(tuple(self.iter_edges_to_start(vertex)))
 
     @abstractmethod
-    def __getitem__(self, vertex: [Vertex]) -> tuple:
+    def __getitem__(self, vertex: Vertex) -> tuple:
         """Returns the path that ends at *vertex* as a tuple. The orientation
         of the path is from first to last vertex / edge. In case of a labeled
         path, the edges are returned, for an unlabeled path the vertices.
@@ -132,11 +132,11 @@ class PathsOfUnlabeledEdges(Paths):
         self._predecessor[to_vertex_id] = from_vertex
 
     def _edge(
-        self, from_vertex: [Vertex], to_vertex: [Vertex], to_vertex_id: Hashable
+        self, from_vertex: Vertex, to_vertex: Vertex, to_vertex_id: Hashable
     ) -> tuple[Vertex, Vertex]:
         return (from_vertex, to_vertex)
 
-    def __getitem__(self, vertex: [Vertex]) -> tuple[Vertex]:
+    def __getitem__(self, vertex: Vertex) -> tuple[Vertex, ...]:
         """Tuple of the vertices in the path from the first to the given
         vertex. Internally, a list of the vertices in backward order is
         created and then reversed."""
@@ -182,11 +182,11 @@ class PathsOfLabeledEdges(Paths):
         self._edge_data[to_vertex_id] = to_edge[1:]
 
     def _edge(
-        self, from_vertex: [Vertex], to_vertex: [Vertex], to_vertex_id: Hashable
-    ) -> tuple[Vertex, Vertex, ...]:
+        self, from_vertex: Vertex, to_vertex: Vertex, to_vertex_id: Hashable
+    ) -> tuple:
         return (from_vertex, to_vertex, *self._edge_data[to_vertex_id])
 
-    def __getitem__(self, vertex: [Vertex]) -> tuple[tuple]:
+    def __getitem__(self, vertex: Vertex) -> tuple[tuple, ...]:
         """Tuple of the vertices in the path from the first to the given
         vertex. Internally, a list of all the edges in backward order is
         created and then reversed."""

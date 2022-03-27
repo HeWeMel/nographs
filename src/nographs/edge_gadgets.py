@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 import itertools
 from collections.abc import Sequence, Mapping, Callable, Iterable
-from typing import Union
+from typing import Union, Any
 
 
 # ---------- functions for handling test data given as some kind of edges -------------
@@ -94,7 +94,7 @@ def adapt_edge_iterable(
     :return: Neighbor function that can be used as parameter for one of the traversal
         algorithms.
     """
-    edge_dict = collections.defaultdict(list)
+    edge_dict: dict[Any, list[Any]] = collections.defaultdict(list)
     if add_inverted:
         if labeled:
             # Labeled edges are provided and all data should be used
