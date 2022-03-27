@@ -60,8 +60,8 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 **Documentation**
 
-- `Installation guide <installation>`.
-- `Tutorial <concept_and_examples>` (contains many `examples <examples>`).
+- `Installation guide <installation>`
+- `Tutorial <concept_and_examples>` (contains many `examples <examples>`)
 - `API reference <api>`
 
 **Example**
