@@ -7,7 +7,7 @@ long_description = (here / 'README.rst').read_text(encoding='utf-8')
 
 setup(
     name="nographs",
-    version="0.0.1.dev3",
+    version="2.5.0.dev1",
     description=("Graph analysis – the lazy (evaluation) way: Analysis on the fly,"
                  + "for graphs, that are computed and/or adapted on the fly."),
     long_description=long_description,
@@ -19,7 +19,7 @@ setup(
     package_dir={'': 'src'},
     # install_requires=[],
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Stable',
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",
