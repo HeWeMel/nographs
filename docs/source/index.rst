@@ -124,6 +124,10 @@ A part of the graph, the vertices up to 41, is shown in the following picture.
 Arrows denote directed edges. The edges in red show shortest paths from
 0 to other vertices.
 
+.. image:: nographs_example_graph.PNG
+   :class: with-shadow
+   :width: 600px
+
 **And now?**
 
 You can imagine an infinite generator of primes, defined by just a graph and
@@ -137,7 +141,3 @@ or even on partial analysis results from already processed parts of the same gra
 Let's `build it <installation>`.
 
 Welcome to NoGraphs!
-
-.. image:: nographs_example_graph.PNG
-   :class: with-shadow
-   :width: 600px
