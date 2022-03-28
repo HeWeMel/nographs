@@ -143,13 +143,17 @@ Arrows denote directed edges. The edges in red show shortest paths from
 
 **And now?**
 
-You can imagine an infinite generator of primes, defined by just a graph and
-a call to a standard graph algorithm? Or a graph that defines an infinite set
-of Towers of Hanoi problems in a generic way, without fixing the number of
-towers, disk sizes, and the start and goal configuration - and a specific
-problem instance is solved by just one library call? Or graphs that are dynamically
-computed based on other graphs, or on analysis results about other graphs,
-or even on partial analysis results from already processed parts of the same graph?
+Can you imagine...
+
+- An infinite generator of primes, defined by just a graph and
+  a call to a standard graph algorithm?
+- Or a graph that defines an infinite set
+  of Towers of Hanoi problems in a generic way, without fixing the number of
+  towers, disk sizes, and the start and goal configuration - and a specific
+  problem instance is solved by just one library call?
+- Or graphs that are dynamically
+  computed based on other graphs, or on analysis results about other graphs,
+  or even on partial analysis results from already processed parts of the same graph?
 
 Let's `build it <https://nographs.readthedocs.io/en/latest/installation.html>`__.
 

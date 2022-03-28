@@ -15,6 +15,7 @@ NoGraphs: Graph analysis on the fly
    gadgets
    api.rst
    genindex
+   changelog
 
 NoGraphs simplifies the analysis of graphs that can not or should not be fully
 computed, stored or adapted, e.g. infinite graphs, large graphs and graphs with
