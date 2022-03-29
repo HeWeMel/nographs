@@ -29,7 +29,7 @@ ChangeLog
 - Path: Representation of predecessor relation changed from linked tuples
   to dict
 
-** Till 1.6.0 2021-05**
+**Till 1.6.0 2021-05**
 
 - Further algorithms added
 - More support functions for traversal and graph adaption added
