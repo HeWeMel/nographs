@@ -1,11 +1,13 @@
-pip>=21.3.1
-wheel>=0.37.1
+# build and upload
+pip>=22.0.4
+build>=0.7.0
 twine>=3.7.1
-coverage>=6.3
+# documentation
 docutils>=0.17.1
-# docutils>=0.18.1
-black
-sphinx-rtd-theme
 sphinx
+sphinx-rtd-theme
+# source formatting, testing, type checking
+black
+coverage>=6.3
 flake8
 mypy
