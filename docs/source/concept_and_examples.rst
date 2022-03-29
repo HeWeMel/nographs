@@ -1,8 +1,8 @@
 Concept & examples
 ------------------
 
-One the fly - the basics
-~~~~~~~~~~~~~~~~~~~~~~~~
+On the fly - the basics
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ..
    Import nographs for doctests of this document. Does not go into docs.
