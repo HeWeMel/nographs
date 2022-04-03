@@ -27,8 +27,8 @@ class documentation in the API reference for details.
       depth** (the depth of a vertex is the edge count of the path with least edges
       from a start vertex).
 
-    - The traversal state provides **vertex depth** / **search depth**, **paths**,
-      and set of **visited vertices**.
+    - The traversal state provides **vertex depth** / **search depth**, **paths**
+      (optionally), and set of **visited vertices**.
 
     - Examples: See `example-traversal-breadth-first-in-maze` and
       `example-traversal-breadth-first-towers-hanoi`.
@@ -41,7 +41,7 @@ class documentation in the API reference for details.
       and **goes back a step to some already visited vertex and follows a
       further edge starting there only when necessary** to come to new vertices.
 
-    - The traversal state provides **search depth**, **paths**,
+    - The traversal state provides **search depth**, **paths** (optionally),
       and set of **visited vertices**.
 
     - Example: See `example-traversal-depth-first-integers`.
@@ -57,8 +57,8 @@ class documentation in the API reference for details.
       (indirect) predecessors of each other. If there is such a cycle in the
       graph, this is detected.
 
-    - The traversal state provides **search depth**, **paths**, and set of
-      **visited vertices**.
+    - The traversal state provides **search depth**, **paths** (optionally),
+      and set of **visited vertices**.
 
     - Example: See `example-topological_sorting_processes`.
 
@@ -121,8 +121,8 @@ respective class documentation in the API reference for details.
       **from short to long distances (minimal sum of edge weights)** from
       some start vertices.
 
-    - The traversal state provides **vertex distance**, **search depth**, **paths**
-      and **distances**.
+    - The traversal state provides **vertex distance**, **search depth**,
+      **paths** (optionally) and **distances** (optionally).
 
     - Examples: See `example-shortest-paths-in-maze`,
       `Sieve of Eratosthenes <eratosthenes_with_Dijkstra>`,
@@ -137,9 +137,9 @@ respective class documentation in the API reference for details.
     - **Finds the shortest path (minimal sum of edge weights)** from one of the start
       vertices to the goal vertex.
 
-    - The traversal state provides **path length**, **search depth** and **paths**.
-      For the goal vertex, the path length is the length of the shortest path
-      (distance from a start vertex).
+    - The traversal state provides **path length**, **search depth** and
+      **paths** (optionally). For the goal vertex, the path length is the
+      length of the shortest path (distance from a start vertex).
 
     - Examples: See `example-shortest-paths-with-heuristic`
       and `the examples below <examples_weighted_graphs>`.
@@ -155,7 +155,7 @@ respective class documentation in the API reference for details.
       and there is no other such tree, that has a smaller total of edge weights
       than the found tree.
 
-    - The traversal state provides **edge** and **paths**.
+    - The traversal state provides **edge** and **paths** (optionally).
 
     - Example: See `the examples below <examples_weighted_graphs>`.
 

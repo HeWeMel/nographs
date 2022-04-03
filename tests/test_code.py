@@ -784,13 +784,14 @@ class NormalGraphTraversalsWithLabels:
     """-- Small example graph. The three strategies that need edge weights. --
     For TraversalShortestPaths, test option known_distances, too.
 
+    First we test without know_distances, and with option keep_distances.
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.distance=} {traversal.depth=}")
     ...     return ((1, 2), (2, 1)) if vertex == 0 else (
     ...            ((3, 2),) if vertex in (1, 2) else ())
 
     >>> traversal = nog.TraversalShortestPaths(next_edges=next_edges)
-    >>> traversal = traversal.start_from(0, build_paths=True)
+    >>> traversal = traversal.start_from(0, build_paths=True, keep_distances=True)
     >>> reported = []
     >>> for vertex in traversal:
     ...     reported.append(vertex)
@@ -800,17 +801,20 @@ class NormalGraphTraversalsWithLabels:
     ...        f"traversal.paths={traversal.paths[vertex]}")
     Next called: vertex=0 traversal.distance=0 traversal.depth=0
     Reported: vertex=2 traversal.distance=1 traversal.depth=1
-    distances for reported vertices: {2: 0} traversal.paths=(0, 2)
+    distances for reported vertices: {2: 1} traversal.paths=(0, 2)
     Next called: vertex=2 traversal.distance=1 traversal.depth=1
     Reported: vertex=1 traversal.distance=2 traversal.depth=1
-    distances for reported vertices: {2: 0, 1: 0} traversal.paths=(0, 1)
+    distances for reported vertices: {2: 1, 1: 2} traversal.paths=(0, 1)
     Next called: vertex=1 traversal.distance=2 traversal.depth=1
     Reported: vertex=3 traversal.distance=3 traversal.depth=2
-    distances for reported vertices: {2: 0, 1: 0, 3: 0} traversal.paths=(0, 2, 3)
+    distances for reported vertices: {2: 1, 1: 2, 3: 3} traversal.paths=(0, 2, 3)
     Next called: vertex=3 traversal.distance=3 traversal.depth=2
     >>> print("All paths:", [traversal.paths[vertex] for vertex in range(4)])
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
+    >>> print("All distances:", dict(traversal.distances))
+    All distances: {0: 0, 1: 2, 2: 1, 3: 3}
 
+    Now we test with known_distances, but without option keep_distances.
     Start vertex starts with distance 2, and we pretend to have a path to 1 with
     distance 0. Effect: All reported distances are 2 higher than in the test before,
     because the traversal starts at distance 2, and vertex 1 is not visited and

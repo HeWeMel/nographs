@@ -7,8 +7,8 @@ long_description = (here / 'README.rst').read_text(encoding='utf-8')
 
 setup(
     name="nographs",
-    version="2.5.0",
-    description=("Graph analysis – the lazy (evaluation) way: Analysis on the fly,"
+    version="2.5.1",
+    description=("Graph analysis – the lazy (evaluation) way: Analysis on the fly, "
                  + "for graphs, that are computed and/or adapted on the fly."),
     long_description=long_description,
     long_description_content_type="text/x-rst",

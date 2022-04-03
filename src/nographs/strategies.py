@@ -50,7 +50,7 @@ def _define_visited(
 
 
 def _create_no_paths(labeled_path: bool):
-    """ Create setting of paths, predecessors and edge_data for
+    """Create setting of paths, predecessors and edge_data for
     case that no paths should be built."""
     if labeled_path:
         raise RuntimeError("Option labeled_paths without option build_paths.")
@@ -63,7 +63,7 @@ def _create_paths(
     vertex_to_id: Optional[VertexToID],
 ) -> tuple[Paths, dict, Optional[dict]]:
     """Translate from configuration of path generation to setting of
-    paths, predecessors and edge_data. """
+    paths, predecessors and edge_data."""
 
     predecessors = dict[Any, Any]()
     if not labeled_path:
@@ -265,7 +265,8 @@ class Traversal(ABC):
             )
         else:
             self.paths, self._predecessors, self._edge_data = _create_no_paths(
-                labeled_paths)
+                labeled_paths
+            )
 
         self._calculation_limit = calculation_limit
 
@@ -972,14 +973,14 @@ class TraversalShortestPaths(_TraversalWithLabels):
       If labeled edges were provided, paths contain them instead of just vertices,
       if demanded.
 
-    - **distances:** A dictionary. For the vertices that have already been visited,
-      it contains their distance.
-
-      Note: Typically, it contains values for some other vertices, too. These
-      might not be final and could change until the respective vertex is visited.
-
-      When a finite graph has been fully traversed, it contains the distances of all
-      vertices that are reachable from the start vertices.
+    - **distances:** A dictionary with current candidates of distance values
+      (distance from a start vertex). Without option *keep_distances*,
+      the value for a vertex is removed once the vertex has been reported. With
+      option *keep_distances*, values are never removed, and that means: During a
+      traversal, the distance values for already reported vertices can be found in
+      the dictionary. And when a finite graph has been fully traversed,
+      the dictionary contains exactly and only the distances of all vertices that are
+      reachable from the start vertices.
 
     **Inherited methods:** from `Traversal`: `__iter__`, `__next__`,
     `go_for_vertices_in`, `go_to`.
@@ -1005,6 +1006,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
         build_paths: bool = False,
         labeled_paths: bool = False,
         calculation_limit: Optional[int] = None,
+        keep_distances: bool = False,
         known_distances: Optional[dict[Hashable, Real]] = None,
     ) -> TraversalShortestPaths:
         """
@@ -1025,18 +1027,23 @@ class TraversalShortestPaths(_TraversalWithLabels):
         :param calculation_limit: If provided, maximal number of vertices to process
             (read in) from your graph. If it is exceeded, a RuntimeError will be raised.
 
+        :param keep_distances: If True, the found distances of vertices are
+            collected in traversal attribute distances, and not deleted after
+            having reported the vertex. See attribute distances.
+
         :param known_distances: If provided, this dict is used instead of an internal
-            one to keep the distances of vertices that have already been visited (resp.
-            their hashable ids from vertex_to_id is used as key) from some start vertex.
+            one to keep distance candidates and final distances values of reported
+            vertices (resp. their hashable ids from vertex_to_id is used as key) from
+            some start vertex.
+
             For vertices without known distance, it must yield float('infinity'). The
-            internal default implementation uses a collections.defaultdict. Typical use
-            cases are: 1) pre-loading known distances of vertices, and the vertices
-            should not be visited if no smaller distance is found during the traversal,
-            or 2) getting online access to the internal bookkeeping of visited vertices
-            and their distances, or 3) for providing your own way for storing the
-            distance of a vertex that has already been visited (if you do that in your
-            own graph structure instead of a dict, visited_vertices needs to provide the
-            methods __contains__, __getitem__ and __setitem__).
+            internal default implementation uses a collections.defaultdict. Typical
+            use cases are: 1) pre-loading known distances of vertices, and the
+            vertices should not be visited if no smaller distance is found during the
+            traversal, and 2) providing your own way for storing the distances (if
+            you do that in your own graph structure instead of a dict,
+            visited_vertices needs to provide the methods __contains__, __getitem__
+            and __setitem__).
 
         :return: Traversal, that has been started, e.g., the methods go* can now be
             used.
@@ -1056,6 +1063,7 @@ class TraversalShortestPaths(_TraversalWithLabels):
         )
         self.distance = None
         self.depth = None
+        self.keep_distances = keep_distances
         self.distances = known_distances
         super()._start()
         return self
@@ -1073,6 +1081,8 @@ class TraversalShortestPaths(_TraversalWithLabels):
             predecessors,
             edge_data,
         ) = args
+
+        keep_distances = self.keep_distances
 
         # Create booleans (avoid checks with "is")
         edge_data_exists = edge_data is not None
@@ -1123,9 +1133,10 @@ class TraversalShortestPaths(_TraversalWithLabels):
                 v_id = vertex_to_id(vertex) if vertex_to_id else vertex
                 if path_weight > distances[v_id]:
                     continue
-                # (Allow garbage collector to free distance value if nowhere else
-                # needed any more)
-                distances[v_id] = 0
+                if not keep_distances:
+                    # (Allow garbage collector to free distance value if nowhere else
+                    # needed any more)
+                    distances[v_id] = 0
 
             # Export traversal data to traversal attributes
             self.distance = path_weight
