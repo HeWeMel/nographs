@@ -56,17 +56,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade flake8 coverage mypy
+          python -m pip install --upgrade flake8 coverage mypy black
       - name: Lint all python files with flake8
         run: |
           # stop the build if there are flake8 errors (E203,W505 not compatible to black)
           flake8 src tests --count --extend-ignore=E203,W503 --max-line-length=88 --show-source --statistics
-      - name: Type checking package source with mypy
+      - name: Type check package source with mypy
         run: |
           mypy src/nographs
+      - name: Check source code formatting with Black
+        run: |
+          black src/nographs --check --verbose --diff
       - name: Install from source (required for the pre-commit tests)
         run: python -m pip install .
-      - name: Test with pytest
+      - name: Run all tests (including doc tests)
         run: python ./tests/test_nographs.py
       - name: Upload coverage
         uses: codecov/codecov-action@v1
