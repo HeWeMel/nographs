@@ -569,8 +569,8 @@ class TraversalDepthFirst(_TraversalWithOrWithoutLabels):
 
     :param is_tree: bool: If it is sure, that during each traversal run, each vertex can
         be reached only once, is_tree can be set to True. This improves performance,
-        but attribute *visited* of the traversal will not be updated during and after
-        the traversal.
+        but attributes *visited* and *depth* of the traversal will not be updated
+        during and after the traversal.
 
     :param vertex_to_id: See `VertexToID` function.
 
