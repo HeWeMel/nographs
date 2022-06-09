@@ -4,7 +4,7 @@ ChangeLog
 **v2.5.1** (2022-04-03)
 
 - Class TraversalShortestPaths: Error in documentation corrected,
-  option keep_distances added.
+  option keep_distances added. 
 
 
 **v2.5.0** (2022-03-28)
