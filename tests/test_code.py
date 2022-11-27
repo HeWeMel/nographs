@@ -248,6 +248,10 @@ class ProtocolAndABCNotImplementedErrors:
     Traceback (most recent call last):
     NotImplementedError
 
+    >>> nog.VertexSequenceWrapperForSetProto._from_iterable(None, None)
+    Traceback (most recent call last):
+    NotImplementedError
+
     >>> nog.VertexSequenceWrapperForMappingProto.sequence(None)
     Traceback (most recent call last):
     NotImplementedError
@@ -355,6 +359,10 @@ class ProtocolAndABCNotImplementedErrors:
     AssertionError: Call to a method of this object is not expected to ever happen
 
     >>> nog._VertexSequenceWrapperAssertNoCall.update_default(None, None)
+    Traceback (most recent call last):
+    AssertionError: Call to a method of this object is not expected to ever happen
+
+    >>> nog._VertexSequenceWrapperAssertNoCall._from_iterable(None, None)
     Traceback (most recent call last):
     AssertionError: Call to a method of this object is not expected to ever happen
     """
@@ -490,6 +498,9 @@ class PathHandling:
 
     >>> paths_dummy = nog._PathsDummy()  # noinspection PyProtectedMember
     >>> paths_dummy._check_vertex(None)  # noinspection PyProtectedMember
+    Traceback (most recent call last):
+    RuntimeError: No paths available: Traversal not started or no paths requested.
+    >>> paths_dummy.__getitem__(None)  # noinspection PyProtectedMember
     Traceback (most recent call last):
     RuntimeError: No paths available: Traversal not started or no paths requested.
     >>> predecessor = paths_dummy._predecessor

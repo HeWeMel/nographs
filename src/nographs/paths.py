@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence, Iterator, MutableMapping
 from typing import Optional, Any, Generic, cast, Union
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import nographs
 from nographs import (
@@ -216,6 +216,7 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
             "Edges with labels needed, and Traversal needs to know about them"
         )
 
+    @abstractmethod
     def __getitem__(
         self, vertex: T_vertex
     ) -> Union[
@@ -279,6 +280,16 @@ class _PathsDummy(Paths[T_vertex, T_vertex_id, Any]):
         """Raise RuntimeError with helpful explanation. This method
         is called by each method of Paths that returns a path as first step.
         So, they all raise the exception."""
+        raise RuntimeError(
+            "No paths available: " + "Traversal not started or no paths requested."
+        )
+
+    def __getitem__(
+        self, vertex: T_vertex
+    ) -> Union[
+        Sequence[T_vertex],
+        Sequence[UnweightedLabeledFullEdge[T_vertex, T_labels]],
+    ]:
         raise RuntimeError(
             "No paths available: " + "Traversal not started or no paths requested."
         )
@@ -418,20 +429,17 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
 
         :param path_edges: tuples (from_vertex, to_vertex, to_vertex_id)
         """
-        attributes: Optional[T_labels]
+        path_attributes: Optional[T_labels]
+        res: UnweightedLabeledFullEdge[T_vertex, T_labels]
         for from_vertex, vertex, vertex_id in path_edges:
             # to_vertex_id is contained in self._predecessor
             # (see _iter_raw_edges_to_start).
             # So we know: No KeyError or IndexError will occur here, and we will not
             # get None as result.
-            path_attributes: Optional[T_labels] = self._attributes_collection[vertex_id]
+            path_attributes = self._attributes_collection[vertex_id]
             assert path_attributes is not None
             # noinspection PyTypeChecker
-            res: UnweightedLabeledFullEdge[T_vertex, T_labels] = (
-                from_vertex,
-                vertex,
-                path_attributes,
-            )  # PyCharm cannot check this
+            res = (from_vertex, vertex, path_attributes)  # PyCharm cannot check this
             yield res
 
     def iter_labeled_edges_to_start(

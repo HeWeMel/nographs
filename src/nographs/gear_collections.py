@@ -261,6 +261,7 @@ class VertexSequenceWrapperForSetProto(
     ) -> "VertexSequenceWrapperForSetProto":
         """Return a new VertexSequenceWrapperForSetProto with the *elements*
         as content."""
+        raise NotImplementedError
 
 
 class VertexSequenceWrapperForMappingProto(
@@ -320,9 +321,9 @@ class _GettableSettableForGearAssertNoCall(
 
 
 class _VertexSequenceWrapperAssertNoCall(
-    VertexSequenceWrapperForSetProto[T_hashable_key_contra, T_value_contra, T_value_co],
+    VertexSequenceWrapperForSetProto[T_hashable_key, T_value_contra, T_value_co],
     VertexSequenceWrapperForMappingProto[
-        T_hashable_key_contra, T_value_contra, T_value_co
+        T_hashable_key, T_value_contra, T_value_co
     ],
 ):
     """An implementation of the protocols that implements nothing,
@@ -357,6 +358,8 @@ class _VertexSequenceWrapperAssertNoCall(
     def update_default(self, elements):
         raise AssertionError(called_by_mistake)
 
+    def _from_iterable(self, elements):
+        raise AssertionError(called_by_mistake)
 
 # - Set
 

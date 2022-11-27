@@ -882,7 +882,7 @@ class TraversalBreadthFirstFlex(
         #  Any or 'type: ignore' is slower)
         edge_or_vertex: Any  # "Hole" in typing, but types "around" make it safe
         neighbor: T_vertex  # Re-establish type "after" the "hole"
-        data_of_edge: T_labels  # Re-establish type "after" the "hole"
+        edge_data: T_labels  # Re-establish type "after" the "hole"
 
         # ----- Inner loop -----
 
