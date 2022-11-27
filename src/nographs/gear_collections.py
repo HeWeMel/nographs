@@ -860,11 +860,10 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
             value_high += 8
 
     def __len__(self) -> int:
-        return (
-            sum(value.bit_count() for value in self._sequence)
-            if sys.version_info >= (3, 10) else
-            sum(bin(value).count("1") for value in self._sequence)
-        )
+        if sys.version_info >= (3, 10):  # pragma: no cover
+            return sum(value.bit_count() for value in self._sequence)
+        else:  # pragma: no cover
+            return sum(bin(value).count("1") for value in self._sequence)
 
     def add(self, key: NonNegativeDenseInt) -> None:
         sequence = self._sequence
