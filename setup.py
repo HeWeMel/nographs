@@ -7,7 +7,7 @@ long_description = (here / 'README.rst').read_text(encoding='utf-8')
 
 setup(
     name="nographs",
-    version="2.5.1",
+    version="3.0.0dev2",
     description=("Graph analysis – the lazy (evaluation) way: Analysis on the fly, "
                  + "for graphs, that are computed and/or adapted on the fly."),
     long_description=long_description,
@@ -17,6 +17,7 @@ setup(
     author_email='HeWeMel@web.de',
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    package_data={"nographs": ["py.typed"]},
     # install_requires=[],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -43,8 +44,3 @@ setup(
     },
     license_files='LICENSE',
 )
-
-# long_description='%s\n%s' % (
-#         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S).sub('', read('README.rst')),
-#         re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))
-#     ),

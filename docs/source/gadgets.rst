@@ -8,8 +8,8 @@ Gadgets
 The functions and classes explained in this section ease the adaption
 of existing graphs, especially for quick tests with some small examples.
 
-They do not belong to the core of NoGraphs and are not needed for
-productive use of the library.
+They do not belong to the core of NoGraphs, are not needed for
+productive use of the library, and are only gradually typed.
 
 .. _edge_gadgets:
 
@@ -27,29 +27,31 @@ This function returns a `NextVertices` or `NextEdges` function for graphs that a
 stored in a **list of edges**. The examples show the use cases and the
 respective application of the function:
 
-  - **Iterable of unlabeled edges**, e.g. a tuple or list
+  - **Iterable of unlabeled, unweighted edges**, e.g. a tuple or list
 
     .. code-block:: python
 
      >>> edges1 = (('A', 'B'), ('A', 'C'), ('C', 'D'))
      >>> next_vertices_1 = nog.adapt_edge_iterable(
-     ...    edges1, add_inverted=False, labeled=False)
+     ...    edges1, add_inverted=False, attributes=False)
 
-  - **Iterable of labeled edges**, e.g. a tuple or list, and the **labels should be used**
+  - **Iterable of labeled and/or weighted edges**, e.g. a tuple or list, and
+    the **labels and/or weights should be used**
 
     .. code-block:: python
 
      >>> edges2 = (('A', 'B', 30), ('A', 'C', 10), ('C', 'D', 10))
      >>> next_edges_1 = nog.adapt_edge_iterable(
-     ...    edges2, add_inverted=False, labeled=True)
+     ...    edges2, add_inverted=False, attributes=True)
 
-  - **Iterable of labeled edges**, e.g. a tuple or list, and the **labels should be ignored**
+  - **Iterable of labeled and/or weighted edges**, e.g. a tuple or list, and
+    the **labels and weights should be ignored**
 
     .. code-block:: python
 
      >>> edges2 = (('A', 'B', 30), ('A', 'C', 10), ('C', 'D', 10))
      >>> next_vertices_2 = nog.adapt_edge_iterable(
-     ...    edges2, add_inverted=False, labeled=False)
+     ...    edges2, add_inverted=False, attributes=False)
 
 ..
    Hidden DocTests:
@@ -64,9 +66,9 @@ respective application of the function:
    >>> tuple(traversal.start_from('A', build_paths=True))
    ('C', 'D', 'B')
 
-Parameter *labeled* informs function `adapt_edge_index` whether the given
-**graph consists of labeled edges**
-and the **labels should be take into the generated function**.
+Parameter *attributes* informs function `adapt_edge_index` whether the given
+**graph consists of labeled and/or weights edges**
+and the **labels and/or weights should be take into the generated function**.
 
 Set parameter *add_inverted* to True, **if your graph is undirected** (i.e., two
 vertices are always either connected by edges in both directions or not connected
@@ -92,7 +94,7 @@ respective application of the function:
 
    >>> edges1 = {'A': ('B', 'C'), 'C': ('D',)}
    >>> next_vertices_1 = nog.adapt_edge_index(
-   ...    edges1, add_inverted=False, labeled=False)
+   ...    edges1, add_inverted=False, attributes=False)
 
 - **Sequence of respectively connected vertices**, e.g. built of tuples or lists,
   and vertices are the integers
@@ -101,23 +103,25 @@ respective application of the function:
 
    >>> edges2 = ((1, 2), (), (3,))  # same as above, 0...3 used instead of A...D
    >>> next_vertices_2 = nog.adapt_edge_index(
-   ...    edges2, add_inverted=False, labeled=False)
+   ...    edges2, add_inverted=False, attributes=False)
 
-- **Mapping from vertices to outgoing labeled edges**, e.g. in a dictionary
+- **Mapping from vertices to outgoing edges with edge attributes**
+  (weights and/or labels), e.g. in a dictionary
 
   .. code-block:: python
 
    >>> edges3 = {'A': (('B', 30), ('C', 10)), 'C': (('D', 10),)}
    >>> next_edges_1 = nog.adapt_edge_index(
-   ...    edges3, add_inverted=False, labeled=True)
+   ...    edges3, add_inverted=False, attributes=True)
 
-- **Sequence of respectively outgoing labeled edges**, e.g. built of tuples or lists
+- **Sequence of respectively outgoing edges with edge attributes**
+  (weights and/or labels), e.g. built of tuples or lists
 
   .. code-block:: python
 
    >>> edges4 = (((1, 30), (2, 10)), (), ((3, 10),))
    >>> next_edges_2 = nog.adapt_edge_index(
-   ...    edges4, add_inverted=False, labeled=True)
+   ...    edges4, add_inverted=False, attributes=True)
 
 ..
    Hidden DocTests:
@@ -149,8 +153,9 @@ Let's try out one of the generated neighborship functions:
 
 **Parameters:**
 
-- Set parameter *labeled* to *True* if the given graph
-  consists of **labeled edges**.
+- Set parameter *attributes* to *True* if the given graph
+  consists of **edges with edge attributes**, and to *False*,
+  if **connected vertices** are provided.
 
 - Set parameter *add_inverted* to True, **if your graph is undirected** (i.e., two
   vertices are always either connected by edges in both directions or not connected
@@ -161,7 +166,7 @@ Let's try out one of the generated neighborship functions:
   .. code-block:: python
 
      >>> next_vertices_1b = nog.adapt_edge_index(
-     ...    edges1, add_inverted=True, labeled=False)
+     ...    edges1, add_inverted=True, attributes=False)
      >>> for vertex in "ABCD":
      ...    print("For vertex {}, it returns {}".format(
      ...          vertex, next_vertices_1b(vertex, None)))
@@ -186,17 +191,17 @@ In case you have graph content that is
 the following support functions might help you with
 `adapting <graphs_and_adaptation>` it for NoGraphs.
 
+
 Class `Array <nographs.Array>`
 ++++++++++++++++++++++++++++++
 
-The functionality of the class can be divided in four groups:
+The functionality of the class can be divided in four groups. We explain them
+using the **example of a maze stored in a string**.
 
 **1) Array creation from nested sequences**
 
-   We explain this step using the example of a maze stored in a string.
-
    **Example:** Character *S* marks
-   he start vertex, *G* the goal vertex, and *#* positions we are not allowed to
+   the start vertex, *G* the goal vertex, and *#* positions we are not allowed to
    enter. We apply the Python functions *strip()* and *splitlines()* and get nested
    sequences: a Python array.
 
@@ -256,9 +261,26 @@ The functionality of the class can be divided in four groups:
 
       >>> starts, goals = (a.findall(c) for c in "SG")
 
-.. _class_array_part_3:
+**3) Mutable arrays**
 
-**3) Automate the generation of NextVertices or NextEdges function**
+  We can
+  **create a mutable array just by initiating it by mutable nested sequences**,
+  e.g., a list of lists.
+
+  But it is also possible to use NoGraphs to
+  **create a mutable Array from an immutable one**, and then to change its contents:
+
+  .. code-block:: python
+
+    >>> mutable_array = a.mutable_copy()
+    >>> mutable_array[(0, 2)] = 'S'
+    >>> mutable_array[(0, 2)]
+    'S'
+
+
+.. _class_array_part_4:
+
+**4) Automate the generation of NextVertices or NextEdges function**
 
    **In the example:** We use the array content to define a `NextVertices`
    function, based on the information, that content "#" means "no edge to
@@ -304,39 +326,22 @@ The functionality of the class can be divided in four groups:
      >>> traversal.distance, traversal.paths[found]
      (12, ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (1, 2), (1, 3), (1, 4), (2, 4)))
 
-**4) Mutable arrays**
-
-  We can
-  **create a mutable array just by initiating it by mutable nested sequences**,
-  e.g., a list of lists.
-
-  But it is also possible to use NoGraphs to
-  **create a mutable Array from an immutable one**, and then to change its contents:
-
-  .. code-block:: python
-
-    >>> mutable_array = a.mutable_copy()
-    >>> mutable_array[(0, 2)] = 'S'
-    >>> mutable_array[(0, 2)]
-    'S'
-
-
 .. tip::
    For cases, where the methods *next_vertices_from_forbidden* and
    *next_vertices_from_cell_weights* of class *Array* do not cover your
-   exact scenario, you could combine functionality of the other methods of
+   exact scenario, you can easily combine functionality of the other methods of
    class *Array* with functionality of class `Position <nographs.Position>`
    in order to
    `manually define your individual callback function <maze_function_manually>`.
-   In fact, this is how the two methods are implemented. Class *Position*
-   is explained in the following section.
+   In fact, this is how the two methods are implemented.
+
 
 .. _tutorial_position:
 
 Class `Position <nographs.Position>`
 ++++++++++++++++++++++++++++++++++++
 
-A position in a n-dimensional array can be stored and manipulated in an
+A cell position in a n-dimensional array can be stored and manipulated in an
 instance of this class.
 
 We can **create a Position, add and subtract other vectors, and calculate the
@@ -448,7 +453,7 @@ We initiate a NoGraphs array by our maze:
 
 Instead of calling method
 `Array.next_vertices_from_forbidden <nographs.Array.next_vertices_from_forbidden>`
-like we saw it in `the section about class Array <class_array_part_3>`,
+like we saw it in `the section about class Array <class_array_part_4>`,
 we now create our `NextVertices` function manually, to be able to adapt
 the code to our needs:
 

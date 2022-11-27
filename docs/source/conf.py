@@ -67,18 +67,28 @@ default_role = 'any'
 # -- Options for autodocs ----------------------------------------------------
 
 autodoc_typehints_format = 'short'
+# autodoc_typehints = 'signature'  # default
+autodoc_typehints = 'description'
+# autodoc_typehints = 'both'
 
 # Prevent the following aliases from being expanded
-# (Note: VertexIterator is only needed due to an error in sphinx autodocs: With Vertex
-# in aliases, Iterator[Vertex] leads to WARNING "Failed to get a method signature for.."
-# with reason "unhashable type: 'TypeAliasForwardRef'". So, it was necessary
-# to encapsulate this in a artificial TypeAlias "VertexIterator = Iterator[Vertex]"
-# and to add the resolved typing manually in the autodoc_type_aliases.)
-aliases = ('Vertex', 'NextVertices', 'NextEdges', 'VertexToID', 'Vector', 'Limits')
-autodoc_type_aliases = {alias: alias for alias in aliases} | {
-  'VertexIterator': 'Iterator[Vertex]',
-  'EdgeIterator': 'Iterator[Edge]',
-  'Vectors': 'Sequence[Vector]'}
+# (Note: In gears.py, temporarily, due to a Sphinx bug, tuple[U, V]
+# is a TypeAlias (!) for Typing.Tuple[U, V]. It is listed here to avoid,
+# that Sphinx expands the TypeAlias.)
+aliases = ('NextVertices', 'NextEdges', 'VertexToID', 'Vector', 'Limits',
+           'UnweightedUnlabeledFullEdge', 'UnweightedLabeledFullEdge',
+           'WeightedUnlabeledFullEdge', 'WeightedLabeledFullEdge',
+           'WeightedOrLabeledFullEdge', 'OutEdge',
+           # 'VertexIdSet', 'VertexIdToDistanceMapping',
+           # 'VertexIdToVertexMapping', 'VertexIdToPathEdgeDataMapping',
+           )
+# The following would be helpful to conceal the tuple alias trick in Gears,
+# but when applied, the type aliases of return (!) values for Gears methods
+# are not evaluated anymore by Sphinx...
+# 'tuple',
+
+autodoc_type_aliases = {alias: alias for alias in aliases}  # | {
+# 'Vectors': 'Sequence[Vector]'}
 
 autoclass_content = "both"
 # autodoc_class_signature = "separated"
@@ -90,7 +100,67 @@ autodoc_default_options = {
     'exclude-members': '__weakref__, __new__'
 }
 
+
+# # The following works only in the signature, not in the type docs of parameters
+# def correct_generic_tuple(app, what, name:str, obj, options,
+#                           signature: str, return_annotation: str):
+#     # if what == "method" and name.find("gears") >= 0:
+#     #    signature = signature.replace('~T_', 'T_')
+#     signature = signature.replace('T_', 'TT')
+#     return (signature, return_annotation)
+#
+#
+# def setup(app):
+#     app.connect('autodoc-process-signature', correct_generic_tuple)
+
+
+# # The following works only in the docstrings, not in the type docs of parameters
+# def correct_generic_tuples_in_docstring(
+#         app, what, name, obj, options, lines
+# ):
+#     for i in range(len(lines)):
+#         lines[i] = lines[i].replace(r'~T', 'T_')
+#
+#
+# def setup(app):
+#     app.connect('autodoc-process-docstring',
+#                 correct_generic_tuples_in_docstring)
+
+
+# def setup(app):
+#     app.add_css_file('css/custom.css', priority=300)
+
 # 'special-members': '__init__',
+
+
+# The following is done directly in the docstrings. Explicit is better than implicit.
+# def adapt_bases(app, name, obj, options, bases):
+#     bases_unweighted = r"`Traversal` [`T_vertex`, `T_vertex_id`, `T_labels`]"
+#     bases_weighted = (
+#         r"Generic[`T_vertex`, `T_vertex_id`, `T_weight`, `T_labels`], "
+#         + bases_unweighted)
+#     for i in range(len(bases)):
+#         # The following approach to change the bases does not work, because a
+#         # bases entry is of type _GenericAlias, and it is not officially documented
+#         # how to work with this and replace content. And string processing destroys
+#         # the correct post processing for formatting...
+#         #
+#         # base: str = str(bases[i])
+#         # # The following two classes will be replaced if they occur as base
+#         # base = base.replace("_TraversalWithoutWeights[", "Traversal[")
+#         # base = base.replace("_TraversalWithWeights[", "Traversal[")
+#         # bases[i] = base
+#         base_str = str(bases[i])
+#         if base_str.find("_TraversalWithoutWeights") >= 0:
+#             # Fake Traversal as base, skip the hidden intermediate class
+#             bases[i] = bases_unweighted
+#         elif base_str.find("_TraversalWithWeights") >= 0:
+#             # Fake Traversal as base, skip the hidden intermediate class
+#             bases[i] = bases_weighted
+#
+#
+# def setup(app):
+#     app.connect('autodoc-process-bases', adapt_bases)
 
 
 # def skip(app, what, name, obj, skip, options):

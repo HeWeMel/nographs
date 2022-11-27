@@ -1,5 +1,5 @@
-Graph pruning, abstraction and multiplication
----------------------------------------------
+Graph pruning, abstraction, multiplication, union and intersection
+------------------------------------------------------------------
 
 ..
    Import nographs for doctests of this document. Does not go into docs.
@@ -8,21 +8,27 @@ Graph pruning, abstraction and multiplication
 Sometimes, we focus on just a part of a graph and leave out some vertices and edges,
 that are outside of our focus. This is a form of *graph pruning*.
 
-
 Sometimes, we want to analyze a graph from a simplified point of view, that makes it
 easier to understand or more efficient to process the graph, but preserves important
 properties of it. This is a form of
 *graph abstraction*.
 
-Sometimes, we want to combine two graphs in the sense of a multiplication: Vertices
-are combinations of vertices of the two graphs, end edges are combinations of edges
-of the two vertices. This creates a *product graph*.
+Sometimes, we want to combine two graphs by using one of the
+typical binary graph operations like *union* and *intersection*
+(see `Wikipedia <https://en.wikipedia.org/wiki/Graph_operations>`_ for
+details). For example, we could combine them in the sense of a multiplication:
+Vertices are combinations of vertices of the two graphs, end edges are combinations
+of edges of the two vertices. This creates a *product graph*
+(a *tensor product*, *cartesian product*, *lexicographical product*,
+or *strong product*, depending of details of the allowed combinations).
 
 All three kinds of operations on graphs are supported by NoGraphs and its API
 concept: We can easily implement them in application code on the basis of
-NextVertices resp. NextEdges functions, what gives us flexibility, and we can use
-the mechanisms of NoGraphs for necessary computation, what makes the implementation
-easier.
+*NextVertices* or *NextEdges* functions (see
+`graphs and adaptation <graphs_and_adaptation>`),
+what gives us flexibility, and we can
+use the mechanisms of NoGraphs for necessary computation, what makes the
+implementation easier.
 
 **Example:**
 
@@ -45,8 +51,8 @@ Step 2: We **prune the graph** to limit it to coordinates in the range 0...9:
    >>> def next_vertices_1d(i, _):
    ...     return filter(lambda j: j in range(10), next_vertices_1d_all(i,_))
 
-Step 3: We build the **product of the graph with itself** to get moves in two
-dimensions (horizontally, vertically, diagonally, and the zero move):
+Step 3: We build the **tensor product of the graph with itself** to get moves in
+two dimensions (horizontally, vertically, diagonally, and the zero move):
 
 .. code-block:: python
 
@@ -54,6 +60,16 @@ dimensions (horizontally, vertically, diagonally, and the zero move):
    >>> def next_vertices_2d(pos, _):
    ...     return (itertools.product(next_vertices_1d(pos[0], _),
    ...                               next_vertices_1d(pos[1], _)))
+
+.. tip::
+
+   Not only the tensor product can be implemented that easy:
+
+   If you need a **graph union**, just put the edges of both graphs for a given
+   vertex in sets, build the union of them, and return them.
+
+   If you need a **graph intersection**, do the same, but build the intersection of
+   the two edge sets, instead of the union.
 
 Step 4: We model the routes of a truck between a home position and 4 positions with
 goods. Only the travel distances measured in the needed moves according to step 3 are

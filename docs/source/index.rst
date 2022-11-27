@@ -12,7 +12,10 @@ NoGraphs: Graph analysis on the fly
    graphs_and_adaptation
    graph_operations
    algorithms
+   vertex_identity
+   gears
    gadgets
+   performance
    api.rst
    genindex
    changelog
@@ -39,23 +42,36 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - Flexible graph notion: Infinite directed multigraphs with loops and
   attributes (this includes
   `multiple adjacency, cycles, self-loops <supported-special-cases>`,
-  `directed edges <unlabeled_graphs>`,
-  `weighted edges and edges with application specific attributes <labeled_graphs>`).
-  Your `vertices <vertices>` can be nearly anything.
-  Currently, all algorithms are limited to locally finite
-  graphs (i.e., a vertex has only finitely many outgoing edges).
+  `directed edges <graphs_without_attributes>`,
+  `weighted edges and edges with application specific attributes
+  <graphs_with_attributes>`).
+  `Vertices <vertices>` can be nearly anything.
+  `Wide range of data types for edge weights <weights>` and path length
+  supported (float, int, Decimal, mpmath.mpf and others), e.g.,
+  for high precision computations.
+  Infinite graphs are supported, but need to be
+  locally finite (i.e., a vertex has only finitely many outgoing edges).
 - Results: `Reachability, depth, distance, paths and trees <algorithms>`.
   `Paths <paths_api>` can be
-  `calculated with vertices or edges or attributed edges <general-start_from>`
+  `calculated with vertices, edges or attributed edges <general-start_from>`
   and can be iterated in both directions.
-- Flexible API: It eases operations like
-  `graph pruning, graph product and graph abstraction <graph_operations>`, the
-  computation of `search-aware graphs <search_aware_graphs>` and
-  `traversals of vertex equivalence classes on the fly <vertex-identity>`. It is even
-  possible to `replace some of the internal data structures <replace-internals>`
-  and to interfere with them during the search.
+- Flexible API: Eases `graph operations <graph_operations>` like
+  graph pruning, graph abstraction, the typical binary
+  graph operations (union, intersection, several types of products), the
+  computation of `search-aware graphs <search_aware_graphs>`, and
+  `traversals of vertex equivalence classes on the fly <vertex_identity>`.
+- Flexible bookkeeping:
+  `Several sets of bookkeeping data structures <replace-internals>`,
+  optimized for different situations (data types used by the application,
+  hashing vs. indexing, collections for *Python* objects or *C* native data types,
+  ...); `Adaptable and extendable <new_gear>`, e.g., specialized collections of
+  3rd party libraries can be integrated easily and runtime efficiently. Internal
+  bookkeeping data can be
+  `pre-initialized and accessed during computations <initializing_bookkeeping>`.
+- Typing: The API `can be used fully typed <typing>` (optionally).
 - Implementation: Pure Python (>=3.9). It introduces no further dependencies.
-  Runtime and memory performance have been goals.
+- Runtime and memory performance: Have been goals. In its domain, it
+  often even `outperforms <performance>` *Rust*- and *C*-based libraries.
 - Source: Available `here <https://github.com/HeWeMel/nographs>`__.
 - Licence: `MIT <https://github.com/HeWeMel/nographs/blob/main/LICENSE>`__.
 
@@ -64,6 +80,9 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - `Installation guide <installation>`
 - `Tutorial <concept_and_examples>` (contains many `examples <examples>`)
 - `API reference <api>`
+
+
+.. _overview_example:
 
 **Example**
 
@@ -81,7 +100,7 @@ looks like...
     ...     yield i + 1, j * 2 + 1
     ...     if i % 2 == 0:
     ...         yield i + 6, 7 - j
-    ...     elif i > 5:
+    ...     elif i % 1200000 > 5:
     ...         yield i - 6, 1
 
 We would like to find out the *distance* of vertex 5 from vertex 0, i.e., the minimal
@@ -90,9 +109,9 @@ paths* from 0 to 5.
 
 We do not know which part of the graph is necessary to look at in order to find the
 shortest path and to make sure, it is really the shortest. So, we use the
-traversal strategy *TraversalShortestPaths* of NoGraphs (see `Traversal algorithms`).
-It implements the well-known *Dijkstra* graph algorithm in the lazy evaluation
-style of NoGraphs.
+traversal strategy *TraversalShortestPaths* of NoGraphs (see
+`Traversal algorithms <algorithms>`). It implements the well-known *Dijkstra*
+graph algorithm in the lazy evaluation style of NoGraphs.
 
 .. code-block:: python
 

@@ -56,20 +56,33 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   directed edges,
   weighted edges and edges with application specific attributes).
   Your vertices can be nearly anything.
-  Currently, all algorithms are limited to locally finite
-  graphs (i.e., a vertex has only finitely many outgoing edges).
+  Wide range of data types for edge weights and path length
+  supported (float, int, Decimal, mpmath.mpf and others), e.g.,
+  for high precision computations.
+  Infinite graphs are supported, but need to be
+  locally finite (i.e., a vertex has only finitely many outgoing edges).
 - Results: Reachability, depth, distance, paths and trees.
   Paths can be
   calculated with vertices or edges or attributed edges
   and can be iterated in both directions.
-- Flexible API: It eases operations like
-  graph pruning, graph product and graph abstraction, the
-  computation of search-aware graphs and
-  traversals of vertex equivalence classes on the fly. It is even
-  possible to replace some of the internal data structures
-  and to interfere with them during the search.
-- Implementation: Pure Python, no dependencies, runtime and memory
-  performance have been goals.
+- Flexible API: Eases operations like
+  graph pruning, graph product and graph abstraction ike
+  graph pruning, graph abstraction, the typical binary
+  graph operations (union, intersection, several types of products), the
+  computation of search-aware graphs, and
+  traversals of vertex equivalence classes on the fly.
+- Flexible bookkeeping:
+  Several sets of bookkeeping data structures,
+  optimized for different situations (data types used by the application,
+  hashing vs. indexing, collections for Python objects or *C* native data types,
+  ...); Adaptable and extendable, e.g., specialized collections of
+  3rd party libraries can be integrated easily and runtime efficiently. Internal
+  bookkeeping data can be
+  pre-initialized and accessed during computations.
+- Typing: The API can be used fully typed (optionally).
+- Implementation: Pure Python (>=3.9). It introduces no further dependencies.
+- Runtime and memory performance: Have been goals. In its domain, it
+  often even outperforms Rust- and C-based libraries.
 
 **Documentation**
 
@@ -83,7 +96,8 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 Our graph is directed, weighted and has infinitely many edges. These edges are
 defined in application code by the following function. For a vertex *i*
-(first parameter, here: an integer), it yields the edges that start at *i* as tuples
+(here: an integer) as the first of two
+parameters, it yields the edges that start at *i* as tuples
 *(end_vertex, edge_weight)*. What a strange graph - we do not know how it
 looks like...
 
@@ -94,7 +108,7 @@ looks like...
     ...     yield i + 1, j * 2 + 1
     ...     if i % 2 == 0:
     ...         yield i + 6, 7 - j
-    ...     elif i > 5:
+    ...     elif i % 1200000 > 5:
     ...         yield i - 6, 1
 
 We would like to find out the *distance* of vertex 5 from vertex 0, i.e., the minimal

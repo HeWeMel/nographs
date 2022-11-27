@@ -3,69 +3,108 @@ API reference
 
 .. currentmodule:: nographs
 
-Basic types
-~~~~~~~~~~~
+.. _type_variables:
 
-.. data:: nographs.Vertex
 
-   alias of Any
+Type variables for graph adaption
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   You can use anything as `Vertex <vertices>`, with the exception of None.
+NoGraphs can handle vertices, vertex ids, weights and edge labels of
+different data types. In order to support this optimally, the respective
+**classes of NoGraphs are generic, and parameterized**
+**by the following type variables**:
 
-   If your vertices are not Hashable, you need to provide a `VertexToID` function
-   as parameter *vertex_to_id* when creating a `Traversal`.
+.. data:: T_vertex
+   :value: TypeVar("T_vertex")
 
-.. data:: nographs.Edge
+   You can use anything as vertex, with the exception of None. (This exception
+   cannot be expressed as type bound of a TypeVar. Thus, T_vertex has no bound.
+   It is checked at runtime.)
 
-   alias of Sequence
+   Examples: See section `vertices <vertices>` of the tutorial.
 
-   Structure: *start_vertex, end_vertex, additional_data_elements...*
+   Note: If in your setting, T_vertex is not a subtype of `T_vertex_id`, e.g.,
+   you use Hashable as `T_vertex_id`, but your vertices are not hashable,
+   you need to provide a `VertexToID` function as parameter *vertex_to_id*
+   when creating a traversal object. See section
+   `identity and equivalence of vertices <vertex_identity>` of the tutorial.
 
-   In case of a weighted edge, the weight will be given as first element
-   of the additional data elements.
+.. data:: T_vertex_id
+   :value: TypeVar("T_vertex_id", bound=Hashable)
 
-   Used in analysis results of the library.
+   A vertex id is a hashable object that *identifies* a vertex
+   (see `VertexToID` function).
 
-.. data:: nographs.NextVertices
+   Examples: See the `section about vertex identity <vertex_identity>`
+   in the tutorial.
 
-   alias of Callable[[Vertex, Traversal], Iterable[Vertex]]
+.. data:: T_weight
+   :value: TypeVar("T_weight", bound=Weight)
 
-   For a given `Vertex` and a `Traversal`, your NextVertices function reports
-   (positively) connected neighbor vertices.
+   As type of weights of edges, you can choose any subtype of protocol *Weight*.
+   For the current version of NoGraphs, it is defined as follows:
 
-   Used for `adapting graphs with unlabeled edges <unlabeled_graphs>`.
+   .. _nographs.Weight:
+   .. code-block:: python
 
-.. data:: nographs.NextEdges
+      class Weight(Protocol[T]):
+          @abstractmethod
+          def __add__(self: T, value: T) -> T: ... # self + value
+          @abstractmethod
+          def __lt__(self: T, value: T) -> bool: ...  #  self<value
+          @abstractmethod
+          def __le__(self: T, value: T) -> bool: ...  #  self<=value
 
-   alias of Callable[[Vertex, Traversal], Iterable[Sequence]]
+   Please note, that the `gear <nographs.Gear>` (combination of bookkeeping collections)
+   you use might have additional requirements w.r.t. edge weights. If you manually
+   set a gear, see its documentation for this aspect.
 
-   For a given `Vertex` and a `Traversal`, your NextEdges function reports
-   *outgoing edges*, each in the form of a sequence with the following
-   elements:
+   Traversal objects, that do not allow to change the gear, use
+   `GearDefault <nographs.GearDefault>`. See the documentation of this gear for its
+   restrictions and for examples of typical weight types for it.
 
-   - *end_vertex* of the edge
-   - optionally, a *weight*
-   - optionally, further elements with *additional data*.
+   Examples: See section `edge weights <weights>` in the tutorial.
 
-   Note: Since each outgoing edge starts at the given vertex, this information
-   is not repeated here (compare `edges <nographs.Edge>`).
+.. data:: T_labels
+   :value: TypeVar("T_labels")
 
-   Used for `adapting graphs with labeled edges <labeled_graphs>`.
+   Labels of edges can be provided as any kind of object, e.g., as a dictionary
+   holding key/value pairs, or just a number for numbering edges,
+   or as a string for naming it.
 
-   Your additional data will be included in traversal results, if you demand
-   this by using option *labeled_paths* of method *start_from* of the `Traversal`.
+.. tip::
 
-.. data:: nographs.VertexToID
+   Tutorial section `typing` gives a first idea of how NoGraphs can be used in
+   typed code.
 
-   alias of Callable[[Vertex], Hashable]
 
-   For a given `Vertex`, a VertexToID function returns a hashable object that
-   *identifies* the vertex. This means: For two given vertices, the respectively
-   returned objects ("*identifiers*") have to be equal (in the sense of Python's
-   equality comparison) if and only if the two vertices are to be regarded as
-   the same vertex in the sense of your graph.
+Function signatures for graph adaptation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   Used as parameter *vertex_to_id* when creating a `Traversal`.
+Based on the `type variables for graph adaption <type_variables>`,
+NoGraphs defines some signatures for functions that application code
+can provide to NoGraphs for graph adaptation.
+
+Vertex identity
+...............
+
+.. data:: VertexToID
+
+   alias of Callable[[`T_vertex`], `T_vertex_id`]
+
+   For a given vertex, return a hashable object that *identifies* the vertex.
+
+   A function with this signature can be used by application code as parameter
+   *vertex_to_id* when creating a `Traversal` of one of the "Flex" classes
+   (see tutorial section `vertex identity <vertex_identity>`).
+
+   A VertexToID function defines the identity of vertices (or of equivalence
+   classes of vertices) in your graph as follows:
+   **NoGraphs regards two vertices as the same vertex**
+   ("the same", or "equivalent")
+   **if and only if the objects returned by the used VertexToID function**
+   (the *identifiers*) for the vertices **are equal**
+   (in the sense of Python's equality comparison).
 
    Typical use cases:
 
@@ -77,15 +116,173 @@ Basic types
    vertex. Here, you define the function such that it calculates a hashable identifier
    of the equivalence class of the vertex given as parameter.
 
-   Please note, that the identifiers will not only be used internally by a Traversal,
+   The identifiers will not only be used internally by a Traversal,
    but they will also replace your vertices as keys in sets or mappings used as
-   externally accessible traversal attributes.
+   externally accessible traversal attributes. In this case, this effect is documented
+   for the traversal class.
 
-   Examples: For identifying vertices that are singletons, the build-in function
-   *id* can be used, because every other object stored somewhere else is not the
-   same vertex. For a mutable collection like a *list*, an immutable counterpart like
-   a *tuple* could be returned (provided, the elements are hashable). Or you number
-   your vertices and return the numbers as identifiers.
+   Example: See `tutorial <equivalence_class_example>`.
+
+.. autofunction:: vertex_as_id
+
+
+.. _outgoing_edges:
+
+Outgoing edges
+..............
+
+For a given vertex, the edges that start at this vertex can be described
+as tuples. The building rules of NoGraphs for such *outedge* tuple structures
+are:
+
+- The **first element is always the vertex the edge leads to**.
+- Then, **in some cases, a weight value follows**.
+- Then, **in some cases, an object that represents edge labels follows**.
+
+This leads to the following structures that are used in the signatures of
+NoGraphs:
+
+.. data:: UnweightedLabeledOutEdge
+
+   alias of tuple[`T_vertex`, `T_labels`]
+
+.. data:: WeightedUnlabeledOutEdge
+
+   alias of tuple[`T_vertex`, `T_weight`]
+
+.. data:: WeightedLabeledOutEdge
+
+   alias of tuple[`T_vertex`, `T_weight`, `T_labels`]
+
+Next vertices and next edges functions
+......................................
+
+Application code can use a function to inform NoGraphs about the outgoing
+edges that start at some vertex. The signature of such a function needs
+to have a special structure:
+
+- The **first argument is always the current vertex** (outgoing edges
+  from this vertex will be reported to NoGraphs)
+- The **second argument is always the current traversal object**
+  (see tutorial section about `search-aware graphs <search_aware_graphs>`)
+
+  In the following, type variable *T_traversal* is used as placeholder for
+  the type of the traversal object.
+
+  .. data:: T_traversal
+     :value: TypeVar("T_traversal")
+
+- The **result needs to be iterable**.
+
+  - Either it iterates **just the vertices** the edges lead to.
+  - Or it iterates **the edges described by tuples** (see
+    section `outgoing edges <outgoing_edges>`).
+
+    **Application code might need to provide a weight**
+    (because the used traversal strategy requires it) or an
+    **edge label object** (because it guarantees this to the traversal strategy so that
+    this data is included in results of the traversal). In these cases,
+    the weight, resp. the edge label object, needs to be **of the proper types**
+    (as needed by the traversal or as declared in typed code).
+
+    **If such data is provided without such need, it can be of arbitrary types.**
+
+These building rules lead to the following combinations of signature elements:
+
+**Functions for traversals that accept edges with and without weights:**
+
+.. data:: NextVertices
+
+   alias of Callable[[`T_vertex`, `T_traversal`], Iterable[`T_vertex`]]
+
+   For a given vertex and a `Traversal`, report
+   (positively) connected neighbor vertices.
+
+.. data:: NextEdges
+
+   | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
+   |     `WeightedUnlabeledOutEdge` [`T_vertex`, Any],
+   |     `UnweightedLabeledOutEdge` [`T_vertex`, Any],
+   |     `WeightedLabeledOutEdge` [`T_vertex`, Any, Any]]]]
+
+   Like NextVertices, but instead of connected vertices, **return outgoing**
+   **edges with or without weights and with or without labels**, and
+   the weight and labels can be of arbitrary type (not need to match the
+   types used to instantiate the traversal), because the traversal will ignore
+   weights and labels.
+
+.. data:: NextLabeledEdges
+
+    | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
+    |     `WeightedLabeledOutEdge` [`T_vertex`, Any, `T_labels`],
+    |     `UnweightedLabeledOutEdge` [`T_vertex`, `T_labels`]]
+
+    Here, **a labels object must be given**, and it needs to match the edge
+    data type used to instantiate the traversal in order to ensure correct
+    functioning of NoGraphs.
+
+**Functions for traversals that accept only edges with weights:**
+
+.. data:: NextWeightedEdges
+
+   | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
+   |     `WeightedUnlabeledOutEdge` [`T_vertex`, `T_weight`],
+   |     `WeightedLabeledOutEdge` [`T_vertex`, `T_weight`, Any]]]]
+
+    Here, **a weight must be given**, and it needs to match the weight type
+    used to instantiate the traversal in order to ensure correct
+    functioning of NoGraphs. Labels are not necessary, and if given,
+    can have arbitrary type.
+
+.. data:: NextWeightedLabeledEdges
+
+   | alias of callable[[`T_vertex`, `T_traversal`], Iterable[
+   |     `WeightedLabeledOutEdge` [`T_vertex`, `T_weight`, `T_labels`]]]
+
+   Here, **both a weight and labels must be given**, and they need to match
+   the weight and labels types used to instantiate the traversal in order
+   to ensure correct functioning of NoGraphs.
+
+
+Edges as part of trees or paths
+...............................
+
+NoGraphs computes trees and paths consisting of edges and returns them
+with the data you request. Accordingly, such edges can have weights,
+labels, both, or none of these:
+
+.. data:: UnweightedUnlabeledFullEdge
+
+   alias of tuple[`T_vertex`, `T_vertex`]
+
+.. data:: UnweightedLabeledFullEdge
+
+   alias of tuple[`T_vertex`, `T_vertex`, `T_labels`]
+
+.. data:: WeightedUnlabeledFullEdge
+
+   alias of tuple[`T_vertex`, `T_vertex`, `T_weight`]
+
+.. data:: WeightedLabeledFullEdge
+
+   alias of tuple[`T_vertex`, `T_vertex`, `T_weight`, `T_labels`]
+
+Sometimes, it is optional whether you provide labels for an edges or not, and
+NoGraphs returns the edges as part of computed results with our without labels:
+
+.. data:: WeightedFullEdge
+
+   | alias of Union[
+   |     `WeightedUnlabeledFullEdge` [`T_vertex`, `T_weight`],
+   |     `WeightedLabeledFullEdge` [`T_vertex`, `T_weight`, `T_labels`]]
+
+
+.. data:: WeightedOrLabeledFullEdge
+
+   | alias of Union[
+   |    `UnweightedLabeledFullEdge` [`T_vertex`, `T_labels`],
+   |    `WeightedUnlabeledFullEdge` [`T_vertex`, `T_weight`],
+   |    `WeightedLabeledFullEdge` [`T_vertex`, `T_weight`, `T_labels`]]
 
 
 .. _traversal_api:
@@ -96,11 +293,26 @@ Traversal strategies
 Common methods
 ..............
 
-.. autoclass:: Traversal()
-   :members:
-   :special-members: __iter__, __next__
+.. class:: Traversal
+
+  Abstract Class. Its subclasses provide methods to iterate through vertices
+  and edges using some specific traversal strategies.
+
+  .. automethod:: __iter__
+
+  .. automethod:: __next__
+
+  .. automethod:: go_for_vertices_in
+
+  .. automethod:: go_to
+
 ..
-  Note: Signature suppressed here (manually overridden by "()") - is abstract class
+    .. autoclass:: Traversal()
+      :show-inheritance: yes
+      :members:
+      :special-members: __iter__, __next__
+    ..
+       Note: Signature suppressed here (manually overridden by "()") - is abstract class
 
 
 .. _traversal-classes-api:
@@ -113,40 +325,92 @@ TraversalBreadthFirst
 
 Examples: See `example-traversal-breadth-first-in-maze`,
 `example-traversal-breadth-first-towers-hanoi`,
-the comparing examples `here <examples_weighted_graphs>`, and
+the comparing examples `here <examples_all_graphs>`, and
 `an example for method go_for_depth_range <example_go_for_depth_range>`.
 
-.. autoclass:: TraversalBreadthFirst
-   :member-order: bysource
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+.. autoclass:: TraversalBreadthFirstFlex
+   :exclude-members:
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. autoattribute:: visited
+
+   .. automethod:: start_from
+
+   .. automethod:: go_for_depth_range
+
 ..
-  Note: Method start_from is inherited from _TraversalWithOrWithoutLabels. The
+  Note: Method start_from is inherited from _TraversalWithoutWeights. The
   inheritance is not explained, and the method is shown as method of the current class.
-  Reason: The inheritance from _TraversalWithOrWithoutLabels is code inheritance.
+  Reason: The inheritance from _TraversalWithoutWeights is code inheritance.
   This inheritance structure is not guaranteed for the future.
+
+.. autoclass:: TraversalBreadthFirst
+   :show-inheritance: yes
 
 TraversalDepthFirst
 +++++++++++++++++++
 
 Examples: See `example-traversal-depth-first-integers` and
-the comparing examples `here <examples_weighted_graphs>`.
+the comparing examples `here <examples_all_graphs>`.
+
+.. autoclass:: TraversalDepthFirstFlex
+   :exclude-members:
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. autoattribute:: visited
+
+   .. automethod:: start_from
 
 .. autoclass:: TraversalDepthFirst
-   :members: __init__
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+   :show-inheritance: yes
+
+TraversalNeighborsThenDepthFlex
++++++++++++++++++++++++++++++++
+
+Examples: See `example-traversal-depth-first-integers` and
+the comparing examples `here <examples_all_graphs>`.
+
+.. autoclass:: TraversalNeighborsThenDepthFlex
+   :exclude-members:
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. autoattribute:: visited
+
+   .. automethod:: start_from
+
+.. autoclass:: TraversalNeighborsThenDepth
+   :show-inheritance: yes
 
 TraversalTopologicalSort
 ++++++++++++++++++++++++++
 
 Examples: See `example-topological_sorting_processes` and
-the comparing examples `here <examples_weighted_graphs>`.
+the comparing examples `here <examples_all_graphs>`.
+
+.. autoclass:: TraversalTopologicalSortFlex
+   :exclude-members:
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. autoattribute:: visited
+
+   .. autoattribute:: cycle_from_start
+
+   .. automethod:: start_from
 
 .. autoclass:: TraversalTopologicalSort
-   :members: __init__
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+   :show-inheritance: yes
 
 
 Traversal classes for weighted graphs
@@ -159,10 +423,23 @@ Examples: See `example-shortest-paths-in-maze`,
 the comparing examples `here <examples_weighted_graphs>` and
 `an example for method go_for_distance_range <example_go_for_distance_range>`.
 
+.. autoclass:: TraversalShortestPathsFlex
+   :exclude-members:
+
+   .. autoattribute:: distance
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. autoattribute:: distances
+
+   .. automethod:: start_from
+
+   .. automethod:: go_for_distance_range
+
 .. autoclass:: TraversalShortestPaths
-   :members: __init__
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+   :show-inheritance: yes
 
 TraversalAStar
 ++++++++++++++
@@ -170,30 +447,160 @@ TraversalAStar
 Examples: See `example-shortest-paths-with-heuristic`
 and the comparing examples `here <examples_weighted_graphs>`.
 
+.. autoclass:: TraversalAStarFlex
+   :exclude-members:
+
+   .. autoattribute:: path_length
+
+   .. autoattribute:: depth
+
+   .. autoattribute:: paths
+
+   .. automethod:: start_from
+
 .. autoclass:: TraversalAStar
-   :members: __init__
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+   :show-inheritance: yes
 
 TraversalMinimumSpanningTree
 ++++++++++++++++++++++++++++
 
 Examples: See `the comparing examples here <examples_weighted_graphs>`.
 
+.. autoclass:: TraversalMinimumSpanningTreeFlex
+   :exclude-members:
+
+   .. autoattribute:: edge
+
+   .. autoattribute:: paths
+
+   .. automethod:: start_from
+
 .. autoclass:: TraversalMinimumSpanningTree
-   :members: __init__
-   :inherited-members:
-   :exclude-members: go_for_vertices_in, go_to
+   :show-inheritance: yes
+
 
 .. _paths_api:
 
 Paths
 ~~~~~
 
-.. autoclass:: Paths()
+.. autoclass:: Paths
    :members:
-   :exclude-members: append_edge, __init__
+   :exclude-members: append_edge
    :special-members: __contains__, __getitem__
+
+..
+   Notes:
+
+   - The other two classes of the module are internal and thus not documented here
+   - Even if __init__ were listed in exclude-members, its parameters would be displayed
+     as part of the class documentation.
+
+.. _gears_api:
+
+Gears
+~~~~~
+
+In NoGraphs, a *gear* provides a **complete set of bookkeeping data structures,**
+**that are optimized for a specific usage scenario** of NoGraphs.
+Application code can:
+
+- choose the optimal gear for a given situation,
+
+- and define new gears that are derived from existing ones and that
+  replace some collections by other set- oder mapping-like collections (e.g.,
+  collections from external libraries) that better suite the use case.
+
+Side note: If you like to define a new gear based on a new list- or array-like
+collection (e.g., one of an external library) and you also aim at high runtime
+efficiency (comparable to the predefined gears for integer vertex ids, that
+use lists and arrays of the standard library in a special and fast way), please
+inform the author, that the documentation should also cover this aspect.
+
+The protocols
+.............
+
+Syntactically, a gear is an implementation of one of the protocols
+`nographs.GearWithoutDistances` and `nographs.Gear`. Each
+of its methods is a factory that creates one of the kinds of data structures
+that NoGraphs needs for its algorithms.
+
+.. autoclass:: GearWithoutDistances()
+   :show-inheritance: yes
+   :members:
+
+.. autoclass:: Gear()
+   :show-inheritance: yes
+   :members:
+
+Gears for hashable vertex ids
+.............................
+
+.. autoclass:: GearForHashableVertexIDs
+   :show-inheritance: yes
+
+Subclasses:
+
+.. autoclass:: GearDefault
+   :show-inheritance: yes
+
+.. autoclass:: GearForHashableVertexIDsAndIntsMaybeFloats
+   :show-inheritance: yes
+
+.. autoclass:: GearForHashableVertexIDsAndDecimals
+   :show-inheritance: yes
+
+.. autoclass:: GearForHashableVertexIDsAndFloats
+   :show-inheritance: yes
+
+..
+  Option :members: is not given here, since the methods are just overloaded
+  by appropriate implementations, but the documentation is unchanged.
+
+Gears for integer vertex ids
+............................
+
+.. autoclass:: GearForIntVertexIDs
+   :show-inheritance: yes
+
+Subclasses:
+
+.. autoclass:: GearForIntVertexIDsAndIntsMaybeFloats
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVertexIDsAndDecimals
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVertexIDsAndCFloats
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVertexIDsAndCInts
+   :show-inheritance: yes
+
+Gears for integer vertices and ids
+..................................
+
+.. autoclass:: GearForIntVerticesAndIDs
+   :show-inheritance: yes
+
+Subclasses:
+
+.. autoclass:: GearForIntVerticesAndIDsAndIntsMaybeFloats
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVerticesAndIDsAndDecimals
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVerticesAndIDsAndCFloats
+   :show-inheritance: yes
+
+.. autoclass:: GearForIntVerticesAndIDsAndCInts
+   :show-inheritance: yes
+
+..
+  Option :members: is not given here, since the methods are just overloaded
+  by appropriate implementations, but the documentation is unchanged.
+
 
 Gadgets
 ~~~~~~~
@@ -229,6 +636,15 @@ Common types
    The lower (inclusive) and upper (exclusive) boundaries of the indices
    of an Array, given per dimension.
 
+Position
+++++++++
+
+Examples: See `tutorial <tutorial_position>`.
+
+.. autoclass:: Position(my_vector: Vector)
+   :members:
+   :special-members: __add__, __sub__
+
 Array
 +++++
 
@@ -237,15 +653,9 @@ Examples: See `tutorial <matrix_gadgets>`.
 .. autoclass:: Array
    :members:
    :special-members: __getitem__, __setitem__
+
+..
    :exclude-members: items, findall
 
    .. automethod:: items() -> Generator[tuple[Position, Any]]
    .. automethod:: findall(content: Container[Any]) -> tuple[Position]
-
-Position
-++++++++
-
-Examples: See `tutorial <tutorial_position>`.
-
-.. autoclass:: Position(my_vector: Vector)
-   :members:

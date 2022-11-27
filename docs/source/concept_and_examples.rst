@@ -15,6 +15,7 @@ The main elements of the concept of NoGraphs are the following:
 
    The library does not offer graph containers and it stores no graphs. This is where
    the name *NoGraphs* library comes from.
+
    Instead,
    your application computes the graph on the fly, or it stores a graph and
    adapts it on the fly. This works as follows:
@@ -94,7 +95,8 @@ The main elements of the concept of NoGraphs are the following:
 
       We do not need to declare or define vertices. For NoGraphs, a vertex is
       what occurs in the role of a vertex during traversing the graph
-      (for details see section `vertices <vertices>`).
+      (for details see section `vertices <vertices>`, and if you like to
+      work fully typed, see `usage in typed code <typing>`).
 
 
 .. _examples:
@@ -154,7 +156,8 @@ We start at position (0, 0), traverse the graph, compute the depth of position (
 , i.e. the number of edges needed from start to come to here, and a path with that
 number of edges.
 
-We use the *TraversalBreadthFirst* strategy of NoGraphs (see `Traversal algorithms`).
+We use the *TraversalBreadthFirst* strategy of NoGraphs (see
+`Traversal algorithms <algorithms>`).
 It implements the *Breadth First Search* graph algorithm in the NoGraphs style.
 
 .. code-block:: python
@@ -236,7 +239,7 @@ In order to really see a solution, we print a path with the minimal number of ed
 problem 1.
 
 Again, we use the *TraversalBreadthFirst* strategy of NoGraphs
-(see `Traversal algorithms`).
+(see `Traversal algorithms <algorithms>`).
 
 .. code-block:: python
 
@@ -280,13 +283,14 @@ We choose the integers as our vertices. The (only) successor of a vertex *i* is 
 We check that 20000000 (20 million) can be reached from 0. This means, that the number
 is even. There might be easier ways to find that out... :-)
 
-We use the *TraversalDepthFirst* strategy of NoGraphs (see `Traversal algorithms`).
-It implements the well-known *Depth First Search* algorithm in the NoGraphs style.
+We use the *TraversalDepthFirst* strategy of NoGraphs (see
+`Traversal algorithms <algorithms>`). It implements the well-known
+*Depth First Search* algorithm in the NoGraphs style.
 
 .. code-block:: python
 
    >>> traversal = nog.TraversalDepthFirst(next_vertices, is_tree=True)
-   >>> traversal.start_from(0).go_to(20000000)  #doctest:+SKIP
+   >>> traversal.start_from(0).go_to(20000000)
    20000000
 
 Now, we choose some odd number and try to
@@ -314,6 +318,19 @@ We choose a limit, here 10000001, that is surely high enough to reach the goal
 vertex, if it is reachable, but prevents an unnecessarily high run time
 or, like in our case, even an infinite run time, if it is not reachable.
 
+Additionally to TraversalDepthFirst, NoGraphs provides the traversal strategy
+*TraversalNeighborsThenDepth*. It traverses the graph in a way similar to
+TraversalDepthFirst, but it reports the direct neighbors of a current vertex
+before it descends deeper into the graph. It can be used to find
+a vertex, when the exact traversal order of the vertices is not important.
+Typically, it is faster than TraversalDepthFirst and needs less memory.
+
+.. code-block:: python
+
+   >>> traversal = nog.TraversalNeighborsThenDepth(next_vertices, is_tree=True)
+   >>> traversal.start_from(0).go_to(20000000)  #doctest:+SKIP
+   20000000
+
 
 .. _example-topological_sorting_processes:
 
@@ -325,9 +342,15 @@ tasks that have to be done before it.
 
 .. code-block:: python
 
-   >>> depends_on = {"drink coffee": ["make coffee"],
-   ...               "make coffee": ["stand up", "get water"],
-   ...               "get water": ["stand up"]}
+   >>> depends_on = {
+   ...    "make coffee": ["heat water", "fill filter"],
+   ...    "get coffee": ["stand up"],
+   ...    "get water": ["stand up"],
+   ...    "heat water": ["get water"],
+   ...    "fill filter": ["get filter", "get coffee"],
+   ...    "drink coffee": ["make coffee"],
+   ...    "get filter": ["stand up"],
+   ... }
    >>> def next_vertices(task, _):
    ...     return depends_on.get(task, ())
 
@@ -335,16 +358,49 @@ We use this graph to find out how to proceed to be able to drink coffee. For tha
 traverse the graph in topological order, and start the problem solution process at
 our goal vertex "drink coffee".
 
-We use the *TraversalTopologicalSort* strategy of NoGraphs (see `Traversal algorithms`).
-It implements the *Topological Sort* graph algorithm in the NoGraphs style.
+We use the *TraversalTopologicalSort* strategy of NoGraphs (see
+`Traversal algorithms <algorithms>`). It implements the *Topological Sort*
+graph algorithm in the NoGraphs style.
 
 .. code-block:: python
 
    >>> traversal = nog.TraversalTopologicalSort(next_vertices)
-   >>> tuple(traversal.start_from("drink coffee"))
-   ('stand up', 'get water', 'make coffee', 'drink coffee')
+   >>> sorted_tasks = tuple(traversal.start_from("drink coffee"))
+   >>> sorted_tasks   # doctest: +NORMALIZE_WHITESPACE
+    ('stand up', 'get coffee', 'get filter', 'fill filter', 'get water', 'heat water',
+    'make coffee', 'drink coffee')
 
-Now, we try out what happens when there is a **cyclic dependency** between the tasks:
+When calculations for a vertex depend on results of (positively) connected
+other vertices, we can use the topological sorting of the vertices for ordering
+the calculations in the graph.
+
+Example: We assign (local) runtimes to the tasks. For each task, the minimal global
+runtime till it is completed (runtime of the **critical path**) is the sum of the
+local runtime and the maximum of the total runtimes of the tasks the task depends on.
+We order the computations by using the topological sort we got from NoGraphs, so that
+each vertex computation is done only after all computations it depends on have been
+completed.
+
+.. code-block:: python
+
+   >>> runtime = {
+   ...    "make coffee": 2,
+   ...    "get coffee": 2,
+   ...    "get water": 1,
+   ...    "heat water": 3,
+   ...    "fill filter": 1,
+   ...    "drink coffee": 5,
+   ...    "get filter": 2,
+   ...    "stand up": 4,
+   ... }
+   >>> runtime_till_end_of = dict()
+   >>> for task in sorted_tasks:
+   ...     runtime_till_end_of[task] = runtime[task] + max([0] + [
+   ...        runtime_till_end_of[task] for task in next_vertices(task, None)])
+   >>> runtime_till_end_of["drink coffee"]
+   15
+
+Next, we try out what happens when there is a **cyclic dependency** between the tasks:
 We add an artificial dependency that states that *get water* also depends on
 *make coffee* and ask NoGraphs again to traverse the graph in topological order:
 
@@ -364,7 +420,7 @@ we need to *make coffee* before we can *make coffee*):
 .. code-block:: python
 
    >>> traversal.cycle_from_start
-   ['drink coffee', 'make coffee', 'get water', 'make coffee']
+   ['drink coffee', 'make coffee', 'heat water', 'get water', 'make coffee']
 
 
 .. _example-shortest-paths-in-maze:
@@ -394,7 +450,7 @@ Based on that, we can take a cost-optimized walk through an area with costs
 per place...
 
 We use the traversal strategy *TraversalShortestPaths* of NoGraphs
-(see `Traversal algorithms`). As already said, it implements the
+(see `Traversal algorithms <algorithms>`). As already said, it implements the
 *Dijkstra* algorithm in the style of NoGraphs.
 
 .. code-block:: python
@@ -439,8 +495,8 @@ Based on that, NoGraphs calculates a path from start to end position that
 avoids the obstacle.
 
 We use the traversal strategy *TraversalAStar* of NoGraphs
-(see `Traversal algorithms`). It implements the *A\* search* algorithm
-in the style of NoGraphs.
+(see `Traversal algorithms <algorithms>`). It implements the *A\* search*
+algorithm in the style of NoGraphs.
 
     >>> traversal =nog.TraversalAStar(next_edges)
     >>> _ = traversal.start_from(heuristic, start, build_paths=True)

@@ -11,3 +11,4 @@ black
 coverage>=6.3
 flake8
 mypy
+mpmath  # only for the tests with this library

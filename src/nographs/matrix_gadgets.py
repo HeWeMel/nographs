@@ -21,30 +21,31 @@ Limits = Sequence[tuple[int, int]]  # api.rst: documented manually
 
 class Position(tuple[int]):
     """A position in an n-dimensional array. It is initialized
-    by a sequence of integer coordinates, e.g., a list or tuple."""
+    by a `Vector`."""
 
     @classmethod
-    def at(cls, *coordinates: int):
-        """Factory method. Create a position from integer *coordinates*
-        given as separate parameters."""
+    def at(cls, *coordinates: int) -> Position:
+        """Factory method, that creates a position from coordinates given
+        as separated parameters.
+        """
         return Position(coordinates)
 
     def __add__(self, other: Vector) -> Position:  # type: ignore[override]
-        """Add the *other* vector to the position"""
+        """Add the *other* `Vector` to the position"""
         return Position(map(sum, zip(self, other)))
 
     def __sub__(self, other: Vector) -> Position:
-        """Subtract the *other* vector from the position."""
+        """Subtract the *other* `Vector` from the position."""
         return Position(map(operator.sub, self, other))
 
     def manhattan_distance(self, other: Vector) -> int:
-        """Manhattan distance of the *other* vector from the
+        """Manhattan distance of the *other* `Vector` from the
         given position vector."""
         return sum(abs(coordinate_diff) for coordinate_diff in self - other)
 
     def is_in_cuboid(self, limits: Limits) -> bool:
         """Return true if each coordinate of the position is inside
-        the respective range defined by the *limits* sequence.
+        the respective range defined by the *limits* sequence (see `Limits`).
         """
         return all(
             low_limit <= coordinate < high_limit
@@ -53,9 +54,9 @@ class Position(tuple[int]):
 
     def wrap_to_cuboid(self, limits: Limits) -> Position:
         """If a coordinate of the position is outside its respective
-        limit range *(from, to)* of the *limits* sequence, add or
-        subtract the size (to - from + 1) of the limit range as often as
-        necessary to correct this.
+        limit range *(from, to)* of the *limits* sequence (see `Limits`),
+        add or subtract the size (to - from + 1) of the limit range as often
+        as necessary to correct this.
         """
         coordinates = []
         for coordinate, (low_limit, high_limit) in zip(self, limits):
@@ -75,10 +76,14 @@ class Position(tuple[int]):
         zero_move: bool = False,
     ) -> Vectors:
         """
-        Generate vectors of moves to neighbor coordinates in a n-dimensional
+        Generate vectors of moves to neighbor coordinates in an n-dimensional
         Array in sorted order, i.e., vectors that differ in each coordinate
-        by -1, 0 or 1. Default: Leave out the "zero move" *(0, ...)* and
-        the "diagonal" moves (no zeros in any coordinate)."""
+        by -1, 0 or 1.
+
+        :param dimensions: Number of dimensions of the generated move vectors.
+        :param diagonals: Add diagonal moves (no zero in any coordinate).
+        :param zero_move: Add the zero move *(0, ...)*.
+        """
         moves = []
         for move in itertools.product(range(-1, 2), repeat=dimensions):
             if not zero_move and all(coordinate == 0 for coordinate in move):
@@ -96,11 +101,15 @@ class Position(tuple[int]):
     ) -> Iterator[Position]:
         # noinspection PyShadowingNames
         """
-        Generate coordinates of direct neighbors of a given position in a n-dimensional
-        matrix. If pairs of lower and upper limits per coordinate are given, the
-        generated coordinates are filtered or wrapped (if wrap == True) to stay within
-        the limits. Diagonal neighbors are omitted on request. The neighbors are
-        generated in sorted order.
+        Iterate the positions that are reached by performing the given moves.
+        Can limit or wrap moves at a cuboid.
+
+        :param moves: They define what moves lead to neighbors (irrespective the
+          optionally given limits).
+        :param limits: If given, they define the cuboid the generated positions
+          have to stay in.
+        :param wrap: If True, moves to positions outside the limits cuboid are
+          wrapped at this boundary. If False, such moves are ignored.
         """
         # inspection PyShadowingNames
         for move in moves:
@@ -120,13 +129,16 @@ class Array:
     def __init__(self, nested_sequences, dimensions: int = 2):
         """An n-dimensional array.
 
-        Based on *nested sequences* that, up to up to a given number of
+        Based on *nested sequences* that, up to a given number of
         *dimensions*, define its content. Data in nestings deeper than
         that is interpreted as part of the content of an array cell.
 
         Coordinates of a position in the array are meant in the order from "outer"
-        to "inner" sequences along the nesting. Coordinates can be given as
-        Vector, especially as Position.
+        to "inner" sequences along the nesting. Coordinates used as arguments
+        for Array methods can be given as Vector, especially as Position.
+
+        :param nested_sequences: Content of the array to be created.
+        :param dimensions: Number of dimensions the array should have.
         """
         self.content = nested_sequences
         self.dimensions = dimensions
@@ -143,7 +155,7 @@ class Array:
         return size
 
     def limits(self) -> Limits:
-        """Calculate coordinate limits per dimension as tuples
+        """Calculate coordinate limits (see `Limits`) per dimension as tuples
         (from, to). Since the array consists of nested sequences,
         *from* is always zero and *to* equals the size of the array
         in this dimension."""
@@ -162,7 +174,10 @@ class Array:
 
     def __getitem__(self, position: Vector):
         """Get the content at the given position. This allows for using
-        the expression syntax *array[...]*."""
+        the expression syntax *array[...]*.
+
+        :param position: The content at this position `Vector` is returned.
+        """
         i = self.content
         for coordinate in position:
             i = i[coordinate]
@@ -173,7 +188,11 @@ class Array:
         """Set the content at the given position. Assumption: The nested
         sequence the array is build upon is mutable in its last dimension
         (i.e., a list). Allows for using the assignment syntax
-        *array[...] = ...* ."""
+        *array[...] = ...* .
+
+        :param position: The content at this position `Vector` is replaced.
+        :param content: This content is stored at the position.
+        """
         # inspection PyShadowingNames
         field = self.content
         for coordinate in position[:-1]:
@@ -205,6 +224,9 @@ class Array:
     def findall(self, content: Iterable[Any]) -> tuple[Position, ...]:
         """Find content in array and return found positions.
         The content is given in some container, i.e., a set.
+
+        :param content: This content is searched. The found positions
+           are returned in the same order as the content elements are given.
         """
         # Attention: Method signature is manually documented, update also there
 
@@ -231,11 +253,15 @@ class Array:
         diagonals: bool = False,
     ) -> Callable:
         # noinspection PyShadowingNames
-        """Return a NextVertices function for traversal strategies, based on
-        given choice of when positions qualifies as neighbors (goals of a
+        """Return a `NextVertices` function for traversal strategies, based on
+        given choice of when positions qualify as neighbors (goals of a
         move) of a given position (options *wrap* and *diagonals*) and whether
         such a move is allowed w.r.t. the content of the array at this
         position (parameter *forbidden*).
+
+        :param forbidden: A move to a position with this content is not allowed.
+        :param wrap: Positions are wrapped at the array limits.
+        :param diagonals: Diagonal moves are allowed.
         """
         # inspection PyShadowingNames
         forbidden_content = set(forbidden)
@@ -256,12 +282,16 @@ class Array:
         diagonals: bool = False,
     ) -> Callable:
         # noinspection PyShadowingNames
-        """Return a NextEdges function for traversal strategies, based on
-        given choice of when positions qualifies as neighbors (goals of a
+        """Return a `NextEdges` function for traversal strategies, based on
+        given choice of when positions qualify as neighbors (goals of a
         move) of a given position (options *wrap* and *diagonals*) and what
         weight such a move has w.r.t. the content of the matrix at this
         position (parameter *content_to_weight*, and no assigned weight means
         the move is impossible).
+
+        :param content_to_weight: Returns the weight of a move to a given position.
+        :param wrap: Positions are wrapped at the array limits.
+        :param diagonals: Diagonal moves are allowed.
         """
         # inspection PyShadowingNames
         limits = self.limits()

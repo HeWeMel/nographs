@@ -1,5 +1,5 @@
-_`Traversal algorithms`
------------------------
+Traversal algorithms
+--------------------
 
 ..
    Import nographs for doctests of this document. Does not go into docs.
@@ -15,8 +15,8 @@ Classes for all graphs
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The following classes can be used both for graphs
-with `labeled edged <labeled_graphs>` and for graphs with
-`unlabeled edges <unlabeled_graphs>`. See the respective
+`with edge attributes <graphs_with_attributes>` and for graphs
+`without edge attributes <graphs_without_attributes>`. See the respective
 class documentation in the API reference for details.
 
 - Class `nographs.TraversalBreadthFirst`
@@ -26,6 +26,8 @@ class documentation in the API reference for details.
     - Visits and reports vertices in *breadth first order*, i.e., **with ascending
       depth** (the depth of a vertex is the edge count of the path with least edges
       from a start vertex).
+      A vertex (with the exception of start vertices) is reported before the
+      first outgoing edge is taken.
 
     - The traversal state provides **vertex depth** / **search depth**, **paths**
       (optionally), and set of **visited vertices**.
@@ -40,11 +42,33 @@ class documentation in the API reference for details.
     - Follows just one outgoing edge per vertex as long as possible,
       and **goes back a step to some already visited vertex and follows a
       further edge starting there only when necessary** to come to new vertices.
+      **A vertex** (with the exception of start vertices)
+      **is reported before the first outgoing edge is taken**.
+
+    - The traversal state provides **search depth** (optionally),
+      **paths** (optionally), and set of **visited vertices**.
+
+    - Example: See `example-traversal-depth-first-integers`.
+
+- Class `nographs.TraversalNeighborsThenDepth`
+
+    - Algorithm similar to *Depth First Search* ("DFS"), but vertex order
+      is slightly changed.
+
+    - Follows just one outgoing edge per vertex as long as possible,
+      and **goes back a step to some already visited vertex and follows a
+      further edge starting there only when necessary** to come to new vertices.
+      **Vertices are reported when they are first "seen" as direct neighbors**
+      of a currently visited vertex.
 
     - The traversal state provides **search depth**, **paths** (optionally),
       and set of **visited vertices**.
 
     - Example: See `example-traversal-depth-first-integers`.
+
+    .. versionchanged:: 3.0
+
+       Strategy class `nographs.TraversalNeighborsThenDepth` introduced.
 
 - Class `nographs.TraversalTopologicalSort`
 
@@ -71,7 +95,9 @@ We define a graph with the following edges: From vertex 0, edges lead to vertice
 
 .. code-block:: python
 
-    >>> edges = {0: (1, 2), 1: (3,), 2: (3,)}
+    >>> edges = {0: [3, 2, 1],
+    ...          2: [5], 5: [3],
+    ...          1: [4], 4: [3]}
     >>> def next_vertices(vertex, _):
     ...     return edges.get(vertex, ())
 
@@ -81,25 +107,35 @@ from vertex 0.
 .. code-block:: python
 
     >>> list(nog.TraversalBreadthFirst(next_vertices).start_from(0))
-    [1, 2, 3]
+    [3, 2, 1, 5, 4]
 
-As you can see, TraversalBreadthFirst starts by exploring the two
-vertices 1 and 2 that can be reached directly from vertex 0. Only then, it
-goes deeper to vertex 3.
+As you can see, TraversalBreadthFirst starts by exploring the three
+vertices 3, 2 and 1 that can be reached directly from vertex 0
+(distance "level" 1). Only then, it
+goes deeper to vertices 5 and 4 (one distance "level" up).
 
 .. code-block:: python
 
     >>> list(nog.TraversalDepthFirst(next_vertices).start_from(0))
-    [2, 3, 1]
+    [1, 4, 3, 2, 5]
 
-TraversalDepthFirst explores vertex 2 and goes directly deeper to vertex 3.
-Then, it goes backwards till, at vertex 0, it finds an edge to a further
-vertex, here vertex 1.
+TraversalDepthFirst explores vertex 1, reports it, and goes directly deeper
+to vertex 4, and then till vertex 3. Then, it goes backwards till at vertex 0,
+it finds an edge to a further vertex, vertex 2, and from there vertex 5.
+
+.. code-block:: python
+
+    >>> list(nog.TraversalNeighborsThenDepth(next_vertices).start_from(0))
+    [3, 2, 1, 4, 5]
+
+TraversalNeighborsThenDepth reports the neighbors 3, 2 and 1 of the start vertex,
+then explores vertex 1 and reports the neighbor 4, and then it explores
+vertex 2 and reports neighbor 5. Backtracking leads to no new vertices.
 
 .. code-block:: python
 
     >>> list(nog.TraversalTopologicalSort(next_vertices).start_from(0))
-    [3, 2, 1, 0]
+    [3, 4, 1, 5, 2, 0]
 
 TraversalTopologicalSort reports the vertices in such an order,
 that for each edge of the graph, the successor is reported before the
@@ -110,8 +146,10 @@ Classes for weighted graphs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following classes can be used for
-graphs with `weighted edged <labeled_graphs>`. See the
-respective class documentation in the API reference for details.
+graphs with weighted edges (see sections
+`graphs with edge attributes <graphs_with_attributes>` and
+`edge weights <weights>`).
+See the respective class documentation in the API reference for details.
 
 - Class `nographs.TraversalShortestPaths`
 
@@ -237,21 +275,21 @@ would increase the total edge weight.
 
 .. _methods:
 
-States and standard methods of traversal objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+State and standard methods of traversal objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section explains the lifecycle of traversal objects, and in which
 state which methods can be used.
 See the API reference of the `traversal classes <traversal-classes-api>` for
 further details about methods and signatures.
 
-- **Instantiation** of a traversal class, leading to state *created*
+Transition **1. Instantiation** of a traversal class, leading to state *created*
 
   - In this step, you **define what graph** should be traversed
     (you provide a `NextEdges` or a `NextVertices` function).
 
   - Optionally, you define some specific **graph properties** (see
-    `identity and equivalence of vertices <vertex-identity>`
+    `identity and equivalence of vertices <vertex_identity>`
     and `traversing trees <is_tree>`).
 
 
@@ -267,7 +305,7 @@ further details about methods and signatures.
    >>> traversal = nog.TraversalBreadthFirst(next_vertices)
 
 
-- State **created** (inactive)
+State **A. created** (inactive)
 
   In this state, you cannot use any of the iterator methods of the traversal object:
 
@@ -279,7 +317,7 @@ further details about methods and signatures.
 
 .. _general-start_from:
 
-- **Starting** a traversal, leading to state *started*
+Transition **2. Starting** a traversal, leading from any state to state *started*
 
   You (re-) start the traversal by calling its method **start_from(...)**:
 
@@ -303,7 +341,7 @@ further details about methods and signatures.
      direct calls of other methods, like in
      *traversal.start_from(...).go_to(...))*.
 
-- State **started** (active)
+State **B. started** (active)
 
   In this state, you can use the **iterator methods of the traversal object**:
 
@@ -373,7 +411,7 @@ further details about methods and signatures.
      and the methods explained in section `class_specific_methods`
      only when there are good reasons for this.
 
-- State **exhausted** (inactive)
+State **C. exhausted** (inactive)
 
   When the traversal has iterated through all vertices that are reachable from
   your chosen start vertices, the iterator is exhausted. Upon calls, it raises
@@ -402,8 +440,8 @@ Methods for depth and distance ranges
 Two traversal classes offer additional iteration methods that focus on ranges of
 vertex depths or distances. These are the following:
 
-- `TraversalBreadthFirst.go_for_depth_range(start, stop)
-  <nographs.TraversalBreadthFirst.go_for_depth_range>`
+- `TraversalBreadthFirstFlex.go_for_depth_range(start, stop)
+  <nographs.TraversalBreadthFirstFlex.go_for_depth_range>`
 
   For a started traversal, the method returns an iterator. During the traversal, the
   iterator skips vertices as long as their depth is lower than *start*. From then on,
@@ -428,7 +466,7 @@ vertex depths or distances. These are the following:
      (20, 22, 24, 26, 28, 30, 32, 34, 36, 38)
 
 - `TraversalShortestPaths.go_for_distance_range(start, stop)
-  <nographs.TraversalShortestPaths.go_for_distance_range>`
+  <nographs.TraversalShortestPathsFlex.go_for_distance_range>`
 
   For a started traversal, the method returns an iterator. During the traversal, the
   iterator skips vertices as long as their distance is lower than *start*. From
@@ -485,84 +523,87 @@ will probably run longer, return wrong results or will even not terminate.
 Example: See section
 `Depths first search in the integers <example-traversal-depth-first-integers>`.
 
-.. _vertex-identity:
+.. _typing:
 
-Identity and equivalence of vertices
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Usage in typed code
+~~~~~~~~~~~~~~~~~~~
 
-The default behavior of NoGraphs with respect to vertex identity is the
-following:
+NoGraphs can be used in a fully typed way and, given its flexibility w.r.t.
+data types, with a very good level of type safety.
 
-1) **Two vertices are regarded as the same vertex, if they are equal** in
-   the sense of Python's comparison operators (== and !=).
-   That means, e.g., *(1, 2)* and *tuple([1, 2])* both stand
-   for the same vertex.
+.. versionchanged:: 3.0
 
-2) **Vertices need to be hashable**, and this implies, that two equal
-   vertices have equal hashes.
+   Type stubs and API for good typing support introduced.
 
-If this is not what you want, consider to define a `VertexToID` function
-and to use this function as parameter *vertex_to_id* when instantiating
-a traversal class:
+`Application code can specify, what data types it uses <type_variables>`
+for vertices, `vertex ids <vertex_identity>`, weights and edge labels.
+Then, based on the generic signatures of NoGraphs,
+a static type checker can check whether the application uses
+`suitable classes of NoGraphs for graph analysis <traversal_api>`, the
+`handling of vertex identity <vertex_identity>` and for
+`bookkeeping of graph data <gears>`
+of these types,
+and whether the application is ready to receive the result types returned by
+NoGraphs.
 
-For a given vertex, a *VertexToID* function returns a hashable object, a
-so-called *identifier*. The **traversal will use the identifiers instead of
-the vertices themselves for equality comparisons and as keys in sets or
-mappings** (both in internal ones and in externally accessible ones).
+The signatures of NoGraphs have been tested for the use of MyPy as static type
+checker, and its implementation is fully type checked with MyPy (where casts
+where necessary, manual correctness arguments support them).
 
-Here are some cases, and examples for each case:
+**Example**:
 
-- **Two vertex objects are the same vertex if and only if they are identical**
+The following code is a fully typed variant of the example of the
+`overview page <overview_example>`.
 
-  You use instances of some vertex class of your application as vertices.
-  They are mutable, and thus not hashable. Each vertex object is to be
-  seen as a different vertex.
+- When instantiating `TraversalShortestPaths`,
+  the types used for `vertices <vertices>`, `weights <weights>`
+  and `edge labels <graphs_with_attributes>` are
+  given as [int, int, Any].
 
-  In this situation, you can simply use the Python
-  function *id* as *VertexToID* function.
+- Parameters and return value of the function *next_edges* are also specified.
+  When the function is given as argument to the traversal, MyPy can check
+  its signature against the needs of `TraversalShortestPaths`.
 
-- **Mutable vertex object, and their immutable counterparts identify them**
+- The correct use of methods *start_from* and *go_to* and its parameters can be
+  checked by MyPy.
 
-  You use lists as you vertices. You know that their content will not
-  change during a traversal run. And the immutable tuple counterpart of a
-  vertex is well suited for getting a hash value.
+- The guaranteed types of the three result values can be derived by MyPy.
 
-  In this situation, you can use function *tuple* as *VertexToID* function.
+.. code-block:: python
 
-- **Traversal in equivalence classes of vertices**
+    >>> from typing import Any, Iterator
+    >>> def next_edges(i: int, _) -> Iterator[tuple[int, int]]:
+    ...     j = (i + i // 6) % 6
+    ...     yield i + 1, j * 2 + 1
+    ...     if i % 2 == 0:
+    ...         yield i + 6, 7 - j
+    ...     elif i % 1200000 > 5:
+    ...         yield i - 6, 1
+    >>> traversal = nog.TraversalShortestPaths[int, int, Any](next_edges)
+    >>> traversal.start_from(0, build_paths=True).go_to(5)  # derived type: int
+    5
+    >>> traversal.distance  # derived type: float (type of object is int)
+    24
+    >>> tuple(traversal.paths.iter_vertices_from_start(5))  # derived type: tuple[int]
+    (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)
 
-  You have defined an abstraction function, that assigns an equivalence class to a
-  vertex. And you know: Whenever there is a path of vertices, there is a
-  respective path in the equivalence classes of these vertices. And whenever
-  their is a path in the equivalence classes, there is a respective path in
-  the vertices of these classes. You would like to solve some analysis
-  problem in the equivalence classes instead of the vertices, because there,
-  the analysis is easier to do.
+.. tip::
 
-  Here, you can use your abstraction function as *VertexToID* function.
+   Please note, that all the algorithms, that have been
+   explained so far and work with weighted edges, add *float* to the
+   possible type of edge weights and distances, because internally, they
+   use float("infinity") for infinite weight/distance and the integer 0
+   for zero weight/distance. See the respective
+   `API specification <traversal_api>`.
 
-.. _replace-internals:
+   **Example:**
 
-Replacing internal data structures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   | `TraversalShortestPaths` [T_vertex, T_weight, T_labels]
+   | is, according to its specification, a
+   | `TraversalShortestPathsFlex` [T_vertex, T_vertex, Union[T_weight, float], T_labels]
 
-The *start_from* methods of most strategy classes offer to replace some of the
-internal data structures by application specific versions (see the
-API reference of the respective `traversal class <traversal-classes-api>`).
-You can use this for several purposes.
+   And a TraversalShortestPathsFlex with these generic types is allowed to
+   return floats, additionally to the T_weight specified by the application code.
 
-Examples:
-
-- You provide your own implementation, that does the **bookkeeping in your own way**,
-  e.g. directly in your vertex objects. Note: It is likely that
-  this makes the traversal slower, since NoGraphs uses the high performance
-  data structures of the Python standard library.
-
-- You provide an object of a suitable standard library container,
-  NoGraphs does the bookkeeping in there, and like this, you got **permanent
-  access to this state information during the traversal**.
-
-- You provide an object of a suitable standard library container that you have
-  **pre-loaded with bookkeeping data**, in order to make NoGraphs to use this when it
-  starts the traversal.
-
+   It is possible to avoid this be choosing the `gear (see there) <gears>` that
+   fits the typing needs of the application optimally.
