@@ -27,7 +27,7 @@ if __name__ == "__main__":
     # sys.exit()
 
     # Start recording coverage
-    cov = coverage.Coverage(source=["./src/nographs"])
+    cov = coverage.Coverage(source_pkgs=["nographs"])
     cov.start()
 
     # Create empty TestSuite
