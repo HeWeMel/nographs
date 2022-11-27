@@ -125,7 +125,11 @@ the goal states.
     ...     for next_state in itertools.product(
     ...         *(allowed_next_positions(pos) for pos in state)
     ...     ):
-    ...         if all(p1 != p2 for p1, p2 in itertools.pairwise(sorted(next_state))):
+    ...         # For python 3.10: The following check is equal to:
+    ...         # all(p1 != p2 for p1, p2 in itertools.pairwise(sorted(next_state)))
+    ...         sorted_pos = sorted(next_state)
+    ...         if all(sorted_pos[i] != sorted_pos[i+1]
+    ...                for i in range(len(sorted_pos)-1)):
     ...             yield next_state
     >>> start_state = ((0, 0), (1, 0), (2, 0), (3, 0))
     >>> goal_states = set(itertools.permutations(((1, 4), (2, 4), (3, 4), (4, 4))))
