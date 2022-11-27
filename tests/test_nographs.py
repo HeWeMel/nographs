@@ -27,8 +27,7 @@ if __name__ == "__main__":
     # sys.exit()
 
     # Start recording coverage
-    cov = coverage.Coverage(omit=["tests/test_code.py", "tests/test_nographs.py",
-                                  "tests/test_unit_typed.py"])
+    cov = coverage.Coverage()
     cov.start()
 
     # Create empty TestSuite
