@@ -1684,7 +1684,7 @@ class NormalGraphTraversalsWithLabels:
     Best path len guesses found so far): {0: 8, 2: 7, 4: inf, 3: 7}
 
 
-    All algorithms, with option is_tree:
+    All algorithms, with option is_tree (except for MST, it does not have the option):
 
     >>> def next_edges(vertex, traversal):
     ...     print(f"Next called: {vertex=} {traversal.depth=} {traversal.distance=}")
@@ -1714,11 +1714,6 @@ class NormalGraphTraversalsWithLabels:
     Next called: vertex=7 traversal.depth=2 traversal.distance=10
     All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
     All distances: {1: 0}
-
-    >>> this_test(nog.TraversalMinimumSpanningTree)  # doctest: +NORMALIZE_WHITESPACE
-    Traceback (most recent call last):
-    TypeError: TraversalMinimumSpanningTree.__init__() got an unexpected keyword
-    argument 'is_tree'
 
     Test TraversaAStar. Typically, one would use go_to(6) for our goal vertex 6, but for
     the test purposes we continue to iterate the rest of the graph.
