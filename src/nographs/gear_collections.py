@@ -323,9 +323,7 @@ class _GettableSettableForGearAssertNoCall(
 
 class _VertexSequenceWrapperAssertNoCall(
     VertexSequenceWrapperForSetProto[T_hashable_key, T_value_contra, T_value_co],
-    VertexSequenceWrapperForMappingProto[
-        T_hashable_key, T_value_contra, T_value_co
-    ],
+    VertexSequenceWrapperForMappingProto[T_hashable_key, T_value_contra, T_value_co],
 ):
     """An implementation of the protocols that implements nothing,
     but raises AssertionError on all method calls.
@@ -361,6 +359,7 @@ class _VertexSequenceWrapperAssertNoCall(
 
     def _from_iterable(self, elements):
         raise AssertionError(called_by_mistake)
+
 
 # - Set
 
