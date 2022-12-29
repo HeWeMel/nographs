@@ -85,7 +85,7 @@ class Position(tuple[int]):
         dimensions: int = 2,
         diagonals: bool = False,
         zero_move: bool = False,
-        non_zero_counts: Optional[Container[int]] = None
+        non_zero_counts: Optional[Container[int]] = None,
     ) -> Vectors:
         """
         Generate vectors of moves to neighbor positions in an n-dimensional
@@ -107,8 +107,8 @@ class Position(tuple[int]):
 
         if non_zero_counts is None:
             non_zero_counts = range(
-                0 if zero_move else 1,
-                1 + (dimensions if diagonals else 1))
+                0 if zero_move else 1, 1 + (dimensions if diagonals else 1)
+            )
         else:
             if zero_move or diagonals:
                 raise RuntimeError("Incompatible options")
