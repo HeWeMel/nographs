@@ -1,6 +1,16 @@
 ChangeLog
 ---------
 
+**v3.0.1** (2022-12-29)
+
+- Position: support for multiplying an integer; new option non_zero_counts of
+  method moves
+
+Error corrections:
+- Position.moves(): For dimensions >= 3, option add_diagonals adapted to typically
+  expected behavior (previous behavior was correctly documented and implemented,
+  but might have been surprising).
+
 **v3.0.0** (2022-11-27)
 
 - NoGraphs can be used fully typed (optionally): API refactored,
