@@ -344,8 +344,8 @@ Class `Position <nographs.Position>`
 A cell position in a n-dimensional array can be stored and manipulated in an
 instance of this class.
 
-We can **create a Position, add and subtract other vectors, and calculate the
-manhattan distance of another vector to our position**:
+We can **create a Position, add and subtract other vectors, multiply an integer,
+and calculate the manhattan distance of another vector to our position**:
 
    .. code-block:: python
 
@@ -361,6 +361,12 @@ manhattan distance of another vector to our position**:
       >>> # Position minus coordinate vector (or Position), returns Position
       >>> nog.Position.at(2, 3, 4) - (1, 1, 1)
       (1, 2, 3)
+      >>> # Position vector multiplied by an integer value, returns Position
+      >>> nog.Position.at(2, 3, 4) * 3
+      (6, 9, 12)
+      >>> # Attention: Since a Position is a tuple, i * Position repeats the coordinates
+      >>> 3 * nog.Position.at(2,3,4)
+      (2, 3, 4, 2, 3, 4, 2, 3, 4)
       >>> # Manhattan distance of some vector
       >>> nog.Position.at(2, 3, 4).manhattan_distance( (1, 1, 1) )
       6
@@ -400,17 +406,23 @@ the number of dimensions:
    .. code-block:: python
 
       >>> # We generate some types of 2-dimensional move vectors
-      >>> tuple(nog.Position.moves())
-      ((-1, 0), (0, -1), (0, 1), (1, 0))
-      >>> tuple(nog.Position.moves(diagonals=True))
-      ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
-      >>> tuple(nog.Position.moves(zero_move=True))
-      ((-1, 0), (0, -1), (0, 0), (0, 1), (1, 0))
+      >>> nog.Position.moves()
+      [(-1, 0), (0, -1), (0, 1), (1, 0)]
+      >>> nog.Position.moves(diagonals=True)
+      [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+      >>> nog.Position.moves(zero_move=True)
+      [(-1, 0), (0, -1), (0, 0), (0, 1), (1, 0)]
       >>> # Now, we generate some 3-dimensional move vectors
-      >>> tuple(nog.Position.moves(3))  # doctest: +NORMALIZE_WHITESPACE
-      ((-1, -1, 0), (-1, 0, -1), (-1, 0, 0), (-1, 0, 1), (-1, 1, 0), (0, -1, -1), (0, -1, 0),
-      (0, -1, 1), (0, 0, -1), (0, 0, 1), (0, 1, -1), (0, 1, 0), (0, 1, 1), (1, -1, 0),
-      (1, 0, -1), (1, 0, 0), (1, 0, 1), (1, 1, 0))
+      >>> nog.Position.moves(3)
+      [(-1, 0, 0), (0, -1, 0), (0, 0, -1), (0, 0, 1), (0, 1, 0), (1, 0, 0)]
+      >>> nog.Position.moves(3, diagonals=True)   # doctest: +NORMALIZE_WHITESPACE
+      [(-1, -1, -1), (-1, -1, 0), (-1, -1, 1), (-1, 0, -1), (-1, 0, 0), (-1, 0, 1),
+      (-1, 1, -1), (-1, 1, 0), (-1, 1, 1), (0, -1, -1), (0, -1, 0), (0, -1, 1),
+      (0, 0, -1), (0, 0, 1), (0, 1, -1), (0, 1, 0), (0, 1, 1), (1, -1, -1), (1, -1, 0),
+      (1, -1, 1), (1, 0, -1), (1, 0, 0), (1, 0, 1), (1, 1, -1), (1, 1, 0), (1, 1, 1)]
+      >>> nog.Position.moves(3, non_zero_counts=range(2, 3))   # doctest: +NORMALIZE_WHITESPACE
+      [(-1, -1, 0), (-1, 0, -1), (-1, 0, 1), (-1, 1, 0), (0, -1, -1), (0, -1, 1),
+      (0, 1, -1), (0, 1, 1), (1, -1, 0), (1, 0, -1), (1, 0, 1), (1, 1, 0)]
 
 Class Position can **calculate "neighbor" positions** based on such moves, and keeps
 given coordinate limits:

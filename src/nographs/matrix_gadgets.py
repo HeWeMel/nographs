@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 import operator
 from collections.abc import (
+    Container,
     Sequence,
     Mapping,
     Callable,
@@ -11,7 +12,7 @@ from collections.abc import (
     Hashable,
 )
 from numbers import Real
-from typing import Optional, Any
+from typing import Optional, Any, SupportsIndex
 
 
 Vector = Sequence[int]  # api.rst: documented manually
@@ -37,6 +38,16 @@ class Position(tuple[int]):
     def __sub__(self, other: Vector) -> Position:
         """Subtract the *other* `Vector` from the position."""
         return Position(map(operator.sub, self, other))
+
+    def __mul__(self, multiple: SupportsIndex) -> Position:
+        """Multiply each coordinate by the multiple, typically an integer.
+
+        Attention: Since Position is a tuple, 3*p returns a tuple that
+        repeats the coordinates of p three times, whilst p*3 means
+        p.__mul__(3) and really multiplies each coordinate of p by 3.
+        """
+        i = int(multiple)
+        return Position(coordinate * i for coordinate in self)
 
     def manhattan_distance(self, other: Vector) -> int:
         """Manhattan distance of the *other* `Vector` from the
@@ -74,24 +85,39 @@ class Position(tuple[int]):
         dimensions: int = 2,
         diagonals: bool = False,
         zero_move: bool = False,
+        non_zero_counts: Optional[Container[int]] = None,
     ) -> Vectors:
         """
-        Generate vectors of moves to neighbor coordinates in an n-dimensional
-        Array in sorted order, i.e., vectors that differ in each coordinate
-        by -1, 0 or 1.
+        Generate vectors of moves to neighbor positions in an n-dimensional
+        Array, i.e., vectors with combinations of -1, 0 and 1 as coordinates,
+        and return them in ascending order.
+
+        The number of occurring non-zero coordinates per move can be configured.
+        Default: Only moves with exactly one non-zero coordinate are generated.
 
         :param dimensions: Number of dimensions of the generated move vectors.
-        :param diagonals: Add diagonal moves (no zero in any coordinate).
+        :param diagonals: Add diagonal moves (moves with more than one non-zero
+            coordinate).
         :param zero_move: Add the zero move *(0, ...)*.
+        :param non_zero_counts: All moves are allowed that have a number of
+            non-zero coordinates as specified by non_zero_counts, e.g.,
+            non_zero_counts = {0, 1} equals zero_move = True. This option can
+            not be combined with the options *diagonals* and *zero_move*.
         """
-        moves = []
-        for move in itertools.product(range(-1, 2), repeat=dimensions):
-            if not zero_move and all(coordinate == 0 for coordinate in move):
-                continue
-            if not diagonals and all(coordinate != 0 for coordinate in move):
-                continue
-            moves.append(move)
-        return moves
+
+        if non_zero_counts is None:
+            non_zero_counts = range(
+                0 if zero_move else 1, 1 + (dimensions if diagonals else 1)
+            )
+        else:
+            if zero_move or diagonals:
+                raise RuntimeError("Incompatible options")
+
+        return list(
+            move
+            for move in itertools.product(range(-1, 2), repeat=dimensions)
+            if dimensions - move.count(0) in non_zero_counts
+        )
 
     def neighbors(
         self,
@@ -200,8 +226,13 @@ class Array:
         field[position[-1]] = content
 
     def items(self) -> Iterator[tuple[Position, Any]]:
-        """Iterate positions and content."""
-        # Attention: Method signature is manually documented, update also there
+        """Iterate positions and content.
+
+        :rtype: Iterator[tuple[Position, Any]]
+        """
+        # Above, the rtype is documented manually because Sphinx autodocs with
+        # option autodoc_typehints = 'description' cannot correctly
+        # evaluate the type parameters of tuple (whilst typing.Tuple works).
 
         def _items_in_dimension(area, dimensions):
             if dimensions == 1:
@@ -223,12 +254,11 @@ class Array:
 
     def findall(self, content: Iterable[Any]) -> tuple[Position, ...]:
         """Find content in array and return found positions.
-        The content is given in some container, i.e., a set.
 
-        :param content: This content is searched. The found positions
-           are returned in the same order as the content elements are given.
+        :param content: Content to be searched.
+        :rtype: tuple[Position, ...]
         """
-        # Attention: Method signature is manually documented, update also there
+        # For reason for manually documented rtype see method items above.
 
         content_set = set(content)
 

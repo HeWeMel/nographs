@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # import sys
     # sys.exit()
 
-    # Start recording coverage for package
+    # Start recording coverage
     cov = coverage.Coverage(source_pkgs=["nographs"])
     cov.start()
 

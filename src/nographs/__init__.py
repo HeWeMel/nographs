@@ -205,10 +205,12 @@ __all__ = (
     "TraversalAStar",
     "TraversalMinimumSpanningTreeFlex",
     "TraversalMinimumSpanningTree",
+    # -- matrix gadgets --
     "Vector",
     "Limits",
     "Position",
     "Array",
+    # -- edge gadgets --
     "adapt_edge_index",
     "adapt_edge_iterable",
 )

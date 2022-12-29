@@ -643,7 +643,7 @@ Examples: See `tutorial <tutorial_position>`.
 
 .. autoclass:: Position(my_vector: Vector)
    :members:
-   :special-members: __add__, __sub__
+   :special-members: __add__, __sub__, __mul__
 
 Array
 +++++
@@ -653,9 +653,3 @@ Examples: See `tutorial <matrix_gadgets>`.
 .. autoclass:: Array
    :members:
    :special-members: __getitem__, __setitem__
-
-..
-   :exclude-members: items, findall
-
-   .. automethod:: items() -> Generator[tuple[Position, Any]]
-   .. automethod:: findall(content: Container[Any]) -> tuple[Position]
