@@ -2846,4 +2846,17 @@ class ArrayTests:
     >>> found = traversal.start_from(start, build_paths=True).go_to(goal)
     >>> traversal.depth, traversal.paths[found]
     (3, ((0, 0), (0, 1), (1, 2), (2, 1)))
+
+    Incompatible options of move
+    >>> nog.Position.moves(diagonals = True, non_zero_counts=range(1, 2))
+    Traceback (most recent call last):
+    RuntimeError: Incompatible options
+    >>> nog.Position.moves(zero_move = True, non_zero_counts=range(1, 2))
+    Traceback (most recent call last):
+    RuntimeError: Incompatible options
+
+    Ascending order
+    >>> moves = nog.Position.moves(3, True, True)
+    >>> moves == sorted(moves)
+    True
     """
