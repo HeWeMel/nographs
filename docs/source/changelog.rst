@@ -7,6 +7,7 @@ ChangeLog
   method moves
 
 Error corrections:
+
 - Position.moves(): For dimensions >= 3, option add_diagonals adapted to typically
   expected behavior (previous behavior was correctly documented and implemented,
   but might have been surprising).
