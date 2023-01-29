@@ -7,12 +7,6 @@ from abc import abstractmethod
 
 """
 Basic types used in NoGraphs.
-
-All could be also defined in and exported by gears, since gears need
-them and exports from gears are imported by paths and strategies.
-But the concept of these types is basis to NoGraphs and is determined
-not only by gears ("what can be stored") but also by the strategies
-("what is needed to work with the data").
 """
 
 

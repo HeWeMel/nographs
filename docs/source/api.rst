@@ -532,6 +532,7 @@ that NoGraphs needs for its algorithms.
 .. autoclass:: Gear()
    :show-inheritance: yes
    :members:
+   :exclude-members: raise_distance_infinity_overflow_error
 
 Gears for hashable vertex ids
 .............................

@@ -114,11 +114,25 @@ VertexIdToPathEdgeDataMapping = VertexMapping[T_vertex_id, T_labels]
 MutableSequenceOfVertices = MutableSequence[T_vertex]
 
 
+# -- Private support functions --
+
+
+def max_value_for_integer_array_type_code(
+    c: Literal["b", "B", "h", "H", "i", "I", "l", "L", "q", "Q"]
+) -> int:
+    """Highest value than can be stores in an array of this type"""
+    bytes_of_type_code = {"b": 1, "h": 2, "i": 2, "l": 4, "q": 8}[c.lower()]
+    bits = bytes_of_type_code * 8
+    if c.lower() == c:
+        bits -= 1
+    return 2**bits - 1
+
+
 # -- Gear protocols --
 
 
 class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
-    """Protocol for a feature-limited kind of gear that offer collections
+    """Protocol for a feature-limited kind of gear that offers collections
     that can store vertices, vertex_ids and edge data, but no edge
     weights / distances.
     """
@@ -167,29 +181,46 @@ class Gear(
     Protocol,
 ):
     """Protocol for gears with collections that can store vertices,
-    vertex_ids, edge data (like a GearWithoutDistances), and additionally,
-    edge weights / distances.
+    vertex_ids, and edge data (like a GearWithoutDistances), and additionally,
+    edge weights / distances. It also provides suitable distance values for
+    zero and positive infinity.
+
+    In case you use a gear that allows for manually choosing a zero and/or infinity
+    value, or when you define your own gear, please note:
+
+    The zero value must be a neutral element of the addition in T_weight, i.e., for
+    any value v in T_weight, v + zero == v needs to hold.
+
+    The infinity value must be larger (w.r.t. to the comparison operators of weights)
+    than all T_weight values that can occur as edge weight or as distance of
+    vertices (sum of a set of edge weights) in the use cases of the gear.
+
+    Note: The infinity value does not need to be a special, build-in infinity value
+    of the type used for weights and distances, with the usual guarantees made for
+    arithmetic operations and comparisons in such cases. And it does not even need to
+    be the largest value in T_weight. As example, consider a collection that operates
+    on int distances, stores them in an array of C-native unsigned short integers,
+    is restricted to distances from 0 up to 65534 (and this is enough for the use
+    cases), and uses 65535 as positive infinity value.
+
+    (In such scenarios, a special kind of error can occur: An arithmetic operation
+    might return a result that reaches or exceeds the infinity value, but stays
+    within the limits of the distances type, so that the operation does not raise an
+    overflow exception. In order to avoid wrong analysis results, NoGraphs detects
+    this kind of error in its calculations and raises an exception itself, whilst it
+    fully relies on the arithmetic operations for the handling of any other kind of
+    overflow, underflow and accuracy problems.)
     """
 
     @abstractmethod
     def zero(self) -> T_weight:
-        """Return the zero value of T_weight, e.g., 0.0 for float.
-
-        This needs to be a value of type T_weight, that is neutral element
-        of the addition in T_weight, i.e., for any value v in T_weight,
-        v + zero == v needs to hold.
-        """
+        """Return the zero value of T_weight, e.g., 0.0 for float."""
         raise NotImplementedError
 
     @abstractmethod
     def infinity(self) -> T_weight:
-        """Return the positive infinity value of T_weight, e.g.,
-        float("infinity") for float.
-
-        This needs to be a value of type T_weight, that is larger than all
-        values of T_weight, that can occur as weights of edges or as distances
-        of vertices (sum of a set of edge weights).
-        """
+        """Return the positive infinity value of T_weight for the gear, e.g.,
+        float("infinity") for float."""
         raise NotImplementedError
 
     @abstractmethod
@@ -199,15 +230,23 @@ class Gear(
         """Factory for a mapping from a vertex id to a distance value.
 
         If the returned mapping does not contain a value for some key,
-        its method __getitem__ needs to return a special default value that is
-        guaranteed to be larger (w.r.t. object comparison) than any regular value that
-        can be stored in the mapping.
-
-        Example: You use *float* as T_weight, and *float("infinity")* as default value.
+        its method __getitem__ needs to return the positive infinity value.
 
         :param initial_content: The collection is created with this initial content.
         """
         raise NotImplementedError
+
+    def raise_distance_infinity_overflow_error(self, value: T_weight):
+        """Report that the computed value is equal or larger than the chosen
+        infinity value of the gear and cannot be further handled.
+
+        The method is intended to be only called by NoGraphs itself.
+        """
+        raise OverflowError(
+            f"Distance {value} is equal or larger than the "
+            + f"infinity value {self.infinity()} used by the chosen gear and "
+            + "its configuration"
+        )
 
 
 # --- Hashable vertex IDs (hashable vertices or vertex_to_id returns hashable ---
@@ -603,14 +642,10 @@ class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
         pre_allocate: int = 0,
     ) -> None:
         self.distance_type_code = distance_type_code
-        bytes_of_type_code = {"b": 1, "h": 2, "i": 2, "l": 4, "q": 8}[
-            self.distance_type_code.lower()
-        ]
         # Highest possible vertex value will be used as NaN value.
         # If this value is stored for some vertex as index, this means that
         # the collection stores no value for the index vertex so far.
-        self.max_type_value = 256 ^ bytes_of_type_code - 1
-
+        self.max_type_value = max_value_for_integer_array_type_code(distance_type_code)
         super().__init__(0, self.max_type_value, False, no_bit_packing, pre_allocate)
 
     def vertex_id_to_distance_mapping(
@@ -682,7 +717,7 @@ class GearForIntVerticesAndIDs(GearForIntVertexIDs[IntVertexID, T_weight, T_labe
         # Highest possible vertex value will be used as NaN value.
         # If this value is stored for some vertex as index, this means that
         # the collection stores no value for the index vertex so far.
-        max_vertex_type_value = 256 ^ bytes_of_vertex_type_code - 1
+        max_vertex_type_value = 256**bytes_of_vertex_type_code - 1
 
         return VertexMappingWrappingSequenceWithoutNone[IntVertexID](
             lambda: array(
@@ -843,14 +878,10 @@ class GearForIntVerticesAndIDsAndCInts(GearForIntVerticesAndIDs[int, T_labels]):
         pre_allocate: int = 0,
     ) -> None:
         self.distance_type_code = distance_type_code
-        bytes_of_type_code = {"b": 1, "h": 2, "i": 2, "l": 4, "q": 8}[
-            self.distance_type_code.lower()
-        ]
         # Highest possible vertex value will be used as NaN value.
-        # If this value is stored for some vertex as index, this means that
-        # the collection stores no value for the index vertex so far.
-        self.max_type_value = 256 ^ bytes_of_type_code - 1
-
+        # If this special value is stored for some vertex as index, it means that
+        # the collection stores no (real) value for the index vertex so far.
+        self.max_type_value = max_value_for_integer_array_type_code(distance_type_code)
         super().__init__(
             0, self.max_type_value, no_bit_packing, vertex_type_code, pre_allocate
         )

@@ -1,6 +1,22 @@
 ChangeLog
 ---------
 
+**v3.0.2** (2023-01-29)
+
+- Traversals that handle distances, with Gears that allow for manually
+  choosing a value to be used as positive infinity: Overflows over infinity
+  are now detected by NoGraphs if the chosen distance value type cannot do this
+  itself, e.g., if the application uses integer distances in the range of a
+  C-native size-limited integer type and manually chooses a "large" value as
+  infinity value.
+
+Error corrections:
+
+- Gear classes GearForIntVertexIDsAndCInts, GearForIntVerticesAndIDs, and
+  GearForIntVerticesAndIDsAndCInts: Sometimes, vertices where not traversed
+  due to an error in the computation of the infinity distance value or the
+  default vertex value for C-native integers.
+
 **v3.0.1** (2022-12-29)
 
 - Position: support for multiplying an integer; new option non_zero_counts of

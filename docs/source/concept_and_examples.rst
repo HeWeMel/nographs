@@ -18,7 +18,8 @@ The main elements of the concept of NoGraphs are the following:
 
    Instead,
    your application computes the graph on the fly, or it stores a graph and
-   adapts it on the fly. This works as follows:
+   adapts it on the fly. From the perspective of NoGraphs, a so-called
+   *implicit graph* is given. This works as follows:
 
    -  Your application makes the graph
       **accessible for NoGraphs by providing a callback function** to the library.

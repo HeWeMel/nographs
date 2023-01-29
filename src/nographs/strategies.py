@@ -118,7 +118,7 @@ NextWeightedMaybeLabeledEdges = Callable[
 
 
 def _start_from_needs_traversal_object(obj: Any):
-    if not isinstance(type(obj), type(Traversal)):
+    if not isinstance(obj, Traversal):
         raise RuntimeError(
             "Method start_from can only be called on a Traversal object."
         )
@@ -2582,6 +2582,9 @@ class TraversalShortestPathsFlex(
 
     def _traverse(self) -> Iterator[T_vertex]:
         # ----- Prepare efficient environment for inner loop -----
+        # Copy Gear attributes into method scope (faster access)
+        infinity = self._gear.infinity()
+
         # Copy Traversal attributes into method scope (faster access)
         is_tree = self._is_tree
         maybe_vertex_to_id = (
@@ -2700,11 +2703,17 @@ class TraversalShortestPathsFlex(
             n_path_edge_count = path_edge_count + 1
             for edge in next_edges(vertex, self):
                 neighbor, weight = edge[0], edge[1]
-                n_path_weight = weight + path_weight
 
-                # If, so far, we have not found a shorter path to the neighbor than the
-                # new one that ends with the edge, this path is a candidate for a
-                # shortest path to the neighbor. We push it to the heap.
+                n_path_weight = weight + path_weight
+                # (Distance values equal to or higher than the chosen infinity value of
+                # the gear are invalid and cannot be handled further.)
+                if infinity <= n_path_weight:
+                    self._gear.raise_distance_infinity_overflow_error(n_path_weight)
+
+                # If the found path to the neighbor is not shorter than the shortest
+                # such path found so far, we can safely ignore it. Otherwise, it is a
+                # new candidate for a shortest path to the neighbor, and we push it to
+                # the heap.
                 if paths or not is_tree:
                     n_id: T_vertex_id = (
                         maybe_vertex_to_id(neighbor)  # type: ignore[assignment]
@@ -2718,12 +2727,6 @@ class TraversalShortestPathsFlex(
                                 continue
                             distances_sequence[n_id] = n_path_weight
                         except IndexError:
-                            # n_id not in distances_collection. To be regarded as value
-                            # infinity, i.e., n_path_weight is smaller.
-
-                            # noinspection PyUnboundLocalVariable
-                            assert distances_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             distances_wrapper.extend_and_set(n_id, n_path_weight)
 
                     # If we are to generate a path, we have to do it here, since the
@@ -3030,6 +3033,9 @@ class TraversalAStarFlex(
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
+        # Copy Gear attributes into method scope (faster access)
+        infinity = self._gear.infinity()
+
         # Copy Traversal attributes into method scope (faster access)
         is_tree = self._is_tree
         maybe_vertex_to_id = (
@@ -3170,10 +3176,15 @@ class TraversalAStarFlex(
             n_path_edge_count = path_edge_count + 1
             for edge in next_edges(vertex, self):
                 neighbor, weight = edge[0], edge[1]
-                n_path_weight = weight + path_weight
 
-                # If the newfound path to the neighbor is longer than the shortest
-                # found so far, we can safely ignore the new path. Otherwise, it is a
+                n_path_weight = weight + path_weight
+                # (Distance values equal to or higher than the chosen infinity value of
+                # the gear are invalid and cannot be handled further.)
+                if infinity <= n_path_weight:
+                    self._gear.raise_distance_infinity_overflow_error(n_path_weight)
+
+                # If the found path to the neighbor is not shorter than the shortest
+                # such path found so far, we can safely ignore it. Otherwise, it is a
                 # new candidate for a shortest path to the neighbor, and we push it to
                 # the heap.
                 n_id: T_vertex_id = (
@@ -3189,10 +3200,6 @@ class TraversalAStarFlex(
                 except IndexError:
                     # n_id not in distances_collection. To be regarded as value
                     # infinity, i.e., n_path_weight is smaller.
-
-                    # noinspection PyUnboundLocalVariable
-                    assert distances_wrapper is not None  # safe
-                    # noinspection PyUnboundLocalVariable
                     distances_wrapper.extend_and_set(n_id, n_path_weight)
 
                 # If we are to generate a path, we have to do it here, since the edge
@@ -3215,8 +3222,15 @@ class TraversalAStarFlex(
                             # noinspection PyUnboundLocalVariable
                             attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
-                n_guess = n_path_weight + heuristic(neighbor)
-                if not is_tree:
+                h = heuristic(neighbor)
+                if h == infinity:
+                    n_guess = infinity
+                else:
+                    n_guess = n_path_weight + h
+                    # (Distance values equal to or higher than the chosen infinity
+                    # value of the gear are invalid and cannot be handled further.)
+                    if infinity <= n_guess:
+                        self._gear.raise_distance_infinity_overflow_error(n_guess)
                     try:
                         path_length_guesses_sequence[n_id] = n_guess
                     except IndexError:

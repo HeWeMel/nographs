@@ -22,6 +22,16 @@ def print_results(traversal, start_vertices_for_path: set, no_paths=False):
         print("All paths:", [traversal.paths[vertex] for vertex in sorted(has_path)])
 
 
+def print_partial_results(traversal, paths_to=None):
+    vertices = []
+    for vertex in traversal:
+        vertices.append(vertex)
+    print(vertices[:5], vertices[-6:])
+    if paths_to is not None:
+        path = traversal.paths[paths_to]
+        print(tuple(path[:2]), tuple(path[-2:]))
+
+
 def graph_report_next(edges):
     def graph(vertex, traversal):
         print(f"Next called: {vertex=} {traversal.depth=} {traversal.visited=}")
@@ -558,8 +568,7 @@ class GraphWithoutEdges:
     Traceback (most recent call last):
     KeyError: 'Not all of the given vertices have been found'
 
-    -- 3) start_from of the strategies w/o weights detects
-    -- parameter error in the start vertices
+    -- 3) __init__ and start_from of the strategies w/o weights detect parameter errors
     >>> traversal = nog.TraversalBreadthFirst(no_next)
     >>> traversal = traversal.start_from(start_vertex=0, start_vertices=(0,))
     Traceback (most recent call last):
@@ -583,8 +592,7 @@ class GraphWithoutEdges:
     Traceback (most recent call last):
     RuntimeError: Both next_edges and next_labeled_edges provided.
 
-    -- 4) start_from of the strategies with weights detects
-    -- parameter error in the start vertices
+    -- 3) __init__ and start_from of the strategies with weights detect parameter errors
     >>> traversal = nog.TraversalShortestPaths()
     Traceback (most recent call last):
     RuntimeError: Neither next_edges and next_labeled_edges provided.
@@ -1652,6 +1660,7 @@ class NormalGraphTraversalsWithLabels:
     >>> print("All paths:", [traversal.paths[vertex] for vertex in range(5)])
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3), (0, 4)]
 
+
     Variant of the test with option known_distances.
     For the start vertex, we define a start distance. Effect: All distances are now 2
     higher. For vertex 1, we define an artificial and low distance of 0. Effect: it is
@@ -1681,7 +1690,7 @@ class NormalGraphTraversalsWithLabels:
     >>> print("Best distances found so far:", dict(known_distances))
     Best distances found so far: {0: 2, 1: 0, 2: 5, 4: 3, 3: 7}
     >>> print("Best path len guesses found so far):", dict(known_path_length_guesses))
-    Best path len guesses found so far): {0: 8, 2: 7, 4: inf, 3: 7}
+    Best path len guesses found so far): {0: 8, 2: 7, 3: 7, 4: inf}
 
 
     All algorithms, with option is_tree (except for MST, it does not have the option):
@@ -2344,8 +2353,8 @@ class GearCollectionTestsForDoNotCallCases:
 
 class GearTestsTraversalsWithOrWithoutLabels:
     # noinspection PyShadowingNames
-    """-- TraversalShortestPathsFlex with different gears --
-
+    """
+    -- TraversalShortestPathsFlex with different gears --
     >>> def next_edges(i, _):
     ...     j = (i + i // 6) % 6
     ...     yield i + 1, j * 2 + 1, j * 2 + 1
@@ -2434,8 +2443,10 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [5, ((0, 1, 1), (1, 2, 3)), ((3, 4, 7), (4, 5, 9))]
 
 
-    Three main gear types, one also without bit_packing,
-    used for each of the traversals, graph is no tree:
+    Three main gear types, one also without bit_packing, used for each of the
+    traversals, graph is no tree. For traversals dealing with distances, we
+    need to test this gear functionality additionally.
+
     >>> enough_for_index_error = (1+128)*8  # index error even for seq of bits
     >>> path_goal = 2 * enough_for_index_error
     >>> limit = 3 * enough_for_index_error
@@ -2448,33 +2459,19 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...             yield i + 3, 1, 1
     ...             yield i + 1, 1, 3
 
-    >>> def gear_test(traversal_class, heuristic=None, is_tree=False,
-    ...               start=0, build_paths=True):
-    ...    for gear in [nog.GearForHashableVertexIDsAndIntsMaybeFloats(),
-    ...                 nog.GearForIntVertexIDsAndCFloats(),
-    ...                 nog.GearForIntVerticesAndIDsAndCFloats(),
-    ...                 nog.GearForIntVerticesAndIDsAndCFloats(no_bit_packing=True),
-    ...                ]:
-    ...        if is_tree:
-    ...            traversal = traversal_class(
-    ...                nog.vertex_as_id, gear, next_labeled_edges=next_edges,
-    ...                is_tree=True)
-    ...        else:
-    ...            traversal = traversal_class(
-    ...                nog.vertex_as_id, gear, next_labeled_edges=next_edges)
-    ...        if heuristic is None:
-    ...            traversal.start_from(start, build_paths=build_paths)
-    ...        else:
-    ...            traversal.start_from(heuristic, start, build_paths=build_paths)
-    ...        vertices = []
-    ...        for vertex in traversal:
-    ...            vertices.append(vertex)
-    ...        print(vertices[:5], vertices[-6:])
-    ...        if build_paths:
-    ...            path = traversal.paths[path_goal]
-    ...            print(tuple(path[:2]), tuple(path[-2:]))
+    >>> test_gears = [nog.GearForHashableVertexIDsAndIntsMaybeFloats(),
+    ...               nog.GearForIntVertexIDsAndCFloats(),
+    ...               nog.GearForIntVerticesAndIDsAndCFloats(),
+    ...               nog.GearForIntVerticesAndIDsAndCFloats(no_bit_packing=True),
+    ...              ]
+    >>> def gear_test_traversals(traversal_class, *args, **nargs):
+    ...     for gear in test_gears:
+    ...         yield traversal_class(nog.vertex_as_id, gear,
+    ...                               next_labeled_edges=next_edges, *args, **nargs)
 
-    >>> gear_test(nog.TraversalBreadthFirstFlex)
+
+    >>> for t in gear_test_traversals(nog.TraversalBreadthFirstFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
@@ -2484,7 +2481,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
 
-    >>> gear_test(nog.TraversalDepthFirstFlex)
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
@@ -2495,13 +2493,15 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
 
     For DFS, we also test without paths, because this changes the process
-    >>> gear_test(nog.TraversalDepthFirstFlex, build_paths=False)
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=False))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
 
-    >>> gear_test(nog.TraversalNeighborsThenDepthFlex)
+    >>> for t in gear_test_traversals(nog.TraversalNeighborsThenDepthFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
     [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
@@ -2511,7 +2511,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
 
-    >>> gear_test(nog.TraversalTopologicalSortFlex)
+    >>> for t in gear_test_traversals(nog.TraversalTopologicalSortFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
     [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
@@ -2521,7 +2522,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
 
-    >>> gear_test(nog.TraversalShortestPathsFlex)
+    >>> for t in gear_test_traversals(nog.TraversalShortestPathsFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
@@ -2531,7 +2533,26 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
 
-    >>> gear_test(nog.TraversalMinimumSpanningTreeFlex)
+    >>> t = nog.TraversalShortestPathsFlex(
+    ...     nog.vertex_as_id,
+    ...     nog.GearForIntVerticesAndIDsAndCInts(),
+    ...     next_labeled_edges=next_edges)
+    >>> print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
+    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
+    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    >>> t = nog.TraversalShortestPathsFlex(
+    ...     nog.vertex_as_id,
+    ...     nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B"),
+    ...     next_labeled_edges=next_edges)
+    >>> print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    OverflowError: Distance 255 is equal or larger than
+    the infinity value 255 used by the chosen gear and its configuration
+
+
+    >>> for t in gear_test_traversals(nog.TraversalMinimumSpanningTreeFlex):
+    ...    print_partial_results(t.start_from(0, build_paths=True), paths_to=path_goal)
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
@@ -2540,10 +2561,14 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+
+
 
     >>> def heuristic(vertex):
     ...    return 0
-    >>> gear_test(nog.TraversalAStarFlex, heuristic)
+    >>> for t in gear_test_traversals(nog.TraversalAStarFlex):
+    ...    print_partial_results(t.start_from(heuristic, 0, build_paths=True),
+    ...                           paths_to=path_goal)
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
@@ -2552,6 +2577,39 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
     [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
     ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+
+    >>> t = nog.TraversalAStarFlex(
+    ...     nog.vertex_as_id,
+    ...     nog.GearForIntVerticesAndIDsAndCInts(),  # infinity overflow in distance
+    ...     next_labeled_edges=next_edges)
+    >>> print_partial_results(t.start_from(heuristic, 0, build_paths=True),
+    ...                       paths_to=path_goal)
+    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
+    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    >>> t = nog.TraversalAStarFlex(
+    ...     nog.vertex_as_id,
+    ...     nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B"),
+    ...     next_labeled_edges=next_edges)
+    >>> print_partial_results(t.start_from(heuristic, 0, build_paths=True),
+    ...                       paths_to=path_goal
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    OverflowError: Distance 255 is equal or larger than
+    the infinity value 255 used by the chosen gear and its configuration
+
+    >>> def heuristic2(vertex):
+    ...     return 255 - vertex  # Create infinity overflow of guessed distance
+    >>> def next_edges2(vertex, _):
+    ...     return [(vertex + 1, 1)]
+    >>> t = nog.TraversalAStarFlex(
+    ...     nog.vertex_as_id,
+    ...     nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B"),
+    ...     next_labeled_edges=next_edges2)
+    >>> print_partial_results(t.start_from(heuristic2, 0), paths_to=255
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    OverflowError: Distance 255 is equal or larger than
+    the infinity value 255 used by the chosen gear and its configuration
 
 
     Three main gear types, one also without bit_packing,
@@ -2565,7 +2623,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...         yield 2*i + 0, 1, 1
     ...         yield 2*i + 1, 1, 3
 
-    >>> gear_test(nog.TraversalBreadthFirstFlex, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalBreadthFirstFlex, is_tree=True):
+    ...    print_partial_results(t.start_from(1, build_paths=True), paths_to=path_goal)
     [2, 3, 4, 5, 6] [12378, 12379, 12380, 12381, 12382, 12383]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [2, 3, 4, 5, 6] [12378, 12379, 12380, 12381, 12382, 12383]
@@ -2575,7 +2634,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [2, 3, 4, 5, 6] [12378, 12379, 12380, 12381, 12382, 12383]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
 
-    >>> gear_test(nog.TraversalDepthFirstFlex, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, is_tree=True):
+    ...    print_partial_results(t.start_from(1, build_paths=True), paths_to=path_goal)
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
@@ -2586,13 +2646,17 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
 
     For DFS, we also test without paths, because this changes the process
-    >>> gear_test(nog.TraversalDepthFirstFlex, is_tree=True, start=1, build_paths=False)
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, is_tree=True):
+    ...    print_partial_results(t.start_from(1, build_paths=False))
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
 
-    >>> gear_test(nog.TraversalNeighborsThenDepthFlex, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalNeighborsThenDepthFlex,
+    ...     is_tree=True
+    ... ):
+    ...     print_partial_results(t.start_from(1, build_paths=True), paths_to=path_goal)
     [2, 3, 6, 7, 14] [4096, 4097, 8194, 8195, 8192, 8193]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [2, 3, 6, 7, 14] [4096, 4097, 8194, 8195, 8192, 8193]
@@ -2602,7 +2666,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [2, 3, 6, 7, 14] [4096, 4097, 8194, 8195, 8192, 8193]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
 
-    >>> gear_test(nog.TraversalTopologicalSortFlex, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalTopologicalSortFlex, is_tree=True):
+    ...    print_partial_results(t.start_from(1, build_paths=True), paths_to=path_goal)
     [8191, 8190, 4095, 8189, 8188] [32, 16, 8, 4, 2, 1]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [8191, 8190, 4095, 8189, 8188] [32, 16, 8, 4, 2, 1]
@@ -2612,7 +2677,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [8191, 8190, 4095, 8189, 8188] [32, 16, 8, 4, 2, 1]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
 
-    >>> gear_test(nog.TraversalShortestPathsFlex, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalShortestPathsFlex, is_tree=True):
+    ...    print_partial_results(t.start_from(1, build_paths=True), paths_to=path_goal)
     [3, 2, 5, 4, 7] [10927, 10926, 10921, 10920, 10923, 10922]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [3, 2, 5, 4, 7] [10927, 10926, 10921, 10920, 10923, 10922]
@@ -2627,7 +2693,10 @@ class GearTestsTraversalsWithOrWithoutLabels:
 
     >>> def heuristic(vertex):
     ...    return 0
-    >>> gear_test(nog.TraversalAStarFlex, heuristic, is_tree=True, start=1)
+    >>> for t in gear_test_traversals(nog.TraversalAStarFlex,
+    ...                               is_tree=True):
+    ...    print_partial_results(t.start_from(heuristic, 1, build_paths=True),
+    ...                          paths_to=path_goal)
     [3, 2, 5, 4, 7] [10927, 10926, 10921, 10920, 10923, 10922]
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
     [3, 2, 5, 4, 7] [10927, 10926, 10921, 10920, 10923, 10922]
@@ -2638,7 +2707,7 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ((1, 2, 1), (2, 4, 1)) ((516, 1032, 1), (1032, 2064, 1))
 
 
-    Case with cycle for TraversTopologicalSorted.
+    Case for TraversTopologicalSorted, without and with cycle.
     Example from concept_and_examples.rst. Here, we number the vertices, so that we
     can use the gears for positive integer vertex ids.
     >>> depends_on = {"drink coffee": ["make coffee"],
