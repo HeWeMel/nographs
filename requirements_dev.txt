@@ -1,15 +1,16 @@
-# build and upload
+# -- build and upload --
 pip>=22.0.4
 build>=0.7.0
 twine>=3.7.1
-# documentation
-docutils>=0.17.1
-sphinx
-sphinx-rtd-theme
-# source formatting, testing, type checking
+# -- documentation --
+docutils=0.19
+sphinx=5.3.0
+sphinx-rtd-theme=1.1.1
+# -- source formatting, testing, type checking --
 black
 coverage>=6.3
 flake8
 mypy
-mpmath  # only for the tests with this library
-intbitset  # only for the tests with this library
+# -- additional packaged used only for test with them --
+mpmath
+intbitset
