@@ -65,7 +65,8 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   Paths can be
   calculated with vertices or edges or attributed edges
   and can be iterated in both directions.
-- Flexible API: Eases operations like
+- Flexible API: The concept of implicit graphs that NoGraphs is based on
+  allows for an API that eases operations like
   graph pruning, graph product and graph abstraction ike
   graph pruning, graph abstraction, the typical binary
   graph operations (union, intersection, several types of products), the
