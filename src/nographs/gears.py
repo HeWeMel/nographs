@@ -302,7 +302,6 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
     def vertex_id_to_distance_mapping(
         self, initial_content: Iterable[tuple[T_vertex_id, T_weight]]
     ) -> VertexMapping[T_vertex_id, T_weight]:
-
         return DefaultdictWithNiceStr[T_vertex_id, T_weight](
             lambda: self._infinity_value, initial_content
         )
@@ -602,7 +601,6 @@ class GearForIntVertexIDsAndCFloats(GearForIntVertexIDs[T_vertex, float, T_label
     def vertex_id_to_distance_mapping(
         self, initial_content: Iterable[tuple[IntVertexID, float]]
     ) -> VertexMapping[IntVertexID, float]:
-
         return VertexMappingWrappingSequenceWithoutNone[float](
             lambda: array(
                 self.distance_type_code,
@@ -651,7 +649,6 @@ class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
     def vertex_id_to_distance_mapping(
         self, initial_content: Iterable[tuple[IntVertexID, int]]
     ) -> VertexMapping[IntVertexID, int]:
-
         return VertexMappingWrappingSequenceWithoutNone[int](
             lambda: array(
                 self.distance_type_code,
@@ -832,7 +829,6 @@ class GearForIntVerticesAndIDsAndCFloats(GearForIntVerticesAndIDs[float, T_label
     def vertex_id_to_distance_mapping(
         self, initial_content: Iterable[tuple[IntVertexID, float]]
     ) -> VertexMapping[IntVertexID, float]:
-
         return VertexMappingWrappingSequenceWithoutNone[float](
             lambda: array(
                 self.distance_type_code,

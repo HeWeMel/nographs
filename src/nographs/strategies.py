@@ -83,9 +83,7 @@ NextWeightedEdges = Callable[
 
 NextWeightedLabeledEdges = Callable[
     [T_vertex, T_traversal],
-    Iterable[
-        WeightedLabeledOutEdge[T_vertex, T_weight, T_labels],
-    ],
+    Iterable[WeightedLabeledOutEdge[T_vertex, T_weight, T_labels]],
 ]
 
 
@@ -757,7 +755,6 @@ class TraversalBreadthFirstFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         (
             self.next_edge_or_vertex,
             self.edges_with_data,
@@ -784,7 +781,6 @@ class TraversalBreadthFirstFlex(
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
     ) -> TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels]:
-
         _start_from_needs_traversal_object(self)
         self._start_with_or_without_labels_from(
             start_vertex,
@@ -1040,7 +1036,6 @@ class TraversalBreadthFirst(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         super().__init__(
             vertex_as_id,
             GearDefault(),
@@ -1119,7 +1114,6 @@ class TraversalDepthFirstFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         (
             self.next_edge_or_vertex,
             self.edges_with_data,
@@ -1149,7 +1143,6 @@ class TraversalDepthFirstFlex(
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
     ) -> TraversalDepthFirstFlex[T_vertex, T_vertex_id, T_labels]:
-
         _start_from_needs_traversal_object(self)
         self._start_with_or_without_labels_from(
             start_vertex,
@@ -1432,7 +1425,6 @@ class TraversalDepthFirst(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         super().__init__(
             vertex_as_id,
             GearDefault(),
@@ -1511,7 +1503,6 @@ class TraversalNeighborsThenDepthFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         (
             self.next_edge_or_vertex,
             self.edges_with_data,
@@ -1540,7 +1531,6 @@ class TraversalNeighborsThenDepthFlex(
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
     ) -> TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]:
-
         _start_from_needs_traversal_object(self)
         self._start_with_or_without_labels_from(
             start_vertex,
@@ -1753,7 +1743,6 @@ class TraversalNeighborsThenDepth(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         super().__init__(
             vertex_as_id,
             GearDefault(),
@@ -1833,7 +1822,6 @@ class TraversalTopologicalSortFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         (
             self.next_edge_or_vertex,
             self.edges_with_data,
@@ -1997,7 +1985,6 @@ class TraversalTopologicalSortFlex(
             # ----- Inner loop -----
 
             while to_expand_or_leave:
-
                 if to_leave_markers[-1]:
                     # Vertex is to be left: We "leave" and report it, and remove marker
                     self.depth -= 1
@@ -2474,7 +2461,6 @@ class TraversalShortestPathsFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         self.next_edges, self.labeled_edges = _create_unified_next_weighted(
             next_edges, next_labeled_edges
         )
@@ -2923,7 +2909,6 @@ class TraversalAStarFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-
         self.next_edges, self.labeled_edges = _create_unified_next_weighted(
             next_edges, next_labeled_edges
         )

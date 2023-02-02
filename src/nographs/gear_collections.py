@@ -645,7 +645,6 @@ class VertexSequenceWrapper(
         default: T_default_value,
         extend_size: int,
     ) -> None:
-
         self._sequence_factory: Callable[
             [],
             SequenceForGearProto[
