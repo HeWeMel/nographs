@@ -107,7 +107,7 @@ WeightedFullEdge = Union[
     WeightedLabeledFullEdge[T_vertex, T_weight, T_labels],
 ]
 WeightedOrLabeledFullEdge = Union[
-    UnweightedLabeledFullEdge[T_vertex, T_labels],
     WeightedUnlabeledFullEdge[T_vertex, T_weight],
+    UnweightedLabeledFullEdge[T_vertex, T_labels],
     WeightedLabeledFullEdge[T_vertex, T_weight, T_labels],
 ]
