@@ -1,6 +1,10 @@
 ChangeLog
 ---------
 
+**v3.0.3** (2023-02-09)
+
+- Small typing problem solved that the new MyPy version 1.0.0 discovered
+
 **v3.0.2** (2023-01-29)
 
 - Traversals that handle distances, with Gears that allow for manually
