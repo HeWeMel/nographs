@@ -18,6 +18,10 @@ from ._paths import (
     Paths,
 )
 
+from ._compatibility import (
+    pairwise,
+)
+
 
 def _take_except_for_last(iterator: Iterator[T]) -> Iterator[T]:
     """Yield each element from the iterator except for the last."""
@@ -177,13 +181,11 @@ class Path(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
     def iter_edges_from_start(self) -> Iterator[UnweightedUnlabeledFullEdge[T_vertex]]:
         """Iterate the edges of the path from the first to the last."""
-        return itertools.pairwise(self._get_vertex_forwards_iter())
+        return pairwise(self._get_vertex_forwards_iter())
 
     def iter_edges_to_start(self) -> Iterator[UnweightedUnlabeledFullEdge[T_vertex]]:
         """Iterate the edges of the path from the last to the first."""
-        return (
-            (v, w) for w, v in itertools.pairwise(self._get_vertex_backwards_iter())
-        )
+        return ((v, w) for w, v in pairwise(self._get_vertex_backwards_iter()))
 
     def iter_labeled_edges_to_start(
         self,

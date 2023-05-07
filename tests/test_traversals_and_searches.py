@@ -1,5 +1,4 @@
 import collections
-import itertools
 import textwrap
 import sys
 from abc import abstractmethod, ABC
@@ -8,7 +7,7 @@ from typing import Any, Iterable, Union, TypeVar, Optional, Protocol, Generic
 
 import nographs as nog
 from nographs import T, Strategy, T_vertex, T_vertex_id, T_labels, T_weight
-
+from nographs._compatibility import pairwise
 
 # ----- Utilities: Printing test results -----
 
@@ -141,7 +140,7 @@ def check_path(
     """Check if each edge in the path described by the vertex_iterable is
     allowed according to the given next_edges function.
     """
-    for v, w in itertools.pairwise(vertex_iterable):
+    for v, w in pairwise(vertex_iterable):
         if w not in (w for w, *more in next_edges(v, None)):
             print("path invalid from", v, "to", w)
             return
