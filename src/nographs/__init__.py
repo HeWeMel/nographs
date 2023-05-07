@@ -1,5 +1,17 @@
-from nographs.types import (
-    # basic data types of NoGraphs
+# In the following, all API elements are listed that are
+# not private of the module that defines it.
+# The elements that are ment to be package private, are
+# commented out to document this property.
+# All other elements are imported and exported "flat"
+# as direct elements of the package.
+
+from ._types import (
+    # TypeVars, type aliases, and protocols that are used in NoGraphs to describe its
+    # API and to specify type annotations. They are exported only for the rare use
+    # case that an applications bases own type annotations on them.
+    # vertex_as_id is the only exception, it is defined here because
+    # it is used as a singleton, and is the only predefined instance of VertexToID.
+    T,
     Weight,
     T_vertex,
     T_vertex_id,
@@ -18,29 +30,25 @@ from nographs.types import (
     WeightedFullEdge,
     WeightedOrLabeledFullEdge,
 )
-
-from nographs.gear_collections import (
+from ._gear_collections import (
     # --- Gear collection types ---
     VertexSet,
     VertexMapping,
     # --- Gear collections for dense integer keys ---
-    # Protocols for the used kind of sequences and the wrappers
+    # -- Protocols for the used kind of sequences and the wrappers
+    # (Only needed for defining/configuring new gears)
     GettableSettableForGearProto,
     SequenceForGearProto,
     VertexSequenceWrapperForSetProto,
     VertexSequenceWrapperForMappingProto,
-    # ABCs and helper functions to allow for type-save down casts
-    _GettableSettableForGearAssertNoCall,
-    _VertexSequenceWrapperAssertNoCall,
-    VertexSetByWrapper,
-    VertexMappingByWrapper,
-    VertexMappingByWrapperWithNone,
-    get_wrapper_from_vertex_set,
-    access_to_vertex_set,
-    get_wrapper_from_vertex_mapping,
-    access_to_vertex_mapping_expect_none,
-    access_to_vertex_mapping,
-    # Implementations or VertexSet/VertexMapping based on wrappers
+    # -- ABCs and helper functions to allow for type-save down casts
+    # get_wrapper_from_vertex_set,
+    # access_to_vertex_set,
+    # get_wrapper_from_vertex_mapping,
+    # access_to_vertex_mapping_expect_none,
+    # access_to_vertex_mapping,
+    # -- Implementations or VertexSet/VertexMapping based on wrappers
+    # (needed to define new gears that are based on sequences)
     VertexSetWrappingSequence,
     VertexSetWrappingSequenceNoBitPacking,
     VertexSetWrappingSequenceBitPacking,
@@ -48,18 +56,18 @@ from nographs.gear_collections import (
     VertexMappingWrappingSequenceWithNone,
     VertexMappingWrappingSequenceWithoutNone,
 )
-
-from nographs.gears import (
-    # ABCs for the needed collection kinds for NoGraphs
-    VertexIdSet,
-    VertexIdToVertexMapping,
-    VertexIdToDistanceMapping,
-    VertexIdToPathEdgeDataMapping,
-    MutableSequenceOfVertices,
-    # Gear protocols
+from ._gears import (
+    # -- ABCs for the needed collection kinds for NoGraphs
+    # (Used library-internal to better document special semantics of some objects)
+    # VertexIdSet,
+    # VertexIdToVertexMapping,
+    # VertexIdToDistanceMapping,
+    # VertexIdToPathEdgeDataMapping,
+    # MutableSequenceOfVertices,
+    # -- Gear protocols
     GearWithoutDistances,
     Gear,
-    # Concrete gears
+    # -- Concrete gears
     GearForHashableVertexIDs,
     GearDefault,
     GearForHashableVertexIDsAndIntsMaybeFloats,
@@ -76,29 +84,47 @@ from nographs.gears import (
     GearForIntVerticesAndIDsAndCFloats,
     GearForIntVerticesAndIDsAndCInts,
 )
-
-from nographs.paths import (
+from ._paths import (
     Paths,
-    _PathsDummy,
-    PathsOfUnlabeledEdges,
-    PathsOfLabeledEdges,
+    # PathsOfUnlabeledEdges,
+    # PathsOfLabeledEdges,
+    # PathsDummy,
+    # DummyPredecessorOrAttributesMapping,
 )
-
-from nographs.strategies import (
-    # basic types
-    NextVertices,
+from ._strategies import (
+    Strategy,
+    T_strategy,
+    NextVertices,  # Usable, in rare cases, for typing application-defined functions
     NextEdges,
-    # traversal (abstract base class and concrete implementations)
+    NextLabeledEdges,
+    NextWeightedEdges,
+    NextWeightedLabeledEdges,
+    # NextEdgesOrVertices,
+    # NextWeightedMaybeLabeledEdges,
+    BNextVertices,
+    BNextEdges,
+    BNextLabeledEdges,
+    BNextWeightedEdges,
+    BNextWeightedLabeledEdges,
+    # BNextEdgesOrVertices,
+    # BNextWeightedMaybeLabeledEdges,
+    # iter_start_ids,
+    # iter_start_vertices_and_ids,
+    # define_visited,
+    # define_distances,
+    # create_paths,
+    # NoIterator,
+    # NoVisitedSet,
+    # NoDistancesMapping,
+)
+from ._traversals import (
     Traversal,
-    _TraversalWithoutWeightsBasic,
-    _TraversalWithoutWeightsDFS,
     TraversalBreadthFirstFlex,
     TraversalBreadthFirst,
     TraversalDepthFirstFlex,
     TraversalDepthFirst,
     TraversalNeighborsThenDepthFlex,
     TraversalNeighborsThenDepth,
-    _TraversalWithWeights,
     TraversalTopologicalSortFlex,
     TraversalTopologicalSort,
     TraversalShortestPathsFlex,
@@ -108,13 +134,27 @@ from nographs.strategies import (
     TraversalMinimumSpanningTreeFlex,
     TraversalMinimumSpanningTree,
 )
-
-from nographs.matrix_gadgets import Vector, Limits, Position, Array
-
-from nographs.edge_gadgets import adapt_edge_index, adapt_edge_iterable
+from ._path import Path
+from ._bidir_search import (
+    BSearchBreadthFirstFlex,
+    BSearchBreadthFirst,
+    BSearchShortestPathFlex,
+    BSearchShortestPath,
+)
+from ._matrix_gadgets import (
+    Vector,
+    Limits,
+    Position,
+    Array,
+)
+from ._edge_gadgets import (
+    adapt_edge_index,
+    adapt_edge_iterable,
+)
 
 __all__ = (
     # -- types --
+    "T",
     "Weight",
     "T_vertex",
     "T_vertex_id",
@@ -135,20 +175,10 @@ __all__ = (
     # -- gear collections --
     "VertexSet",
     "VertexMapping",
-    "_GettableSettableForGearAssertNoCall",
-    "_VertexSequenceWrapperAssertNoCall",
-    "VertexSetByWrapper",
-    "VertexMappingByWrapper",
-    "VertexMappingByWrapperWithNone",
     "GettableSettableForGearProto",
     "SequenceForGearProto",
     "VertexSequenceWrapperForSetProto",
     "VertexSequenceWrapperForMappingProto",
-    "get_wrapper_from_vertex_set",
-    "access_to_vertex_set",
-    "get_wrapper_from_vertex_mapping",
-    "access_to_vertex_mapping_expect_none",
-    "access_to_vertex_mapping",
     "VertexSetWrappingSequence",
     "VertexSetWrappingSequenceNoBitPacking",
     "VertexSetWrappingSequenceBitPacking",
@@ -156,11 +186,6 @@ __all__ = (
     "VertexMappingWrappingSequenceWithNone",
     "VertexMappingWrappingSequenceWithoutNone",
     # -- gears --
-    "VertexIdSet",
-    "VertexIdToVertexMapping",
-    "VertexIdToDistanceMapping",
-    "VertexIdToPathEdgeDataMapping",
-    "MutableSequenceOfVertices",
     "GearWithoutDistances",
     "Gear",
     "GearForHashableVertexIDs",
@@ -181,22 +206,29 @@ __all__ = (
     "GearForIntVertexIDsAndCInts",
     # -- paths --
     "Paths",
-    "_PathsDummy",
-    "PathsOfUnlabeledEdges",
-    "PathsOfLabeledEdges",
-    # -- strategies --
+    # -- path --
+    "Path",
+    # -- strategy --
+    "Strategy",
+    "T_strategy",
     "NextVertices",
     "NextEdges",
+    "NextLabeledEdges",
+    "NextWeightedEdges",
+    "NextWeightedLabeledEdges",
+    "BNextVertices",
+    "BNextEdges",
+    "BNextLabeledEdges",
+    "BNextWeightedEdges",
+    "BNextWeightedLabeledEdges",
+    # -- traversal --
     "Traversal",
-    "_TraversalWithoutWeightsBasic",
-    "_TraversalWithoutWeightsDFS",
     "TraversalBreadthFirstFlex",
     "TraversalBreadthFirst",
     "TraversalDepthFirstFlex",
     "TraversalDepthFirst",
     "TraversalNeighborsThenDepthFlex",
     "TraversalNeighborsThenDepth",
-    "_TraversalWithWeights",
     "TraversalTopologicalSortFlex",
     "TraversalTopologicalSort",
     "TraversalShortestPathsFlex",
@@ -205,6 +237,11 @@ __all__ = (
     "TraversalAStar",
     "TraversalMinimumSpanningTreeFlex",
     "TraversalMinimumSpanningTree",
+    # -- bidir search --
+    "BSearchBreadthFirstFlex",
+    "BSearchBreadthFirst",
+    "BSearchShortestPathFlex",
+    "BSearchShortestPath",
     # -- matrix gadgets --
     "Vector",
     "Limits",

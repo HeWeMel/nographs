@@ -5,14 +5,16 @@ import operator
 from collections.abc import (
     Container,
     Sequence,
+    MutableSequence,
     Mapping,
     Callable,
     Iterable,
     Iterator,
     Hashable,
 )
-from numbers import Real
-from typing import Optional, Any, SupportsIndex
+from typing import Optional, Any, SupportsIndex, cast
+
+from ._types import T_weight
 
 
 Vector = Sequence[int]  # api.rst: documented manually
@@ -152,7 +154,7 @@ class Position(tuple[int]):
 
 
 class Array:
-    def __init__(self, nested_sequences, dimensions: int = 2):
+    def __init__(self, nested_sequences: Sequence, dimensions: int = 2) -> None:
         """An n-dimensional array.
 
         Based on *nested sequences* that, up to a given number of
@@ -190,7 +192,7 @@ class Array:
     def mutable_copy(self) -> Array:
         """Create a mutable copy of the array."""
 
-        def _writable(area, dimensions):
+        def _writable(area: Sequence, dimensions: int) -> list:
             if dimensions > 1:
                 return [_writable(sub_area, dimensions - 1) for sub_area in area]
             else:
@@ -198,7 +200,7 @@ class Array:
 
         return Array(_writable(self.content, self.dimensions), self.dimensions)
 
-    def __getitem__(self, position: Vector):
+    def __getitem__(self, position: Vector) -> Any:
         """Get the content at the given position. This allows for using
         the expression syntax *array[...]*.
 
@@ -209,7 +211,7 @@ class Array:
             i = i[coordinate]
         return i
 
-    def __setitem__(self, position: Vector, content: Any):
+    def __setitem__(self, position: Vector, content: Any) -> None:
         # noinspection PyShadowingNames
         """Set the content at the given position. Assumption: The nested
         sequence the array is build upon is mutable in its last dimension
@@ -223,7 +225,7 @@ class Array:
         field = self.content
         for coordinate in position[:-1]:
             field = field[coordinate]
-        field[position[-1]] = content
+        cast(MutableSequence, field)[position[-1]] = content
 
     def items(self) -> Iterator[tuple[Position, Any]]:
         """Iterate positions and content.
@@ -234,7 +236,9 @@ class Array:
         # option autodoc_typehints = 'description' cannot correctly
         # evaluate the type parameters of tuple (whilst typing.Tuple works).
 
-        def _items_in_dimension(area, dimensions):
+        def _items_in_dimension(
+            area: Sequence, dimensions: int
+        ) -> Iterator[tuple[tuple[int, ...], Any]]:
             if dimensions == 1:
                 for coordinate, sub_area in enumerate(area):
                     yield (coordinate,), sub_area
@@ -262,7 +266,9 @@ class Array:
 
         content_set = set(content)
 
-        def find_in_dimension(p_matrix, p_dimensions) -> Iterator[tuple[int, ...]]:
+        def find_in_dimension(
+            p_matrix: Sequence, p_dimensions: int
+        ) -> Iterator[tuple[int, ...]]:
             if p_dimensions == 1:
                 for coordinate, cell_content in enumerate(p_matrix):
                     if cell_content in content_set:
@@ -298,7 +304,7 @@ class Array:
         limits = self.limits()
         moves = Position.moves(dimensions=self.dimensions, diagonals=diagonals)
 
-        def next_vertices(position, _):
+        def next_vertices(position: Position, _: Any) -> Iterator[Position]:
             for neighbor in position.neighbors(moves=moves, limits=limits, wrap=wrap):
                 if self[neighbor] not in forbidden_content:
                     yield neighbor
@@ -307,10 +313,10 @@ class Array:
 
     def next_edges_from_cell_weights(
         self,
-        content_to_weight: Mapping[Any, Real],
+        content_to_weight: Mapping[Any, T_weight],
         wrap: bool = False,
         diagonals: bool = False,
-    ) -> Callable:
+    ) -> Callable[[Position, Any], Iterable[tuple[Position, T_weight]]]:
         # noinspection PyShadowingNames
         """Return a `NextEdges` function for traversal strategies, based on
         given choice of when positions qualify as neighbors (goals of a
@@ -327,7 +333,7 @@ class Array:
         limits = self.limits()
         moves = Position.moves(dimensions=self.dimensions, diagonals=diagonals)
 
-        def next_edges(vector, _):
+        def next_edges(vector: Position, _: Any) -> Iterator[tuple[Position, T_weight]]:
             for neighbor in vector.neighbors(moves=moves, limits=limits, wrap=wrap):
                 weight = content_to_weight.get(self[neighbor], None)
                 if weight is not None:

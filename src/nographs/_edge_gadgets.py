@@ -4,12 +4,14 @@ import collections
 import itertools
 from collections.abc import Sequence, Mapping, Callable, Iterable
 from typing import Union, Any, Literal, overload
-from nographs import (  # types
+
+from ._types import (
     T_vertex,
     T_weight,
     T_labels,
     OutEdge,
     WeightedOrLabeledFullEdge,
+    AnyFullEdge,
 )
 
 
@@ -136,7 +138,7 @@ def adapt_edge_index(
                 )
         raise ValueError("graph must be Mapping or Sequence")
 
-    def get(vertex, _):
+    def get(vertex: Any, _: Any) -> Union[Any, Sequence[Any]]:
         try:
             return index[vertex]
         except KeyError:
@@ -149,7 +151,7 @@ def adapt_edge_index(
 
 @overload
 def adapt_edge_iterable(
-    edges: Iterable[tuple[T_vertex, T_vertex]],
+    edges: Iterable[AnyFullEdge[T_vertex, T_weight, T_labels]],
     *,
     add_inverted: bool,
     attributes: Literal[False],
