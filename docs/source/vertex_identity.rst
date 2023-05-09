@@ -1,8 +1,10 @@
 Identity and equivalence of vertices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For each of the traversal classes described in section
-`traversal algorithms <algorithms>`, there is another, more flexible class,
+For each of the classes described in the sections
+`traversal algorithms <traversals>` and
+`bidirectional search algorithms <bidirectional_search>`,
+there is another, more flexible class,
 with "Flex" appended to the class name. These classes have two more parameters,
 *vertex_to_id* and *gear*. In this section, we explain the former parameter,
 in the `next section <gears>` the latter parameter.

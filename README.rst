@@ -48,37 +48,49 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 **Feature overview**
 
-- Algorithms: DFS, BFS, topological search,
+- Unidirectional traversal algorithms: DFS, BFS, topological search,
   Dijkstra, A\* and MST.
-- Flexible graph notion: Infinite directed multigraphs with loops and
-  attributes (this includes
-  multiple adjacency, cycles, self-loops,
-  directed edges,
-  weighted edges and edges with application specific attributes).
-  Your vertices can be nearly anything.
-  Wide range of data types for edge weights and path length
-  supported (float, int, Decimal, mpmath.mpf and others), e.g.,
-  for high precision computations.
-  Infinite graphs are supported, but need to be
-  locally finite (i.e., a vertex has only finitely many outgoing edges).
+- Bidirectional search algorithms: BFS and Dijkstra.
+- Flexible graph notion:
+
+  - Infinite directed multigraphs with loops and
+    attributes (this includes
+    multiple adjacency, cycles, self-loops,
+    directed edges,
+    weighted edges and edges with application specific attributes).
+  - Infinite graphs are supported, but need to be
+    locally finite (i.e., a vertex has only finitely many outgoing edges).
+
+- Generic API. The application can define the following:
+
+  - Vertices: Can be anything except for None. Hashable vertices can be
+    used directly, unhashable vertices can be used together with
+    hashable identifiers.
+  - Edge weights and distances: Wide range of data types
+    supported (float, int, Decimal, mpmath.mpf and others), e.g.,
+    for high precision computations.
+  - Edge attributes: Any object, e.g, a container
+    with further data.
+  - Identity and equivalence of vertices.
+  - Bookkeeping: Several sets of bookkeeping data structures
+    are predefined, optimized for different situations (data types used by the
+    application, hashing vs. indexing, collections for *Python* objects or *C* native
+    data types,...); Adaptable and extendable, e.g., specialized
+    collections of 3rd party libraries can be integrated easily and runtime
+    efficiently
+
 - Results: Reachability, depth, distance, paths and trees.
   Paths can be
   calculated with vertices or edges or attributed edges
   and can be iterated in both directions.
 - Flexible API: The concept of implicit graphs that NoGraphs is based on
-  allows for an API that eases operations like
-  graph pruning, graph product and graph abstraction ike
+  allows for an API that eases
+  operations like
   graph pruning, graph abstraction, the typical binary
   graph operations (union, intersection, several types of products), the
   computation of search-aware graphs, and
   traversals of vertex equivalence classes on the fly.
-- Flexible bookkeeping:
-  Several sets of bookkeeping data structures,
-  optimized for different situations (data types used by the application,
-  hashing vs. indexing, collections for Python objects or *C* native data types,
-  ...); Adaptable and extendable, e.g., specialized collections of
-  3rd party libraries can be integrated easily and runtime efficiently. Internal
-  bookkeeping data can be
+  Bookkeeping data can be
   pre-initialized and accessed during computations.
 - Typing: The API can be used fully typed (optionally).
 - Implementation: Pure Python (>=3.9). It introduces no further dependencies.

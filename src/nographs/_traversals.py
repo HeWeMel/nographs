@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import array
-import itertools
 import copy
+import itertools
 from abc import ABC, abstractmethod
 from collections.abc import (
     Callable,
@@ -11,31 +11,14 @@ from collections.abc import (
 )
 from heapq import heapify, heappop, heappush
 from numbers import Real
-from typing import TypeVar, Optional, Any, Union, cast, overload, Generic, Literal
+from typing import Optional, Any, Union, cast, overload, Generic, Literal
 
-from nographs import (  # types
-    T_vertex,
-    T_vertex_id,
-    T_weight,
-    T_labels,
-    VertexToID,
-    vertex_as_id,
-    UnweightedLabeledOutEdge,
-    WeightedUnlabeledOutEdge,
-    WeightedLabeledOutEdge,
-    WeightedOutEdge,
-    LabeledOutEdge,
-    OutEdge,
-    WeightedFullEdge,
-)
-from nographs import (  # gear_collections
-    get_wrapper_from_vertex_set,
+from ._gear_collections import (
     access_to_vertex_set,
-    get_wrapper_from_vertex_mapping,
     access_to_vertex_mapping,
     access_to_vertex_mapping_expect_none,
 )
-from nographs import (  # gears
+from ._gears import (
     GearWithoutDistances,
     Gear,
     GearDefault,
@@ -45,215 +28,62 @@ from nographs import (  # gears
     VertexIdToPathEdgeDataMapping,
     MutableSequenceOfVertices,
 )
-
-from nographs import (  # paths
+from ._paths import (
     Paths,
-    _PathsDummy,
-    PathsOfUnlabeledEdges,
-    PathsOfLabeledEdges,
+    DummyPredecessorOrAttributesMapping,
+    PathsDummy,
 )
-
-
-# --------------- exported types -------------
-
-# todo: Warning: The following types are manually documented in api.rst
-
-# next vertices and next edges functions for traversals
-# that work with and without weights
-T_traversal = TypeVar("T_traversal")
-
-NextVertices = Callable[[T_vertex, T_traversal], Iterable[T_vertex]]
-
-NextEdges = Callable[[T_vertex, T_traversal], Iterable[OutEdge[T_vertex, Any, Any]]]
-
-NextLabeledEdges = Callable[
-    [T_vertex, T_traversal], Iterable[LabeledOutEdge[T_vertex, Any, T_labels]]
-]
-
-# next edges functions for traversal that work with weights
-NextWeightedEdges = Callable[
-    [T_vertex, T_traversal],
-    Iterable[
-        Union[
-            WeightedUnlabeledOutEdge[T_vertex, T_weight],
-            WeightedLabeledOutEdge[T_vertex, T_weight, Any],
-        ]
-    ],
-]
-
-NextWeightedLabeledEdges = Callable[
-    [T_vertex, T_traversal],
-    Iterable[WeightedLabeledOutEdge[T_vertex, T_weight, T_labels]],
-]
-
-
-# --------------- internal types -------------
-
-NextEdgesOrVertices = Callable[
-    [T_vertex, T_traversal],
-    Iterable[
-        Union[
-            T_vertex,
-            WeightedUnlabeledOutEdge[T_vertex, Any],
-            UnweightedLabeledOutEdge[T_vertex, T_labels],
-            WeightedLabeledOutEdge[T_vertex, Any, T_labels],
-        ]
-    ],
-]
-
-NextWeightedMaybeLabeledEdges = Callable[
-    [T_vertex, T_traversal],
-    Iterable[
-        Union[
-            WeightedUnlabeledOutEdge[T_vertex, T_weight],
-            WeightedLabeledOutEdge[T_vertex, T_weight, T_labels],
-        ]
-    ],
-]
+from ._strategies import (
+    Strategy,
+    T_strategy,
+    NextVertices,
+    NextEdges,
+    NextLabeledEdges,
+    NextWeightedEdges,
+    NextWeightedLabeledEdges,
+    NextEdgesOrVertices,
+    NextWeightedMaybeLabeledEdges,
+    iter_start_ids,
+    iter_start_vertices_and_ids,
+    define_visited,
+    define_distances,
+    create_paths,
+    NoIterator,
+    NoVisitedSet,
+    NoDistancesMapping,
+)
+from ._types import (
+    T_vertex,
+    T_vertex_id,
+    T_weight,
+    T_labels,
+    VertexToID,
+    vertex_as_id,
+    WeightedOutEdge,
+    WeightedFullEdge,
+)
 
 
 # --------------- internal support functions -------------
 
 
-def _start_from_needs_traversal_object(obj: Any):
+def _start_from_needs_traversal_object(obj: Any) -> None:
     if not isinstance(obj, Traversal):
         raise RuntimeError(
             "Method start_from can only be called on a Traversal object."
         )
 
 
-def _iter_start_ids(
-    start_vertices: Iterable[T_vertex], vertex_to_id: VertexToID[T_vertex, T_vertex_id]
-) -> Iterable[T_vertex_id]:
-    """Compute vertex ids for given start vertices and allow for iterating
-    them"""
-    if vertex_to_id == vertex_as_id:
-        # If the identity function (in a mathematical sense)
-        # vertex_as_id is used with correct typing, this means that
-        # T_vertex is a subtype of T_vertex_id (typically: identical).
-        # So, instead of applying the function, we could just cast the vertices
-        # to vertex ids. For improved performance, we cast the whole iterator.
-        return cast(Iterable[T_vertex_id], start_vertices)
-
-    return (vertex_to_id(vertex) for vertex in start_vertices)
-
-
-def _iter_start_vertices_and_ids(
-    start_vertices: Iterable[T_vertex], vertex_to_id: VertexToID[T_vertex, T_vertex_id]
-) -> Iterable[tuple[T_vertex, T_vertex_id]]:
-    """Compute vertex ids for given start vertices and allow for iterating
-    pairs of vertex and vertex id."""
-    if vertex_to_id == vertex_as_id:
-        # If the identity function (in a mathematical sense)
-        # vertex_as_id is used with correct typing, this means that
-        # T_vertex is a subtype of T_vertex_id (typically: identical).
-        # So, instead of applying the function, we could just cast the vertices
-        # to vertex ids. For improved performance, we cast the whole iterator.
-        vertices_and_vertices = ((vertex, vertex) for vertex in start_vertices)
-        vertices_and_ids = cast(
-            Iterator[tuple[T_vertex, T_vertex_id]], vertices_and_vertices
-        )
-        return vertices_and_ids
-
-    return ((vertex, vertex_to_id(vertex)) for vertex in start_vertices)
-
-
-def _define_visited(
-    gear: GearWithoutDistances[T_vertex, T_vertex_id, T_labels],
-    already_visited: Optional[VertexIdSet[T_vertex_id]],
-    iter_start_ids: Iterable[T_vertex_id],
-    is_tree: bool,
-) -> VertexIdSet[T_vertex_id]:
-    """Use and return already_visited, if provided, for storing visited vertices,
-    and otherwise a new VertexIdSet. Mark start vertices as visited."""
-    if already_visited is None:
-        return gear.vertex_id_set(() if is_tree else iter_start_ids)
-
-    if not is_tree:
-        if (wrapper := get_wrapper_from_vertex_set(already_visited)) is None:
-            method_add = already_visited.add
-            for v_id in iter_start_ids:
-                method_add(v_id)
-        else:
-            wrapper.update_from_keys(iter_start_ids)
-    return already_visited
-
-
-def _define_distances(
-    gear: Gear[T_vertex, T_vertex_id, T_weight, T_labels],
-    known_distances: Optional[VertexIdToDistanceMapping[T_vertex_id, T_weight]],
-    iter_start_ids_and_distances: Iterable[tuple[T_vertex_id, T_weight]],
-    is_tree: bool,
-) -> VertexIdToDistanceMapping[T_vertex_id, T_weight]:
-    """Use and return known_distances, if provided, for storing vertex distances, and
-    otherwise new VertexIdToDistanceMapping. Store the distances given for the
-    start vertices."""
-    if known_distances is None:
-        return gear.vertex_id_to_distance_mapping(iter_start_ids_and_distances)
-
-    if not is_tree:
-        if (wrapper := get_wrapper_from_vertex_mapping(known_distances)) is None:
-            method_setdefault = known_distances.setdefault
-            for v_id, distance in iter_start_ids_and_distances:
-                method_setdefault(v_id, distance)
-        else:
-            wrapper.update_default(iter_start_ids_and_distances)
-
-    return known_distances
-
-
-def _create_no_paths():
-    """Create setting of paths, predecessors and attributes collections
-    (here: None) for case that no paths should be built."""
-    return None, None, None
-
-
-def _create_paths(
-    gear: GearWithoutDistances[T_vertex, T_vertex_id, T_labels],
-    labeled_edges: bool,
-    vertex_to_id: VertexToID[T_vertex, T_vertex_id],
-    start_vertices: Iterable[T_vertex],
-) -> tuple[
-    Paths[T_vertex, T_vertex_id, T_labels],
-    VertexIdToVertexMapping[T_vertex_id, T_vertex],
-    Optional[VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels]],
-]:
-    """Translate from configuration of path generation to setting of
-    paths, predecessors and attributes collection. Store empty paths for start
-    vertices."""
-
-    # Create container for predecessors.
-    # From each start vertex, store an empty paths to itself.
-    predecessor = gear.vertex_id_to_vertex_mapping(
-        (
-            (vertex_id, vertex)
-            for vertex, vertex_id in _iter_start_vertices_and_ids(
-                start_vertices, vertex_to_id
-            )
-        )
-    )
-    paths: Paths[T_vertex, T_vertex_id, T_labels]
-    attributes: Optional[VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels]]
-    if labeled_edges:
-        attributes = gear.vertex_id_to_path_attributes_mapping(())
-        paths = PathsOfLabeledEdges[T_vertex, T_vertex_id, T_labels](
-            predecessor, attributes, vertex_to_id
-        )
-    else:
-        paths = PathsOfUnlabeledEdges[T_vertex, T_vertex_id](predecessor, vertex_to_id)
-        attributes = None
-    return paths, predecessor, attributes
-
-
 def _create_unified_next(
-    next_vertices: Optional[NextVertices[T_vertex, T_traversal]],
-    next_edges: Optional[NextEdges[T_vertex, T_traversal]],
-    next_labeled_edges: Optional[NextLabeledEdges[T_vertex, T_traversal, T_labels]],
-) -> tuple[NextEdgesOrVertices[T_vertex, T_traversal, T_labels], bool, bool]:
+    next_vertices: Optional[NextVertices[T_vertex, T_strategy]],
+    next_edges: Optional[NextEdges[T_vertex, T_strategy]],
+    next_labeled_edges: Optional[NextLabeledEdges[T_vertex, T_strategy, T_labels]],
+) -> tuple[NextEdgesOrVertices[T_vertex, T_strategy, T_labels], bool, bool]:
     """Check configuration of given next_vertices, next_edges, and next_labeled_edges
-    and calculate unified NextEdgesOrVertices[] and whether we have edges with data
-    (weights and/or labels) and/or labeled_edges."""
-    next_edges_or_vertices: NextEdgesOrVertices[T_vertex, T_traversal, T_labels]
+    and calculate unified NextEdgesOrVertices
+    and whether we have edges with data (weights and/or labels) and/or labeled_edges.
+    """
+    next_edges_or_vertices: NextEdgesOrVertices[T_vertex, T_strategy, T_labels]
     if next_vertices is not None:
         if next_edges is not None:
             raise RuntimeError("Both next_vertices and next_edges provided.")
@@ -281,17 +111,17 @@ def _create_unified_next(
 
 
 def _create_unified_next_weighted(
-    next_edges: Optional[NextWeightedEdges[T_vertex, T_traversal, T_weight]],
+    next_edges: Optional[NextWeightedEdges[T_vertex, T_strategy, T_weight]],
     next_labeled_edges: Optional[
-        NextWeightedLabeledEdges[T_vertex, T_traversal, T_weight, T_labels]
+        NextWeightedLabeledEdges[T_vertex, T_strategy, T_weight, T_labels]
     ],
 ) -> tuple[
-    NextWeightedMaybeLabeledEdges[T_vertex, T_traversal, T_weight, T_labels], bool
+    NextWeightedMaybeLabeledEdges[T_vertex, T_strategy, T_weight, T_labels], bool
 ]:
-    """Check configuration of given next_vertices and next_edges and calculate
-    unified NextEdgesOrVertices[] and whether we have labeled_edges."""
+    """Check configuration of given next_edges and next_labeled_edges and calculate
+    unified _NextWeightedMaybeLabeledEdges[] and whether we have labeled_edges."""
     next_maybe_labeled_edges: NextWeightedMaybeLabeledEdges[
-        T_vertex, T_traversal, T_weight, T_labels
+        T_vertex, T_strategy, T_weight, T_labels
     ]
     if next_edges is not None:
         if next_labeled_edges is not None:
@@ -306,28 +136,10 @@ def _create_unified_next_weighted(
     return next_maybe_labeled_edges, labeled_edges
 
 
-class NoIterator(Generic[T_vertex]):
-    def __next__(self) -> T_vertex:
-        """
-        >>> next(NoIterator())
-        Traceback (most recent call last):
-        RuntimeError: Traversal not started, iteration not possible
-        """
-        raise RuntimeError("Traversal not started, iteration not possible")
-
-    def __iter__(self):
-        """
-        >>> iter(NoIterator())
-        Traceback (most recent call last):
-        RuntimeError: Traversal not started, iteration not possible
-        """
-        raise RuntimeError("Traversal not started, iteration not possible")
-
-
 # -- traversal strategies for unweighted graphs with or without edge labels --
 
 
-class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
+class Traversal(Strategy[T_vertex, T_vertex_id, T_labels]):
     """
     Abstract Class. Its subclasses provide methods to iterate through vertices
     and edges using some specific traversal strategies.
@@ -347,24 +159,24 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
         # -- general attributes set and needed by all traversal strategies
         self._generator: Iterator[T_vertex] = NoIterator[T_vertex]()
-        self._start_vertices: tuple[T_vertex, ...] = tuple[T_vertex]()
+        self._start_vertices: Iterable[T_vertex] = tuple[T_vertex]()
         self._build_paths: bool = False
         self._calculation_limit: Optional[int] = None
 
         # -- attributes for path data, needed by all traversal strategies
-        self.paths: Paths[T_vertex, T_vertex_id, T_labels] = _PathsDummy[
-            T_vertex, T_vertex_id
-        ]()
-        """ If path creation has been demanded, the container *paths* provides the
-        found paths for all vertices visited so far. If labeled edges were provided,
-        the paths contain them instead of just vertices, if demanded.
+        self.paths: Paths[T_vertex, T_vertex_id, T_labels] = PathsDummy[
+            T_vertex, T_vertex_id, T_labels
+        ](vertex_to_id)
+        """ The container *paths* holds the created paths, if path creation has been
+        demanded. If labeled edges were provided (parameter *next_labeled_edges*), the
+        paths contain them instead of just vertices.
         """
-        self._predecessors: Optional[
-            VertexIdToVertexMapping[T_vertex_id, T_vertex]
-        ] = None
-        self._attributes: Optional[
-            VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels]
-        ] = None
+        self._predecessors: VertexIdToVertexMapping[
+            T_vertex_id, T_vertex
+        ] = DummyPredecessorOrAttributesMapping[T_vertex_id, T_vertex]()
+        self._attributes: VertexIdToPathEdgeDataMapping[
+            T_vertex_id, T_labels
+        ] = DummyPredecessorOrAttributesMapping[T_vertex_id, T_labels]()
 
     def __iter__(
         self,
@@ -399,10 +211,13 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         """
         For a started traversal, return an iterator that fetches vertices
         from the traversal, reports a vertex if it is in *vertices*, and stops when
-        all the *vertices* have been found and reported. If the iterator has no
-        more vertices to report (graph is exhausted) without having found all the
-        *vertices*, KeyError is raised, or the traversal just terminates, if a silent
-        fail is demanded.
+        all the *vertices* have been found and reported.
+
+        If the iterator has no more vertices to report (graph is exhausted) without
+        having found all the *vertices*, KeyError is raised, or the traversal just
+        terminates, if a silent fail is demanded.
+
+        If *vertices* does not provide any vertices, an empty iterator is returned.
 
         If a `VertexToID` function is used, the method searches for vertices
         that have the same id as one of the *vertices*.
@@ -427,31 +242,28 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
             vertex_to_id = self._vertex_to_id
             if vertex_to_id == vertex_as_id:
                 vertex_set = set(cast(Iterable[T_vertex_id], vertices))
-
                 v_count = len(vertex_set)
-                for v in self._generator:
-                    if v not in vertex_set:
-                        continue
-                    yield v
-                    v_count -= 1
-                    if v_count == 0:
-                        break
-                else:
-                    if not fail_silently:
-                        raise KeyError("Not all of the given vertices have been found")
+                if v_count:
+                    for v in self._generator:
+                        if v not in vertex_set:
+                            continue
+                        yield v
+                        v_count -= 1
+                        if v_count == 0:
+                            break
             else:
                 vertex_set = set(vertex_to_id(vertex) for vertex in vertices)
                 v_count = len(vertex_set)
-                for v in self._generator:
-                    if vertex_to_id(v) not in vertex_set:
-                        continue
-                    yield v
-                    v_count -= 1
-                    if v_count == 0:
-                        break
-                else:
-                    if not fail_silently:
-                        raise KeyError("Not all of the given vertices have been found")
+                if v_count:
+                    for v in self._generator:
+                        if vertex_to_id(v) not in vertex_set:
+                            continue
+                        yield v
+                        v_count -= 1
+                        if v_count == 0:
+                            break
+            if v_count > 0 and not fail_silently:
+                raise KeyError("Not all of the given vertices have been found")
 
         return my_generator()
 
@@ -521,7 +333,8 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         build_paths: bool,
         calculation_limit: Optional[int],
         gear: GearWithoutDistances[T_vertex, T_vertex_id, T_labels],
-    ):
+    ) -> None:
+        # Check start vertices options. Compute multi-vertices form from single vertex.
         if start_vertex is not None:
             if start_vertices is not None:
                 raise RuntimeError("Both start_vertex and start_vertices provided.")
@@ -529,20 +342,19 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         else:
             if start_vertices is None:
                 raise RuntimeError("Neither start_vertex nor start_vertices provided.")
-            self._start_vertices = tuple(start_vertices)  # copy from iterable
+            self._start_vertices = start_vertices
 
-        # Note: Detection of wrong option combinations for paths is implemented in
-        # _create_paths and _create_no_paths.
-        self.paths, self._predecessors, self._attributes = (
-            _create_paths(
-                gear,
-                self._labeled_edges,
-                self._vertex_to_id,
-                self._start_vertices,
-            )
-            if build_paths
-            else _create_no_paths()
+        # Create and store path container and path setting
+        self._build_paths = build_paths
+        self.paths, self._predecessors, self._attributes = create_paths(
+            build_paths,
+            gear,
+            self._labeled_edges,
+            self._vertex_to_id,
+            self._start_vertices,
         )
+
+        # store calculation limit
         self._calculation_limit = calculation_limit
 
     def _start(self) -> None:
@@ -552,11 +364,21 @@ class Traversal(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
     def _traverse(self) -> Iterator[T_vertex]:
         """Has to be implemented in subclass"""
 
+    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
+        more = dict()
+        if vertices is not None and self._build_paths:
+            for vertex in vertices:
+                more[f"paths[{vertex}]"] = self.paths[vertex]
+        return self._state_and_more_to_str(less=["paths"], more=more)
+
 
 # -------------- Traversal strategies for unweighted edges -----------------
 
 
 class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
+    """Internal: A traversal without weight type and distances collection, but
+    with attribute visited."""
+
     def __init__(
         self,
         edges_with_data: bool,
@@ -568,10 +390,9 @@ class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
         super().__init__(labeled_edges, is_tree, vertex_to_id)
         self._edges_with_data = edges_with_data
         self._gear = gear
-        self.visited: Optional[VertexIdSet[T_vertex_id]] = None
-        """ A collection that contains the vertices (resp. their hashable ids
-        from vertex_to_id) that have been visited so far, and the start
-        vertices. After an exhaustive search, it contains
+        self.visited: VertexIdSet[T_vertex_id] = NoVisitedSet[T_vertex_id]()
+        """ A collection that contains the visited vertices (resp. their hashable ids
+        from vertex_to_id). After an exhaustive search, it contains
         the vertices (resp. vertex ids) reachable from the start vertices.
         """
 
@@ -582,9 +403,8 @@ class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
         build_paths: bool,
         calculation_limit: Optional[int],
         already_visited: Optional[VertexIdSet[T_vertex_id]],
-    ):
+    ) -> None:
         _start_from_needs_traversal_object(self)
-
         self._start_from(
             start_vertex,
             start_vertices,
@@ -592,11 +412,10 @@ class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
             calculation_limit,
             self._gear,
         )
-
-        self.visited = _define_visited(
+        self.visited = define_visited(
             self._gear,
             already_visited,
-            _iter_start_ids(self._start_vertices, self._vertex_to_id),
+            iter_start_ids(self._start_vertices, self._vertex_to_id),
             self._is_tree,
         )
         super()._start()
@@ -621,11 +440,11 @@ class _TraversalWithoutWeightsBasic(
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
-        :param start_vertices: The vertices (iterator) the search should start at. Only
+        :param start_vertices: The vertices the search should start at. Only
             allowed if start_vertex equals None.
 
         :param build_paths: If true, build paths from some start vertex to each visited
-            vertex.
+            vertex. Paths of start vertices are empty paths.
 
         :param calculation_limit: If provided, maximal number of vertices to process
             (read in) from your graph. If it is exceeded, a RuntimeError will be raised.
@@ -662,7 +481,7 @@ class _TraversalWithoutWeightsDFS(
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
-        :param start_vertices: The vertices (iterator) the search should start at. Only
+        :param start_vertices: The vertices the search should start at. Only
             allowed if start_vertex equals None.
 
         :param build_paths: If true, build paths from some start vertex to each visited
@@ -702,10 +521,11 @@ class TraversalBreadthFirstFlex(
      or next_labeled_edges.
 
     :param next_edges: See `NextEdges` function. Only allowed if next_vertices equals
-     None. If both are None, provide next_labeled_edges.
+      None. If both are None, provide next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_vertices
-     and next_edges equal None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextLabeledEdges` function. Only allowed if
+      next_vertices and next_edges equal None. If given, paths will record the given
+      labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run,
      each vertex can be reached only once, is_tree can be set to True. This
@@ -715,11 +535,12 @@ class TraversalBreadthFirstFlex(
     **Algorithm:** Breadth First Search, non-recursive, based on FIFO queue,
     vertices are reported when they are first "seen".
 
-    **Properties:** Visits and reports vertices in breadth first order, i.e.,
+    **Properties:** Reports and expands vertices in breadth first order, i.e.,
     with ascending depth (edge count of the path with the fewest edges from a start
-    vertex). If paths are demanded, all computed paths are *shortest paths*,
-    i.e., paths with minimal number of edges from a start vertex to their end vertex.
-    Vertices are regarded as visited when they have been seen.
+    vertex). All computed paths are *shortest paths* , i.e., paths with minimal number
+    of edges from a start vertex to their end vertex.
+    A vertex is regarded as visited when it has been reported or if it is a start
+    vertex.
 
     **Input:** Directed graph. Unlabeled or labeled edges. One or more start
     vertices. Optional calculation limit.
@@ -756,13 +577,11 @@ class TraversalBreadthFirstFlex(
         is_tree: bool = False,
     ) -> None:
         (
-            self.next_edge_or_vertex,
-            self.edges_with_data,
-            self.labeled_edges,
+            self._next_edge_or_vertex,
+            edges_with_data,
+            labeled_edges,
         ) = _create_unified_next(next_vertices, next_edges, next_labeled_edges)
-        super().__init__(
-            self.edges_with_data, self.labeled_edges, is_tree, vertex_to_id, gear
-        )
+        super().__init__(edges_with_data, labeled_edges, is_tree, vertex_to_id, gear)
         self.depth: int = -1  # value not used, initialized during traversal
         """ At this *search depth*, the reported (resp. the expanded) vertex has been
         found. It equals the length (number of edges) of the created path to the
@@ -770,7 +589,10 @@ class TraversalBreadthFirstFlex(
         For the special case of TraversalBreadthFirst, it equals the
         *depth of the vertex* (minimal number of edges needed to come to it
         from a start vertex).
+        When a traversal has been started, but no vertex has been reported or expanded
+        so far, the depth is 0 (depth of the start vertices).
         """
+        self._report_depth_increase = False
 
     def start_from(
         self,
@@ -780,6 +602,7 @@ class TraversalBreadthFirstFlex(
         build_paths: bool = False,
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
+        _report_depth_increase: bool = False,  # hidden parameter for internal use
     ) -> TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels]:
         _start_from_needs_traversal_object(self)
         self._start_with_or_without_labels_from(
@@ -789,6 +612,8 @@ class TraversalBreadthFirstFlex(
             calculation_limit,
             already_visited,
         )
+        self._report_depth_increase = _report_depth_increase
+        self.depth = 0
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
@@ -799,8 +624,9 @@ class TraversalBreadthFirstFlex(
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
-        paths = self.paths
+        report_depth_increase = self._report_depth_increase
         predecessors = self._predecessors
         attributes = self._attributes
 
@@ -810,12 +636,8 @@ class TraversalBreadthFirstFlex(
 
         # Copy _TraversalWithoutWeights attributes into method scope
         edges_with_data = self._edges_with_data
-        next_edge_or_vertex = self.next_edge_or_vertex
+        next_edge_or_vertex = self._next_edge_or_vertex
         visited = self.visited
-        assert visited is not None
-
-        # Create booleans (avoid checks with "is")
-        attributes_exists = attributes is not None
 
         # Get references of used gear objects and methods (avoid attribute resolution)
         visited_add = visited.add
@@ -826,23 +648,16 @@ class TraversalBreadthFirstFlex(
             visited_uses_bits,
             index_and_bit_method,
         ) = access_to_vertex_set(visited)
-
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-
-        if attributes_exists:
-            assert labeled_edges
-            assert attributes is not None
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
 
         # ----- Initialize method specific bookkeeping -----
 
@@ -850,15 +665,11 @@ class TraversalBreadthFirstFlex(
         # (using a queue and counting down the size of current depth horizon is slower,
         # and creating a new list instead of clear() is also slower)
 
-        # to_expand = list(self._start_vertices)
-        # next_to_expand = list[T_vertex]()
-
         to_expand = self._gear.sequence_of_vertices(self._start_vertices)
         next_to_expand = self._gear.sequence_of_vertices(())
 
         prev_traversal = copy.copy(self)  # copy of self, for keeping previous depth
-        self.depth = 1
-        prev_traversal.depth = 0
+        self.depth = 1  # used for reporting (prev_traversal starts at 0)
 
         # Get method references of specific bookkeeping (avoid attribute resolution)
         to_expand_append = to_expand.append
@@ -892,7 +703,7 @@ class TraversalBreadthFirstFlex(
                 for edge_or_vertex in next_edge_or_vertex(vertex, prev_traversal):
                     neighbor = edge_or_vertex[0] if edges_with_data else edge_or_vertex
 
-                    if not is_tree or paths:
+                    if not is_tree or build_paths:
                         n_id: T_vertex_id = (
                             maybe_vertex_to_id(neighbor)  # type: ignore[assignment]
                             if maybe_vertex_to_id
@@ -930,28 +741,31 @@ class TraversalBreadthFirstFlex(
                                 except IndexError:
                                     visited_wrapper.extend_and_set(n_id, True)
 
-                        if paths:
+                        if build_paths:
                             # Store the predecessor (vertex) of the neighbor
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 predecessors_sequence[n_id] = vertex
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
                                 predecessors_wrapper.extend_and_set(n_id, vertex)
                             # Store the labels of the edge to the neighbor
-                            if attributes_exists:
+                            if labeled_edges:
                                 edge_data = edge_or_vertex[-1]
                                 try:
-                                    # noinspection PyUnboundLocalVariable
                                     attributes_sequence[n_id] = edge_data
                                 except IndexError:
-                                    # noinspection PyUnboundLocalVariable
                                     attributes_wrapper.extend_and_set(n_id, edge_data)
 
                     # Vertex has been seen, report it now
                     yield neighbor
                     # Needs to be expanded in the next round
                     next_to_expand_append(neighbor)
+
+            if report_depth_increase and next_to_expand:
+                # We are not finished yet, because we found new vertices to expand,
+                # and we are about to increase the depth now, and it is demanded
+                # to report this situation by reporting the last vertex reported so far
+                # again. So we report it again.
+                yield next_to_expand[-1]
 
             # Update external views (reporting/expanding) on depth
             self.depth += 1
@@ -987,7 +801,7 @@ class TraversalBreadthFirstFlex(
 
         # In order to make the above check work, the following generator functionality
         # needs to be encapsulated in a local function
-        def my_generator():
+        def my_generator() -> Iterator[T_vertex]:
             for v in self._generator:
                 if self.depth >= start:
                     if self.depth < stop:
@@ -1062,8 +876,9 @@ class TraversalDepthFirstFlex(
     :param next_edges: See `NextEdges` function. Only allowed if next_vertices equals
      None. If both are None, provide next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_vertices
-     and next_edges equal None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextLabeledEdges` function. Only allowed if
+      next_vertices and next_edges equal None. If given, paths will record the given
+      labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run, each vertex
         can be reached only once, is_tree can be set to True. This improves
@@ -1074,10 +889,11 @@ class TraversalDepthFirstFlex(
     vertices are reported when they are about to be expanded (neighbors read from the
     graph).
 
-    **Properties:** Follows edges to new vertices as long as possible, and goes back
-    a step and follows further edges that start at some visited vertex only if
-    necessary to come to new vertices.
-    A vertex is regarded as visited when the traversal started reporting it.
+    **Properties:** Follows edges to new vertices (and reports and expands them) as
+    long as possible, and goes back a step and follows further edges that start at some
+    visited vertex only if necessary to come to new vertices.
+    A vertex is regarded as visited when it has been reported or if it is a start
+    vertex.
 
     **Input:** Directed graph. One or more start vertices. Vertices must be
     hashable, or hashable id can be provided. Unlabeled or labeled edges. Optional
@@ -1115,13 +931,11 @@ class TraversalDepthFirstFlex(
         is_tree: bool = False,
     ) -> None:
         (
-            self.next_edge_or_vertex,
-            self.edges_with_data,
-            self.labeled_edges,
+            self._next_edge_or_vertex,
+            edges_with_data,
+            labeled_edges,
         ) = _create_unified_next(next_vertices, next_edges, next_labeled_edges)
-        super().__init__(
-            self.edges_with_data, self.labeled_edges, is_tree, vertex_to_id, gear
-        )
+        super().__init__(edges_with_data, labeled_edges, is_tree, vertex_to_id, gear)
         self.depth: int = -1  # value not used
         """ If depth computation has been demanded:
         At this *search depth*, the reported (resp. the expanded) vertex has been
@@ -1129,6 +943,8 @@ class TraversalDepthFirstFlex(
         vertex, if path creation is demanded.
         Note: The search depth does not need to be the depth of the vertex
         (see `TraversalBreadthFirstFlex`).
+        When a traversal has been started, but no vertex has been reported or expanded
+        so far, the depth is 0 (depth of the start vertices).
         """
         self._compute_depth = False  # value not used
         self._allow_reordering = False  # value not used
@@ -1152,6 +968,7 @@ class TraversalDepthFirstFlex(
             already_visited,
         )
         self._compute_depth = compute_depth
+        self.depth = 0
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
@@ -1163,6 +980,7 @@ class TraversalDepthFirstFlex(
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
         paths = self.paths
         predecessors = self._predecessors
@@ -1174,12 +992,10 @@ class TraversalDepthFirstFlex(
 
         # Copy _TraversalWithoutWeights attributes into method scope
         edges_with_data = self._edges_with_data
-        next_edge_or_vertex = self.next_edge_or_vertex
+        next_edge_or_vertex = self._next_edge_or_vertex
         visited = self.visited
-        assert visited is not None
 
         # Create booleans (avoid checks with "is", make decisions clear)
-        attributes_exists = attributes is not None
         check_and_set_visited_on_expand = not is_tree
         check_visited_when_seen = paths and not is_tree
         # An alternative is, to choose here: not is_tree.
@@ -1202,29 +1018,22 @@ class TraversalDepthFirstFlex(
             visited_uses_bits,
             index_and_bit_method,
         ) = access_to_vertex_set(visited)
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            assert labeled_edges
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
 
         # ----- Initialize method specific bookkeeping -----
 
-        depth = -1
+        depth = -1  # The inner loop starts with incrementing, so, we pre-decrement
         if not compute_depth:
-            self.depth = depth
-
-        if len(self._start_vertices) == 0:
-            return
+            self.depth = depth  # In this case, we leave the -1 the whole time
 
         # vertices to enter or leave
         to_visit = self._gear.sequence_of_vertices(self._start_vertices)
@@ -1235,14 +1044,16 @@ class TraversalDepthFirstFlex(
             # Sequence of flag bytes (store in a Q array) marking the vertices to leave
             # by 1 and the vertices to enter by 0.
             # Initially, store a zero flag for each start vertex.
-            to_leave_markers = array.array(
-                "B", itertools.repeat(False, len(self._start_vertices))
-            )
+            to_leave_markers = array.array("B", itertools.repeat(False, len(to_visit)))
             to_leave_markers_pop = to_leave_markers.pop
             to_leave_markers_append = to_leave_markers.append
         else:
             # the following is needed to replace the real depth with at least
-            # to information whether it is 0 oder higher.
+            # the information whether it is 0 oder higher.
+            # This does not work if we have no start vertices, but in this case,
+            # we can just stop working because we will not report results anyway
+            if len(to_visit) == 0:
+                return
             top_start_vertex: Optional[T_vertex] = to_visit[-1]
 
         # ----- Typing preparation of inner loop (for details see BFS) -----
@@ -1257,14 +1068,18 @@ class TraversalDepthFirstFlex(
             vertex = to_visit_pop()  # Enter first added vertex first
             if compute_depth:
                 depth += 1
+                # (noinspection necessary due to bug PY-9479, also below...)
+                # noinspection PyUnboundLocalVariable
                 while to_leave_markers_pop():
                     depth -= 1  # Got marker "leave a vertex", update depth
                 # Update external view on depth
                 self.depth = depth
                 # Store marker True: when reached, we are leaving a vertex
+                # noinspection PyUnboundLocalVariable
                 to_leave_markers_append(True)
             else:
                 # if vertex is top_start_vertex:
+                # noinspection PyUnboundLocalVariable
                 if vertex is top_start_vertex:  # "is" is used on purpose
                     depth = 0  # is start vertex
                     if to_visit:
@@ -1321,7 +1136,7 @@ class TraversalDepthFirstFlex(
             for edge_or_vertex in next_edge_or_vertex(vertex, self):
                 neighbor = edge_or_vertex[0] if edges_with_data else edge_or_vertex
 
-                if check_visited_when_seen or paths:
+                if check_visited_when_seen or build_paths:
                     n_id: T_vertex_id = (
                         maybe_vertex_to_id(neighbor)  # type: ignore[assignment]
                         if maybe_vertex_to_id
@@ -1362,24 +1177,18 @@ class TraversalDepthFirstFlex(
                                 continue
                         except IndexError:
                             pass
-                    if paths:
+                    if build_paths:
                         # Store the predecessor (vertex) of the neighbor
                         try:
-                            # noinspection PyUnboundLocalVariable
                             predecessors_sequence[n_id] = vertex
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
-                            assert predecessors_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             predecessors_wrapper.extend_and_set(n_id, vertex)
                         # Store the labels of the edge to the neighbor
-                        if attributes_exists:
+                        if labeled_edges:
                             data_of_edge = edge_or_vertex[-1]
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_sequence[n_id] = data_of_edge
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
                 # Needs to be visited, in stack order
@@ -1451,8 +1260,9 @@ class TraversalNeighborsThenDepthFlex(
     :param next_edges: See `NextEdges` function. Only allowed if next_vertices equals
      None. If both are None, provide next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_vertices
-     and next_edges equal None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextLabeledEdges` function. Only allowed if
+      next_vertices and next_edges equal None. If given, paths will record the given
+      labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run, each vertex
         can be reached only once, is_tree can be set to True. This improves
@@ -1462,9 +1272,10 @@ class TraversalNeighborsThenDepthFlex(
     **Algorithm:** Variant of Depth First Search ("DFS"), non-recursive, based on stack,
     vertices are reported when they are seen (neighbors read from the graph).
 
-    **Properties:** Like Depth First Search, but first reports all neighbors of
-    the current vertex and then goes deeper.
-    Vertices are regarded as visited when they have been seen.
+    **Properties:** Like `nographs.TraversalDepthFirst`, but first reports all
+    neighbors of the current vertex and then goes deeper.
+    A vertex is regarded as visited when it has been reported or if it is a start
+    vertex.
 
     **Input:** Directed graph. One or more start vertices. Vertices must be
     hashable, or hashable id can be provided. Unlabeled or labeled edges. Optional
@@ -1504,13 +1315,11 @@ class TraversalNeighborsThenDepthFlex(
         is_tree: bool = False,
     ) -> None:
         (
-            self.next_edge_or_vertex,
-            self.edges_with_data,
-            self.labeled_edges,
+            self._next_edge_or_vertex,
+            edges_with_data,
+            labeled_edges,
         ) = _create_unified_next(next_vertices, next_edges, next_labeled_edges)
-        super().__init__(
-            self.edges_with_data, self.labeled_edges, is_tree, vertex_to_id, gear
-        )
+        super().__init__(edges_with_data, labeled_edges, is_tree, vertex_to_id, gear)
         self.depth: int = -1  # value not used
         """ If depth computation has been demanded:
         At this *search depth*, the reported (resp. the expanded) vertex has been
@@ -1518,6 +1327,8 @@ class TraversalNeighborsThenDepthFlex(
         vertex, if path creation is demanded.
         Note: The search depth does not need to be the depth of the vertex
         (see `TraversalBreadthFirstFlex`).
+        When a traversal has been started, but no vertex has been reported or expanded
+        so far, the depth is 0 (depth of the start vertices).
         """
         self._compute_depth = False  # value not used
 
@@ -1539,6 +1350,7 @@ class TraversalNeighborsThenDepthFlex(
             calculation_limit,
             already_visited,
         )
+        self.depth = 0
         self._compute_depth = compute_depth
         return self
 
@@ -1551,8 +1363,8 @@ class TraversalNeighborsThenDepthFlex(
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
-        paths = self.paths
         predecessors = self._predecessors
         attributes = self._attributes
 
@@ -1562,12 +1374,8 @@ class TraversalNeighborsThenDepthFlex(
 
         # Copy TraversalWithoutWeights attributes into method scope
         edges_with_data = self._edges_with_data
-        next_edge_or_vertex = self.next_edge_or_vertex
+        next_edge_or_vertex = self._next_edge_or_vertex
         visited = self.visited
-        assert visited is not None
-
-        # Create booleans (avoid checks with "is", make decisions clear)
-        attributes_exists = attributes is not None
 
         # Get references of used gear objects and methods (avoid attribute resolution)
         visited_add = visited.add
@@ -1578,28 +1386,23 @@ class TraversalNeighborsThenDepthFlex(
             visited_uses_bits,
             visited_index_and_bit_method,
         ) = access_to_vertex_set(visited)
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            assert labeled_edges
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
 
         # ----- Initialize method specific bookkeeping -----
 
+        depth = -1  # The inner loop starts with incrementing, so, we pre-decrement
+        if not compute_depth:
+            self.depth = depth  # In this case, we leave the -1 the whole time
         prev_traversal = copy.copy(self)  # copy of self, for keeping previous depth
-        depth = -1
-
-        if len(self._start_vertices) == 0:
-            return
 
         # vertices to expand
         to_expand = self._gear.sequence_of_vertices(self._start_vertices)
@@ -1610,9 +1413,7 @@ class TraversalNeighborsThenDepthFlex(
             # Sequence of flag bytes (store in a Q array) marking the vertices to leave
             # by 1 and the vertices to enter (these are in to_expand) by 0.
             # Initially, store a zero flag for each start vertex.
-            to_leave_marker = array.array(
-                "B", itertools.repeat(False, len(self._start_vertices))
-            )
+            to_leave_marker = array.array("B", itertools.repeat(False, len(to_expand)))
             to_leave_marker_pop = to_leave_marker.pop
             to_leave_marker_append = to_leave_marker.append
 
@@ -1628,12 +1429,14 @@ class TraversalNeighborsThenDepthFlex(
             vertex = to_expand_pop()  # Enter first added vertex first
             if compute_depth:
                 depth += 1
+                # noinspection PyUnboundLocalVariable
                 while to_leave_marker_pop():
                     depth -= 1  # Got marker "leave a vertex", update depth
                 # Update external view on depth
                 prev_traversal.depth = depth
                 self.depth = depth + 1
                 # Store marker True: when reached, we are leaving a vertex
+                # noinspection PyUnboundLocalVariable
                 to_leave_marker_append(True)
 
             if calculation_limit and not (calculation_limit := calculation_limit - 1):
@@ -1642,7 +1445,7 @@ class TraversalNeighborsThenDepthFlex(
             for edge_or_vertex in next_edge_or_vertex(vertex, prev_traversal):
                 neighbor = edge_or_vertex[0] if edges_with_data else edge_or_vertex
 
-                if not is_tree or paths:
+                if not is_tree or build_paths:
                     n_id: T_vertex_id = (
                         maybe_vertex_to_id(neighbor)  # type: ignore[assignment]
                         if maybe_vertex_to_id
@@ -1675,24 +1478,18 @@ class TraversalNeighborsThenDepthFlex(
                             visited_sequence[n_id] = True
                         except IndexError:
                             visited_wrapper.extend_and_set(n_id, True)
-                    if paths:
+                    if build_paths:
                         # Store the predecessor (vertex) of the neighbor
                         try:
-                            # noinspection PyUnboundLocalVariable
                             predecessors_sequence[n_id] = vertex
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
-                            assert predecessors_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             predecessors_wrapper.extend_and_set(n_id, vertex)
                         # Store the labels of the edge to the neighbor
-                        if attributes_exists:
+                        if labeled_edges:
                             data_of_edge = edge_or_vertex[-1]
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_sequence[n_id] = data_of_edge
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
                 yield neighbor
@@ -1769,8 +1566,9 @@ class TraversalTopologicalSortFlex(
     :param next_edges: See `NextEdges` function. Only allowed if next_vertex equals
        None. If both are None, provide next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_vertices
-     and next_edges equal None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextLabeledEdges` function. Only allowed if
+      next_vertices and next_edges equal None. If given, paths will record the given
+      labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run, each vertex
        can be reached only once, is_tree can be set to True. This improves performance,
@@ -1785,7 +1583,12 @@ class TraversalTopologicalSortFlex(
     vertex *v* ("*u* depends on *v*"), *v* comes before *u* in the ordering. If the
     graph contains a cycle that can be reached within the sorting process, a
     RuntimeError exception is raised and a cyclic path from a start vertex is provided.
-    A vertex is regarded as visited when the traversal started expanding it.
+
+    Vertices are expanded following the strategy `nographs.TraversalDepthFirst`.
+
+    For topological search, a vertex is regarded as visited when it has been expanded
+    (see search state) or if it is a start vertex. Note this difference in comparison
+    to other traversals that mark a vertex as visited when it is reported.
 
     **Input:** Directed graph. One or more start vertices. Vertices must be
     hashable, or hashable id can be provided. Unlabeled or labeled edges. Optional
@@ -1823,13 +1626,11 @@ class TraversalTopologicalSortFlex(
         is_tree: bool = False,
     ) -> None:
         (
-            self.next_edge_or_vertex,
-            self.edges_with_data,
-            self.labeled_edges,
+            self._next_edge_or_vertex,
+            edges_with_data,
+            labeled_edges,
         ) = _create_unified_next(next_vertices, next_edges, next_labeled_edges)
-        super().__init__(
-            self.edges_with_data, self.labeled_edges, is_tree, vertex_to_id, gear
-        )
+        super().__init__(edges_with_data, labeled_edges, is_tree, vertex_to_id, gear)
         # the following values are not used, and initialized during traversal
         self.depth: int = -1
         """  At this *search depth*, the reported (resp. the expanded) vertex has been
@@ -1837,6 +1638,8 @@ class TraversalTopologicalSortFlex(
         vertex, if path creation is demanded.
         Note: The search depth does not need to be the depth of the vertex
         (see `TraversalBreadthFirstFlex`).
+        When a traversal has been started, but no vertex has been reported or expanded
+        so far, the depth is 0 (depth of the start vertices).
         """
         self.cycle_from_start: list[T_vertex] = []
         """ If the graph contains a cycle that can be reached within the sorting
@@ -1858,7 +1661,7 @@ class TraversalTopologicalSortFlex(
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
-        :param start_vertices: The vertices (iterator) the search should start at. Only
+        :param start_vertices: The vertices the search should start at. Only
             allowed if start_vertex equals None.
 
         :param build_paths: If true, build paths from some start vertex to each visited
@@ -1893,6 +1696,7 @@ class TraversalTopologicalSortFlex(
             calculation_limit,
             already_visited,
         )
+        self.depth = 0
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
@@ -1903,8 +1707,8 @@ class TraversalTopologicalSortFlex(
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
-        paths = self.paths
         predecessors = self._predecessors
         attributes = self._attributes
 
@@ -1914,12 +1718,8 @@ class TraversalTopologicalSortFlex(
 
         # Copy _TraversalWithoutWeights attributes into method scope
         edges_with_data = self._edges_with_data
-        next_edge_or_vertex = self.next_edge_or_vertex
+        next_edge_or_vertex = self._next_edge_or_vertex
         visited = self.visited
-        assert visited is not None
-
-        # Create booleans (avoid checks with "is")
-        attributes_exists = attributes is not None
 
         # Get references of used gear objects and methods (avoid attribute resolution)
         visited_add = visited.add
@@ -1930,20 +1730,16 @@ class TraversalTopologicalSortFlex(
             visited_uses_bits,
             visited_index_and_bit_method,
         ) = access_to_vertex_set(visited)
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                predecessors_uses_sequence,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            assert labeled_edges
-            (
-                attributes_uses_sequence,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
+        (
+            predecessors_uses_sequence,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            attributes_uses_sequence,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
 
         # ----- Typing preparation of inner loop (for details see DFS) -----
 
@@ -1963,7 +1759,6 @@ class TraversalTopologicalSortFlex(
 
             # ----- Initialize specific bookkeeping -----
 
-            self.depth = 0
             self.cycle_from_start = []
             # Sequence used as stack of vertices that we need to enter & expand (if
             # it is not on the trace, see below) or leave & report (otherwise)
@@ -1973,7 +1768,7 @@ class TraversalTopologicalSortFlex(
             # by 1 and the vertices to enter by 0.
             # Initially, store a zero flag for each start vertex.
             to_leave_markers = array.array(
-                "B", itertools.repeat(False, len(self._start_vertices))
+                "B", itertools.repeat(False, len(to_expand_or_leave))
             )
 
             # Get method references of specific bookkeeping (avoid attribute resolution)
@@ -2014,33 +1809,25 @@ class TraversalTopologicalSortFlex(
                         else neighbor
                     )
 
-                    if paths:
+                    if build_paths:
                         # We have to store the predecessor here, because at time of
                         # visit, it is already lost. And we cannot yield here,
                         # because only the first of the neighbors will indeed be
                         # visited next.
-                        # But since the visiting order is defined by a stack we know
-                        # that for each vertex, the predecessor stored last is the
-                        # edge visited first, and after that no other predecessor can
-                        # be stored for that vertex.
+                        # But since we are in a tree, no other predecessor can
+                        # be stored for that vertex later on.
 
                         # Store the predecessor (vertex) of the neighbor
                         try:
-                            # noinspection PyUnboundLocalVariable
                             predecessors_sequence[n_id] = vertex
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
-                            assert predecessors_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             predecessors_wrapper.extend_and_set(n_id, vertex)
                         # Store the labels of the edge to the neighbor
-                        if attributes_exists:
+                        if labeled_edges:
                             data_of_edge = edge_or_vertex[-1]
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_sequence[n_id] = data_of_edge
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
                     # Put vertex on the stack
@@ -2060,7 +1847,6 @@ class TraversalTopologicalSortFlex(
 
             # ----- Initialize specific bookkeeping -----
 
-            self.depth = 0
             self.cycle_from_start = []
 
             # Sequence used as stack of vertices that we need to enter & expand (if
@@ -2254,7 +2040,7 @@ class TraversalTopologicalSortFlex(
                                     # trace set sequence already has the necessary
                                     # length to store it. So, no IndexError can happen
                                     # here.
-                                    raise RuntimeError(
+                                    raise AssertionError(
                                         "Internal error in TS"
                                     )  # pragma: no cover
                                 continue
@@ -2274,14 +2060,14 @@ class TraversalTopologicalSortFlex(
                                         )
                                 except IndexError:
                                     # See above case for the reason for the pragma
-                                    raise RuntimeError(
+                                    raise AssertionError(
                                         "Internal error in TS"
                                     )  # pragma: no cover
                                 continue
                         except IndexError:
                             pass
 
-                    if paths:
+                    if build_paths:
                         # We have to store the predecessor here, because at time of
                         # visit, it is already lost. And we cannot yield here,
                         # because TopologicalSorted reports not until leaving vertices.
@@ -2290,22 +2076,14 @@ class TraversalTopologicalSortFlex(
                         # edge visited first, and after that no other predecessor can
                         # be stored for that vertex.
                         try:
-                            # noinspection PyUnboundLocalVariable
                             predecessors_sequence[n_id2] = vertex
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
-                            assert predecessors_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             predecessors_wrapper.extend_and_set(n_id2, vertex)
-                        if attributes_exists:
+                        if labeled_edges:
                             data_of_edge = edge_or_vertex[-1]
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_sequence[n_id2] = data_of_edge
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
-                                assert attributes_wrapper is not None  # safe
-                                # noinspection PyUnboundLocalVariable
                                 attributes_wrapper.extend_and_set(n_id2, data_of_edge)
 
                     # Needs to be visited, in stack order
@@ -2413,21 +2191,21 @@ class TraversalShortestPathsFlex(
 
     :param gear: See `gears API <gears_api>` and class `Gear`.
 
-    :param next_edges: See `NextEdges` function. If None, provide next_labeled_edges.
+    :param next_edges: See `NextWeightedEdges` function. If None, provide
+      next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_edges
-      equals None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextWeightedLabeledEdges` function. Only allowed
+      if next_edges equals None. If given, paths will record the given labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run, each vertex
-       can be reached only once, is_tree can be set to True. This improves performance,
-       but attribute *distances* of the traversal will not be updated during and after
-       the traversal.
+      can be reached only once, is_tree can be set to True. This improves performance,
+      but attribute *distances* of the traversal will not be updated during and after
+      the traversal.
 
     **Algorithm:** Shortest paths algorithm of Dijkstra, non-recursive, based on heap.
 
-    **Properties:** Vertices are visited and reported ordered by increasing distance
-    (minimally necessary sum of edge weights) from a start vertex. Each vertex is
-    visited only once.
+    **Properties:** Vertices are reported (and expanded) ordered by increasing distance
+    (minimally necessary sum of edge weights) from a start vertex.
 
     **Input:** Weighted directed graph. One or more start vertices. Vertices must be
     hashable, or hashable id can be provided. Weights need to be non-negative.
@@ -2461,20 +2239,20 @@ class TraversalShortestPathsFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-        self.next_edges, self.labeled_edges = _create_unified_next_weighted(
+        self._next_edges, labeled_edges = _create_unified_next_weighted(
             next_edges, next_labeled_edges
         )
-        super().__init__(self.labeled_edges, is_tree, vertex_to_id, gear)
+        super().__init__(labeled_edges, is_tree, vertex_to_id, gear)
 
         self._known_distances: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None
         self._keep_distances = False
 
-        self.distances: Optional[
-            VertexIdToDistanceMapping[T_vertex_id, T_weight]
-        ] = None
-        """ Current candidates of distance values
+        self.distances: VertexIdToDistanceMapping[
+            T_vertex_id, T_weight
+        ] = NoDistancesMapping[T_vertex_id, T_weight]()
+        """ Provisional or final distance values of some vertices
         (distance from a start vertex). Without option *keep_distances*,
         the value for a vertex is removed once the vertex has been reported. With
         option *keep_distances*, values are never removed, and that means: During a
@@ -2484,7 +2262,7 @@ class TraversalShortestPathsFlex(
         vertices and of the start vertices themselves.
         """
 
-        # The following two values are not used by NoGraphs. They are only set
+        # The following three values are not used by NoGraphs. They are only set
         # to have some initialization.
         self.distance: T_weight = self._gear.infinity()
         """ The length of the shortest path (sum of edge weights) from a
@@ -2496,7 +2274,10 @@ class TraversalShortestPathsFlex(
         vertex, if path creation is demanded.
         Note: The search depth does not need to be the depth of the vertex
         (see `TraversalBreadthFirstFlex`).
+        When a traversal has been started, but no vertex has been reported or expanded
+        so far, the depth is 0 (depth of the start vertices).
         """
+        self._start_vertices_and_ids = tuple[tuple[T_vertex, T_vertex_id]]()
 
     def start_from(
         self,
@@ -2516,11 +2297,11 @@ class TraversalShortestPathsFlex(
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
-        :param start_vertices: The set of vertices (iterator) the search should start
+        :param start_vertices: The set of vertices the search should start
             at. Only allowed if start_vertex equals None.
 
-        :param build_paths: If true, build paths from start vertices for each visited
-            vertex.
+        :param build_paths: If true, build paths from start vertices for each reported
+            vertex, and an empty path for each start vertex.
 
         :param calculation_limit: If provided, maximal number of vertices to process
             (read in) from your graph. If it is exceeded, a RuntimeError will be raised.
@@ -2549,6 +2330,7 @@ class TraversalShortestPathsFlex(
                 "Method start_from can only be called on a Traversal object."
             )
 
+        # ----- Initialize method specific public bookkeeping -----
         self._start_from(
             start_vertex,
             start_vertices,
@@ -2558,12 +2340,30 @@ class TraversalShortestPathsFlex(
         )
         self._keep_distances = keep_distances
         self._known_distances = known_distances
-        super()._start()
+
+        # Explicitly list start vertices and their id. Needed several times.
+        self._start_vertices_and_ids = tuple(
+            iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
+        )
+
+        # At start, most of the distances from a vertex to a start vertex are not
+        # known. If accessed for comparison for possibly better distances, infinity
+        # is used, if no other value is given. Each start vertex has distance 0
+        # from a start vertex (itself), if not defined otherwise.
+        zero = self._gear.zero()
+        self.distances = define_distances(
+            self._gear,
+            self._known_distances,
+            ((vertex_id, zero) for vertex, vertex_id in self._start_vertices_and_ids),
+            self._is_tree,
+        )
 
         # The following two values are not used by NoGraphs. They are only set
-        # to have some defined values before the traversal starts.
+        # to have some defined values before the traversal iterator sets them.
         self.distance = self._gear.infinity()
-        self.depth = -1
+        self.depth = 0
+
+        super()._start()
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
@@ -2572,12 +2372,13 @@ class TraversalShortestPathsFlex(
         infinity = self._gear.infinity()
 
         # Copy Traversal attributes into method scope (faster access)
+        labeled_edges = self._labeled_edges
         is_tree = self._is_tree
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
-        paths = self.paths
         predecessors = self._predecessors
         attributes = self._attributes
 
@@ -2586,32 +2387,23 @@ class TraversalShortestPathsFlex(
             calculation_limit += 1
 
         # Copy traversal specific attributes into method scope
-        next_edges = self.next_edges
+        next_edges = self._next_edges
         keep_distances = self._keep_distances
 
-        # Create booleans (avoid checks with "is"), local check for consistency
-        if attributes is None:
-            attributes_exists = False
-        else:
-            attributes_exists = True
-            assert self.labeled_edges
-
         # Get references of used gear objects and methods (avoid attribute resolution)
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
+        zero = self._gear.zero()
 
-        # ----- Initialize method specific bookkeeping -----
+        # ----- Initialize method specific private bookkeeping -----
 
         # Unique number, that prevents heapq from sorting by vertices in case of a
         # tie in the sort field, because vertices do not need to be pairwise
@@ -2621,32 +2413,16 @@ class TraversalShortestPathsFlex(
         # often faster. Here, we do it simply to do it the same way.
         unique_no = itertools.count(256, -1)
 
-        # Explicitly list start vertices and their id. Needed several times.
-        start_vertices_and_ids = tuple(
-            _iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
-        )
-
-        # At start, most of the distances from a vertex to a start vertex are not
-        # known. If accessed for comparison for possibly better distances, infinity
-        # is used, if no other value is given. Each start vertex has distance 0
-        # from a start vertex (itself), if not defined otherwise.
-        zero = self._gear.zero()
-        distances = _define_distances(
-            self._gear,
-            self._known_distances,
-            ((vertex_id, zero) for vertex, vertex_id in start_vertices_and_ids),
-            is_tree,
-        )
-        self.distances = distances
-
         # Get references of used gear objects and methods (avoid attribute resolution)
-        _, distances_sequence, distances_wrapper = access_to_vertex_mapping(distances)
+        _, distances_sequence, distances_wrapper = access_to_vertex_mapping(
+            self.distances
+        )
 
         # So far, the start vertices are to be visited. Each has an edge count of 0.
         # (No index exception possible at the following indexed access)
         to_visit = [  # used as collection.heapq of tuples, the lowest distance first
             (distances_sequence[vertex_id], next(unique_no), vertex, 0)
-            for vertex, vertex_id in start_vertices_and_ids
+            for vertex, vertex_id in self._start_vertices_and_ids
         ]
         heapify(to_visit)
 
@@ -2700,7 +2476,7 @@ class TraversalShortestPathsFlex(
                 # such path found so far, we can safely ignore it. Otherwise, it is a
                 # new candidate for a shortest path to the neighbor, and we push it to
                 # the heap.
-                if paths or not is_tree:
+                if build_paths or not is_tree:
                     n_id: T_vertex_id = (
                         maybe_vertex_to_id(neighbor)  # type: ignore[assignment]
                         if maybe_vertex_to_id
@@ -2717,27 +2493,20 @@ class TraversalShortestPathsFlex(
 
                     # If we are to generate a path, we have to do it here, since the
                     # edge we have to add to the path prefix is not stored on the heap
-                    if paths:
+                    if build_paths:
                         try:
-                            # noinspection PyUnboundLocalVariable
                             predecessors_sequence[n_id] = vertex
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
-                            assert predecessors_wrapper is not None  # safe
-                            # noinspection PyUnboundLocalVariable
                             predecessors_wrapper.extend_and_set(n_id, vertex)
-                        if attributes_exists:
-                            # attributes_exists -> self.labeled_edges (see assert above)
-                            # -> next_edges (a NextWeightedEdges) is a
-                            # NextWeightedLabeledEdges -> edge[-1] is a T_labels.
+                        if labeled_edges:
+                            # self._labeled_edges -> next_edges (a NextWeightedEdges)
+                            # is a NextWeightedLabeledEdges -> edge[-1] is a T_labels
                             data_of_edge: T_labels = edge[
                                 -1
                             ]  # type: ignore[assignment]
                             try:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_sequence[n_id] = data_of_edge
                             except IndexError:
-                                # noinspection PyUnboundLocalVariable
                                 attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
                 heappush(
@@ -2769,7 +2538,7 @@ class TraversalShortestPathsFlex(
 
         # In order to make the above check work, the following generator functionality
         # needs to be encapsulated in a local function
-        def my_generator():
+        def my_generator() -> Iterator[T_vertex]:
             for v in self._generator:
                 if self.distance >= start:
                     if self.distance < stop:
@@ -2781,6 +2550,24 @@ class TraversalShortestPathsFlex(
                 yield v
 
         return my_generator()
+
+    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
+        more = dict[str, Any]()
+        if vertices is not None:
+            if self._build_paths:
+                for vertex in vertices:
+                    more[f"paths[{vertex}]"] = self.paths[vertex]
+            if self._vertex_to_id is vertex_as_id:
+                for vertex in vertices:
+                    more[f"distances[{vertex}]"] = self.distances[
+                        self._vertex_to_id(vertex)
+                    ]
+            else:
+                for vertex in vertices:
+                    more[f"distances[vertex_to_id({vertex})]"] = self.distances[
+                        self._vertex_to_id(vertex)
+                    ]
+        return self._state_and_more_to_str(less=["paths", "distances"], more=more)
 
 
 class TraversalShortestPaths(
@@ -2848,10 +2635,11 @@ class TraversalAStarFlex(
 
     :param gear: See `gears API <gears_api>` and class `Gear`.
 
-    :param next_edges: See `NextEdges` function. If None, provide next_labeled_edges.
+    :param next_edges: See `NextWeightedEdges` function. If None, provide
+      next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_edges
-      equals None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextWeightedLabeledEdges` function. Only allowed
+      if next_edges equals None. If given, paths will record the given labels.
 
     :param is_tree: bool: If it is certain, that during each traversal run, each vertex
        can be reached only once, is_tree can be set to True. This improves performance,
@@ -2867,17 +2655,18 @@ class TraversalAStarFlex(
     one), and never overestimates the actual needed costs ("admissible heuristic
     function"). Optionally, a calculation limit.
 
-    **Properties:** Vertices are visited and reported ordered by increasing path
-    length (sum of edge weights) of the shortest path from a start vertex to the
-    visited vertex that have been found so far (!).
+    **Properties:** Vertices are reported and expanded ordered by increasing path
+    length (sum of edge weights) of the shortest paths from a start vertex to the
+    respective vertex that have been found so far.
 
-    When the goal is visited, the reported path is a shortest path from start to goal
-    and the reported length is the distance of the goal from start.
+    When the goal is reported, the path stored for it in *paths* is a shortest
+    path from start to goal and the path_length of the search state is the distance
+    of the goal from start.
 
     In case the used heuristic function is *consistent* (i.e., following an edge from
     one vertex to another never reduces the estimated costs to get to the goal by
     more than the weight of the edge), further guarantees hold: Each vertex is only
-    visited once. And for each visited vertex, the yielded path length and edge count
+    visited once. And for each visited vertex, the respective path_length and depth
     (and optionally, the path) are the data of the shortest existing path from start
     (not only from the shortest path found so far).
 
@@ -2909,12 +2698,12 @@ class TraversalAStarFlex(
         ] = None,
         is_tree: bool = False,
     ) -> None:
-        self.next_edges, self.labeled_edges = _create_unified_next_weighted(
+        self._next_edges, labeled_edges = _create_unified_next_weighted(
             next_edges, next_labeled_edges
         )
-        super().__init__(self.labeled_edges, is_tree, vertex_to_id, gear)
+        super().__init__(labeled_edges, is_tree, vertex_to_id, gear)
 
-        # The following two values are not used by NoGraphs. They are only set
+        # The following three values are not used by NoGraphs. They are only set
         # to have some initialization.
         self.path_length: T_weight = self._gear.infinity()
         """ Length (sum of edge weights) of the found path to the
@@ -2927,6 +2716,7 @@ class TraversalAStarFlex(
         Note: The search depth does not need to be the depth of the vertex
         (see `TraversalBreadthFirstFlex`).
         """
+        self._start_vertices_and_ids = tuple[tuple[T_vertex, T_vertex_id]]()
 
         self._heuristic: Optional[Callable[[T_vertex], Real]] = None
         self._known_distances: Optional[
@@ -2936,9 +2726,9 @@ class TraversalAStarFlex(
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None
 
-        self.distances: Optional[
-            VertexIdToDistanceMapping[T_vertex_id, T_weight]
-        ] = None
+        self.distances: VertexIdToDistanceMapping[
+            T_vertex_id, T_weight
+        ] = NoDistancesMapping[T_vertex_id, T_weight]()
         self._path_length_guesses: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None
@@ -2968,11 +2758,11 @@ class TraversalAStarFlex(
         :param start_vertex: The vertex the search should start at. Provide either
             start_vertex or start_vertices, but not both.
 
-        :param start_vertices: The set of vertices (iterator) the search should start
+        :param start_vertices: The set of vertices the search should start
             at. Provide either start_vertex or start_vertices, but not both.
 
-        :param build_paths: If true, build paths from start vertices for each visited
-            vertex.
+        :param build_paths: If true, build paths from start vertices for each reported
+            vertex, and an empty path for each start vertex.
 
         :param calculation_limit: If provided, maximal number of vertices to process
             (read in) from your graph. If it is exceeded, a RuntimeError will be raised.
@@ -3009,71 +2799,14 @@ class TraversalAStarFlex(
             calculation_limit,
             self._gear,
         )
-        self.path_length = self._gear.infinity()  # Value never used
-        self.depth = -1  # Value never used
+
         self._heuristic = heuristic
         self._known_distances = known_distances
         self._known_path_length_guesses = known_path_length_guesses
-        super()._start()
-        return self
-
-    def _traverse(self) -> Iterator[T_vertex]:
-        # Copy Gear attributes into method scope (faster access)
-        infinity = self._gear.infinity()
-
-        # Copy Traversal attributes into method scope (faster access)
-        is_tree = self._is_tree
-        maybe_vertex_to_id = (
-            None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
-        )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
-        calculation_limit = self._calculation_limit
-        paths = self.paths
-        predecessors = self._predecessors
-        attributes = self._attributes
-
-        # Prepare limit check done by zero check
-        if calculation_limit is not None:
-            calculation_limit += 1  # allows for limit check by zero check
-
-        # Copy traversal specific attributes into method scope
-        next_edges = self.next_edges
-        heuristic = self._heuristic
-
-        # Create booleans (avoid checks with "is"), local check for consistency
-        if attributes is None:
-            attributes_exists = False
-        else:
-            attributes_exists = True
-            assert self.labeled_edges
-
-        # Get references of used gear objects and methods (avoid attribute resolution)
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
-
-        # ----- Initialize method specific bookkeeping -----
-
-        # Unique number, that prevents heapq from sorting by vertices in case of a
-        # tie in the sort field, because vertices do not need to be pairwise
-        # comparable. The numbers are generated in decreasing order to make the min
-        # heap behave like a LIFO queue in case of ties. The integers from -5 to 256
-        # are used first, because they are internalized (pre-calculated, and thus
-        # fastest).
-        unique_no = itertools.count(256, -1)
 
         # Explicitly list start vertices and their id. Needed several times.
-        start_vertices_and_ids = tuple(
-            _iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
+        self._start_vertices_and_ids = tuple(
+            iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
         )
 
         # At start, most of the distances from a vertex to a start vertex are not
@@ -3083,28 +2816,81 @@ class TraversalAStarFlex(
         # and a path_length_guess of distance + heuristic(vertex), both if not
         # defined otherwise.
         zero = self._gear.zero()
-        distances = _define_distances(
+        self.distances = define_distances(
             self._gear,
             self._known_distances,
-            ((vertex_id, zero) for vertex, vertex_id in start_vertices_and_ids),
-            is_tree,
+            ((vertex_id, zero) for vertex, vertex_id in self._start_vertices_and_ids),
+            self._is_tree,
         )
-        self.distances = distances
+
+        # The following two values are not used by NoGraphs. They are only set
+        # to have some defined values before the traversal iterator sets them.
+        self.path_length = self._gear.infinity()
+        self.depth = 0
+
+        super()._start()
+        return self
+
+    def _traverse(self) -> Iterator[T_vertex]:
+        # Copy Gear attributes into method scope (faster access)
+        infinity = self._gear.infinity()
+
+        # Copy Traversal attributes into method scope (faster access)
+        labeled_edges = self._labeled_edges
+        is_tree = self._is_tree
+        maybe_vertex_to_id = (
+            None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
+        )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
+        calculation_limit = self._calculation_limit
+        predecessors = self._predecessors
+        attributes = self._attributes
+
+        # Prepare limit check done by zero check
+        if calculation_limit is not None:
+            calculation_limit += 1  # allows for limit check by zero check
+
+        # Copy traversal specific attributes into method scope
+        next_edges = self._next_edges
+        heuristic = self._heuristic
 
         # Get references of used gear objects and methods (avoid attribute resolution)
-        _, distances_sequence, distances_wrapper = access_to_vertex_mapping(distances)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
+
+        # ----- Initialize method specific private bookkeeping -----
+
+        # Unique number, that prevents heapq from sorting by vertices in case of a
+        # tie in the sort field, because vertices do not need to be pairwise
+        # comparable. The numbers are generated in decreasing order to make the min
+        # heap behave like a LIFO queue in case of ties. The integers from -5 to 256
+        # are used first, because they are internalized (pre-calculated, and thus
+        # fastest).
+        unique_no = itertools.count(256, -1)
+
+        # Get references of used gear objects and methods (avoid attribute resolution)
+        _, distances_sequence, distances_wrapper = access_to_vertex_mapping(
+            self.distances
+        )
 
         assert heuristic is not None  # set by __init__
-        path_length_guesses = _define_distances(
+        path_length_guesses = define_distances(
             self._gear,
             self._known_path_length_guesses,
             (
                 (vertex_id, distances_sequence[vertex_id] + heuristic(vertex))
-                for vertex, vertex_id in start_vertices_and_ids
+                for vertex, vertex_id in self._start_vertices_and_ids
             ),
             is_tree,
         )
-
         # Get references of used gear objects and methods (avoid attribute resolution)
         (
             _,
@@ -3116,7 +2902,7 @@ class TraversalAStarFlex(
         # and its path length guess is the one computed above.
         to_visit = [  # used as collection.heapq of tuples, the lowest distance first
             (path_length_guesses_sequence[vertex_id], next(unique_no), vertex, 0)
-            for vertex, vertex_id in start_vertices_and_ids
+            for vertex, vertex_id in self._start_vertices_and_ids
         ]
         heapify(to_visit)
 
@@ -3189,22 +2975,16 @@ class TraversalAStarFlex(
 
                 # If we are to generate a path, we have to do it here, since the edge
                 # we have to add to the path prefix is not stored on the heap
-                if paths:
+                if build_paths:
                     try:
-                        # noinspection PyUnboundLocalVariable
                         predecessors_sequence[n_id] = vertex
                     except IndexError:
-                        # noinspection PyUnboundLocalVariable
-                        assert predecessors_wrapper is not None  # safe
-                        # noinspection PyUnboundLocalVariable
                         predecessors_wrapper.extend_and_set(n_id, vertex)
-                    if attributes_exists:
+                    if labeled_edges:
                         data_of_edge: T_labels = edge[-1]  # type: ignore[assignment]
                         try:
-                            # noinspection PyUnboundLocalVariable
                             attributes_sequence[n_id] = data_of_edge
                         except IndexError:
-                            # noinspection PyUnboundLocalVariable
                             attributes_wrapper.extend_and_set(n_id, data_of_edge)
 
                 h = heuristic(neighbor)
@@ -3216,15 +2996,34 @@ class TraversalAStarFlex(
                     # value of the gear are invalid and cannot be handled further.)
                     if infinity <= n_guess:
                         self._gear.raise_distance_infinity_overflow_error(n_guess)
+
+                if not is_tree:
                     try:
                         path_length_guesses_sequence[n_id] = n_guess
                     except IndexError:
-                        # noinspection PyUnboundLocalVariable
                         path_length_guesses_wrapper.extend_and_set(n_id, n_guess)
                 heappush(
                     to_visit,
                     (n_guess, next(unique_no), neighbor, n_path_edge_count),
                 )
+
+    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
+        more = dict[str, Any]()
+        if vertices is not None:
+            if self._build_paths:
+                for vertex in vertices:
+                    more[f"paths[{vertex}]"] = self.paths[vertex]
+            if self._vertex_to_id is vertex_as_id:
+                for vertex in vertices:
+                    more[f"distances[{vertex}]"] = self.distances[
+                        self._vertex_to_id(vertex)
+                    ]
+            else:
+                for vertex in vertices:
+                    more[f"distances[vertex_to_id({vertex})]"] = self.distances[
+                        self._vertex_to_id(vertex)
+                    ]
+        return self._state_and_more_to_str(less=["paths", "distances"], more=more)
 
 
 class TraversalAStar(
@@ -3292,10 +3091,11 @@ class TraversalMinimumSpanningTreeFlex(
 
     :param gear: See `gears API <gears_api>` and class `Gear`.
 
-    :param next_edges: See `NextEdges` function. If None, provide next_labeled_edges.
+    :param next_edges: See `NextWeightedEdges` function. If None, provide
+      next_labeled_edges.
 
-    :param next_labeled_edges: See `NextEdges` function. Only allowed if next_edges
-      equals None. If given, paths will record the given labels.
+    :param next_labeled_edges: See `NextWeightedLabeledEdges` function. Only allowed
+      if next_edges equals None. If given, paths will record the given labels.
 
     **Algorithm:**  Minimum spanning tree ("MST") algorithm of Jarnik, Prim, Dijkstra.
     Non-recursive, based on heap. A so-called *tie breaker* is implemented, that
@@ -3303,7 +3103,8 @@ class TraversalMinimumSpanningTreeFlex(
     found earlier. This is a typical choice that often improves search performance.
 
     **Properties:** Only edges of the MST from start vertices are reported. Each
-    vertex is visited only once.
+    vertex is reported (as end vertex of an edge) and expanded only once. Computed
+    paths only use MST edges.
 
     **Input:** Weighted undirected graph, given as directed edges with the same
     weight in both directions. One or more start vertices (e.g. for components in
@@ -3340,14 +3141,18 @@ class TraversalMinimumSpanningTreeFlex(
             ]
         ] = None,
     ) -> None:
-        self.next_edges, self.labeled_edges = _create_unified_next_weighted(
+        self._next_edges, labeled_edges = _create_unified_next_weighted(
             next_edges, next_labeled_edges
         )
-        super().__init__(self.labeled_edges, False, vertex_to_id, gear)
+        super().__init__(labeled_edges, False, vertex_to_id, gear)
         self.edge: Optional[WeightedFullEdge[T_vertex, T_weight, T_labels]] = None
         """ Tuple of from_vertex, to_vertex, the weight of the edge,
         and additional data you have provided with the edge (if so).
         """
+
+        # The following value is not used by NoGraphs. It is only set
+        # to have some initialization.
+        self._start_vertices_and_ids = tuple[tuple[T_vertex, T_vertex_id]]()
 
     def start_from(
         self,
@@ -3363,13 +3168,13 @@ class TraversalMinimumSpanningTreeFlex(
         :param start_vertex: The vertex the search should start at. If None, provide
             start_vertices.
 
-        :param start_vertices: The set of vertices (iterator) the search should start
+        :param start_vertices: The set of vertices the search should start
             at. Only allowed if start_vertex equals None. Leads to a result
             consisting of several trees that are only connected if the start vertices
             are connected.
 
-        :param build_paths: If true, build paths from start vertices for each visited
-            vertex.
+        :param build_paths: If true, build paths from start vertices for each reported
+            vertex, and an empty path for each start vertex.
 
         :param calculation_limit: If provided, maximal number of vertices to process
             (read in) from your graph. If it is exceeded, a RuntimeError will be raised.
@@ -3383,6 +3188,7 @@ class TraversalMinimumSpanningTreeFlex(
                 "Method start_from can only be called on a Traversal object."
             )
 
+        # ----- Initialize method specific public bookkeeping -----
         self._start_from(
             start_vertex,
             start_vertices,
@@ -3390,33 +3196,47 @@ class TraversalMinimumSpanningTreeFlex(
             calculation_limit,
             self._gear,
         )
+
+        # Explicitly list start vertices and their id. Needed several times.
+        self._start_vertices_and_ids = tuple(
+            iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
+        )
+
+        # The following value is not used by NoGraphs. It is only set
+        # to have some defined value before the traversal iterator sets them.
         self.edge = None
+
         super()._start()
         return self
 
     def _traverse(self) -> Iterator[T_vertex]:
         # ----- Prepare efficient environment for inner loop -----
         # Copy Traversal attributes into method scope (faster access)
+        labeled_edges = self._labeled_edges
         maybe_vertex_to_id = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
+        build_paths = self._build_paths
         calculation_limit = self._calculation_limit
-        paths = self.paths
         predecessors = self._predecessors
         attributes = self._attributes
 
         # Copy traversal specific attributes into method scope
-        next_edges = self.next_edges
+        next_edges = self._next_edges
 
-        # Create booleans (avoid checks with "is")
-        attributes_exists = attributes is not None
+        # Get references of used gear objects and methods (avoid attribute resolution)
+        (
+            _,
+            predecessors_sequence,
+            predecessors_wrapper,
+        ) = access_to_vertex_mapping_expect_none(predecessors)
+        (
+            _,
+            attributes_sequence,
+            attributes_wrapper,
+        ) = access_to_vertex_mapping_expect_none(attributes)
 
-        # ----- Initialize method specific bookkeeping -----
-
-        # Explicitly list start vertices and their id. Needed several times.
-        start_vertices_and_ids = tuple(
-            _iter_start_vertices_and_ids(self._start_vertices, self._vertex_to_id)
-        )
+        # ----- Initialize method specific private bookkeeping -----
 
         # At start, only the start vertices are regarded as visited
         # (The protocol VertexSet abandons checking the element type, see
@@ -3424,7 +3244,7 @@ class TraversalMinimumSpanningTreeFlex(
         #   noinspection.)
         # noinspection PyTypeChecker
         visited: VertexIdSet[T_vertex_id] = self._gear.vertex_id_set(
-            vertex_id for vertex, vertex_id in start_vertices_and_ids
+            vertex_id for vertex, vertex_id in self._start_vertices_and_ids
         )
 
         # Check if we already go over the calculation limit when we evaluate the
@@ -3434,7 +3254,8 @@ class TraversalMinimumSpanningTreeFlex(
         # exception. So, neither here.
         if calculation_limit is not None and calculation_limit >= 0:
             if (
-                calculation_limit := calculation_limit - len(start_vertices_and_ids)
+                calculation_limit := calculation_limit
+                - len(self._start_vertices_and_ids)
             ) < 0:
                 raise RuntimeError("Number of visited vertices reached limit")
 
@@ -3467,20 +3288,6 @@ class TraversalMinimumSpanningTreeFlex(
             index_and_bit_method,
         ) = access_to_vertex_set(visited)
 
-        if paths:  # has no __len__, so this checks for non-None
-            assert predecessors is not None
-            (
-                _,
-                predecessors_sequence,
-                predecessors_wrapper,
-            ) = access_to_vertex_mapping_expect_none(predecessors)
-        if attributes is not None:
-            (
-                _,
-                attributes_sequence,
-                attributes_wrapper,
-            ) = access_to_vertex_mapping_expect_none(attributes)
-
         # ----- Inner loop -----
 
         while to_visit:
@@ -3501,42 +3308,34 @@ class TraversalMinimumSpanningTreeFlex(
 
             if visited_uses_sequence:
                 try:
-                    # noinspection PyUnboundLocalVariable
                     if visited_sequence[to_id]:
                         continue
                     visited_sequence[to_id] = True
                 except IndexError:
-                    # noinspection PyUnboundLocalVariable
                     visited_wrapper.extend_and_set(to_id, True)
             else:
                 if to_id in visited:
                     continue
                 visited_add(to_id)
 
-            if paths:
+            if build_paths:
                 try:
-                    # noinspection PyUnboundLocalVariable
                     predecessors_sequence[to_id] = vertex
                 except IndexError:
-                    # noinspection PyUnboundLocalVariable
-                    assert predecessors_wrapper is not None  # safe
-                    # noinspection PyUnboundLocalVariable
                     predecessors_wrapper.extend_and_set(to_id, vertex)
-                if attributes_exists:
-                    # attributes_exists -> self.labeled_edges (see assert above)
-                    # -> next_edges (a NextWeightedEdges) is a
+                if labeled_edges:
+                    # self._labeled_edges -> next_edges (a NextWeightedEdges) is a
                     # NextWeightedLabeledEdges -> edge[-1] is a T_labels.
                     data_of_edge: T_labels = to_edge[-1]  # type: ignore[assignment]
                     try:
-                        # noinspection PyUnboundLocalVariable
                         attributes_sequence[to_id] = data_of_edge
                     except IndexError:
-                        # noinspection PyUnboundLocalVariable
                         attributes_wrapper.extend_and_set(to_id, data_of_edge)
 
             # Export traversal data to traversal attribute and report vertex
             # (Expression type follows from types of vertex and to_edge and the
-            #  definition of WeightedFullEdge. MyPy cannot derive this.)
+            #  definition of WeightedFullEdge. MyPy + PyCharm cannot derive this.)
+            # noinspection PyTypeChecker
             full_edge: WeightedFullEdge[T_vertex, T_weight, T_labels] = (
                 vertex,
             ) + to_edge  # type: ignore[assignment]

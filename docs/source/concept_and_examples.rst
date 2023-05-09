@@ -86,8 +86,8 @@ The main elements of the concept of NoGraphs are the following:
 
       .. code-block:: python
 
-         >>> depths = {vertex: traversal.depth for vertex in
-         ...           traversal.go_for_depth_range(6, 8)}
+         >>> depths = {vertex: traversal.depth
+         ...           for vertex in traversal.go_for_depth_range(6, 8)}
          >>> depths
          {20: 6, 16: 6, 12: 6, -4: 6, 23: 7, 19: 7, 15: 7, -5: 7}
 
@@ -111,7 +111,7 @@ of NoGraphs and their use in the context of different traversal algorithms.
 
 The `building blocks of graph adaptation <graphs_and_adaptation>`,
 the support for `operations on graphs <graph_operations>`
-and the `algorithms and API <algorithms>` that are used here will be
+and the `algorithms and API <traversals>` that are used here will be
 explained afterwards.
 
 .. _example-traversal-breadth-first-in-maze:
@@ -158,7 +158,7 @@ We start at position (0, 0), traverse the graph, compute the depth of position (
 number of edges.
 
 We use the *TraversalBreadthFirst* strategy of NoGraphs (see
-`Traversal algorithms <algorithms>`).
+`Traversal algorithms <traversals>`).
 It implements the *Breadth First Search* graph algorithm in the NoGraphs style.
 
 .. code-block:: python
@@ -209,14 +209,14 @@ and put it on top of some other tower, that contains only larger disks so far.
 .. code-block:: python
 
    >>> def next_vertices(towers, _):
-   ...     for t_from in range(len(towers)):
-   ...         if len(towers[t_from])==0: continue
-   ...         for t_to in range(len(towers)):
-   ...             if t_from==t_to: continue
-   ...             if (len(towers[t_to])==0 or
-   ...                    towers[t_from][0] < towers[t_to][0]):
+   ...     n = len(towers)
+   ...     for t_from in range(n):
+   ...         if not towers[t_from]: continue
+   ...         for t_to in range(n):
+   ...             if t_from == t_to: continue
+   ...             if not towers[t_to] or towers[t_from][0] < towers[t_to][0]:
    ...                 tmp_towers = list(towers)
-   ...                 tmp_towers[t_to] = (towers[t_from][0],) + towers[t_to]
+   ...                 tmp_towers[t_to] = (towers[t_from][0], *towers[t_to])
    ...                 tmp_towers[t_from] = towers[t_from][1:]
    ...                 yield tuple(tmp_towers)
 
@@ -240,7 +240,7 @@ In order to really see a solution, we print a path with the minimal number of ed
 problem 1.
 
 Again, we use the *TraversalBreadthFirst* strategy of NoGraphs
-(see `Traversal algorithms <algorithms>`).
+(see `Traversal algorithms <traversals>`).
 
 .. code-block:: python
 
@@ -285,7 +285,7 @@ We check that 20000000 (20 million) can be reached from 0. This means, that the 
 is even. There might be easier ways to find that out... :-)
 
 We use the *TraversalDepthFirst* strategy of NoGraphs (see
-`Traversal algorithms <algorithms>`). It implements the well-known
+`Traversal algorithms <traversals>`). It implements the well-known
 *Depth First Search* algorithm in the NoGraphs style.
 
 .. code-block:: python
@@ -298,19 +298,15 @@ Now, we choose some odd number and try to
 **check that it cannot be reached**.
 Here are two examples for techniques we can use to to that:
 
-.. code-block:: python
-
-   >>> next(traversal.start_from(0).go_for_vertices_in( (20000001, 20000002) ))  #doctest:+SKIP
-   20000002
-
-   >>> traversal.start_from(0, calculation_limit=10000001).go_to(20000001)  #doctest:+SKIP
-   Traceback (most recent call last):
-   RuntimeError: Number of visited vertices reached limit
-
 In the first case, we use a *sentinel vertex*, here 20000002, together with
 our goal vertex. When the sentinel vertex is reached, we know by the structure
 or our graph, that our goal vertex 20000001 - a lower number - will not be
 reached anymore.
+
+.. code-block:: python
+
+   >>> next(traversal.start_from(0).go_for_vertices_in( (20000001, 20000002) ))  #doctest:+SKIP
+   20000002
 
 In the second case, we define an
 *upper limit for the number of allowed calculation steps*,
@@ -318,6 +314,12 @@ i.e., a maximal number of vertices to be read in from the graph.
 We choose a limit, here 10000001, that is surely high enough to reach the goal
 vertex, if it is reachable, but prevents an unnecessarily high run time
 or, like in our case, even an infinite run time, if it is not reachable.
+
+.. code-block:: python
+
+   >>> traversal.start_from(0, calculation_limit=10000001).go_to(20000001)  #doctest:+SKIP
+   Traceback (most recent call last):
+   RuntimeError: Number of visited vertices reached limit
 
 Additionally to TraversalDepthFirst, NoGraphs provides the traversal strategy
 *TraversalNeighborsThenDepth*. It traverses the graph in a way similar to
@@ -360,7 +362,7 @@ traverse the graph in topological order, and start the problem solution process 
 our goal vertex "drink coffee".
 
 We use the *TraversalTopologicalSort* strategy of NoGraphs (see
-`Traversal algorithms <algorithms>`). It implements the *Topological Sort*
+`Traversal algorithms <traversals>`). It implements the *Topological Sort*
 graph algorithm in the NoGraphs style.
 
 .. code-block:: python
@@ -451,7 +453,7 @@ Based on that, we can take a cost-optimized walk through an area with costs
 per place...
 
 We use the traversal strategy *TraversalShortestPaths* of NoGraphs
-(see `Traversal algorithms <algorithms>`). As already said, it implements the
+(see `Traversal algorithms <traversals>`). As already said, it implements the
 *Dijkstra* algorithm in the style of NoGraphs.
 
 .. code-block:: python
@@ -496,7 +498,7 @@ Based on that, NoGraphs calculates a path from start to end position that
 avoids the obstacle.
 
 We use the traversal strategy *TraversalAStar* of NoGraphs
-(see `Traversal algorithms <algorithms>`). It implements the *A\* search*
+(see `Traversal algorithms <traversals>`). It implements the *A\* search*
 algorithm in the style of NoGraphs.
 
     >>> traversal =nog.TraversalAStar(next_edges)
