@@ -17,13 +17,15 @@ from array import array
 from itertools import repeat
 from decimal import Decimal
 
-from ._types import (
+from nographs import (
+    # from types
     T_vertex,
     T_vertex_id,
     T_weight,
     T_labels,
 )
-from ._gear_collections import (
+from nographs import (
+    # from gear_collections
     SequenceForGearProto,
     VertexSet,
     VertexMapping,
@@ -54,12 +56,12 @@ ABC for a collection that is intended to be used by NoGraphs for storing sets
 of vertices represented by your chosen type of hashable vertex ids.
 
 If a VertexIdSet is implemented by a
-_VertexSetByWrapper
+VertexSetByWrapper
 class based on a wrapped sequence, NoGraphs directly accesses the sequence for
 better performance.
-If method index_and_bit_method of the _VertexSetByWrapper returns a function
+If method index_and_bit_method of the VertexSetByWrapper returns a function
 (not None), the set elements will be stored as bits in the sequence, see
-_VertexSetByWrapper.
+VertexSetByWrapper.
 """
 VertexIdSet = VertexSet[T_vertex_id]
 
@@ -186,8 +188,8 @@ class Gear(
     In case you use a gear that allows for manually choosing a zero and/or infinity
     value, or when you define your own gear, please note:
 
-    The zero value must be a neutral element of addition and subtraction in T_weight,
-    i.e., for any value v in T_weight, v + zero == v and v - zero == v need to hold.
+    The zero value must be a neutral element of the addition in T_weight, i.e., for
+    any value v in T_weight, v + zero == v needs to hold.
 
     The infinity value must be larger (w.r.t. to the comparison operators of weights)
     than all T_weight values that can occur as edge weight or as distance of
@@ -234,7 +236,7 @@ class Gear(
         """
         raise NotImplementedError
 
-    def raise_distance_infinity_overflow_error(self, value: T_weight) -> None:
+    def raise_distance_infinity_overflow_error(self, value: T_weight):
         """Report that the computed value is equal or larger than the chosen
         infinity value of the gear and cannot be further handled.
 

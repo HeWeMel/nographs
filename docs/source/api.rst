@@ -6,35 +6,27 @@ API reference
 .. _type_variables:
 
 
-Type variables for graph adaptation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Type variables for graph adaption
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The algorithms, data structures and extension features of NoGraphs
-are able to handle vertices, vertex ids, weights and edge labels of
-different data types. In order to specify their capabilities and typing
-relationships optimally, the respective
+NoGraphs can handle vertices, vertex ids, weights and edge labels of
+different data types. In order to support this optimally, the respective
 **classes of NoGraphs are generic, and parameterized**
-**by the following type variables**.
-
-Example: When you choose bookkeeping collections for a specific use case
-(`gears <nographs.Gear>`)
-that are limited to specific data types, plugging them into some graph analysis
-strategy will transfer these restrictions to the input and output types of the
-analysis. The type variables used in the API of NoGraphs document this
-relationship, and, optionally, you can use a type checker to check if your application
-correctly handles them.
-
+**by the following type variables**:
 
 .. data:: T_vertex
    :value: TypeVar("T_vertex")
 
    You can use anything as vertex, with the exception of None. (This exception
-   cannot be expressed as type bound of a TypeVar. The requirement is checked at
-   runtime.)
+   cannot be expressed as type bound of a TypeVar. Thus, T_vertex has no bound.
+   It is checked at runtime.)
 
    Examples: See section `vertices <vertices>` of the tutorial.
-   If in your setting, `T_vertex` is not a subtype of `T_vertex_id`, e.g., you
-   use Hashable as `T_vertex_id`, but your vertices are not hashable, then see section
+
+   Note: If in your setting, T_vertex is not a subtype of `T_vertex_id`, e.g.,
+   you use Hashable as `T_vertex_id`, but your vertices are not hashable,
+   you need to provide a `VertexToID` function as parameter *vertex_to_id*
+   when creating a traversal object. See section
    `identity and equivalence of vertices <vertex_identity>` of the tutorial.
 
 .. data:: T_vertex_id
@@ -59,8 +51,6 @@ correctly handles them.
           @abstractmethod
           def __add__(self: T, value: T) -> T: ... # self + value
           @abstractmethod
-          def __sub__(self: T, value: T) -> T: ... # self - value
-          @abstractmethod
           def __lt__(self: T, value: T) -> bool: ...  #  self<value
           @abstractmethod
           def __le__(self: T, value: T) -> bool: ...  #  self<=value
@@ -68,9 +58,10 @@ correctly handles them.
    Please note, that the `gear <nographs.Gear>` (combination of bookkeeping collections)
    you use might have additional requirements w.r.t. edge weights. If you manually
    set a gear, see its documentation for this aspect.
+
    Traversal objects, that do not allow to change the gear, use
-   `GearDefault <nographs.GearDefault>`. If you use one of them, see the documentation
-   of this gear for its restrictions and for examples of typical weight types for it.
+   `GearDefault <nographs.GearDefault>`. See the documentation of this gear for its
+   restrictions and for examples of typical weight types for it.
 
    Examples: See section `edge weights <weights>` in the tutorial.
 
@@ -78,8 +69,8 @@ correctly handles them.
    :value: TypeVar("T_labels")
 
    Labels of edges can be provided as any kind of object, e.g., as a dictionary
-   holding key/value pairs, as just a number for numbering edges,
-   or as a string for naming an edge.
+   holding key/value pairs, or just a number for numbering edges,
+   or as a string for naming it.
 
 .. tip::
 
@@ -90,8 +81,8 @@ correctly handles them.
 Function signatures for graph adaptation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Based on the `type variables for graph adaptation <type_variables>`,
-NoGraphs defines some signatures for callback functions that application code
+Based on the `type variables for graph adaption <type_variables>`,
+NoGraphs defines some signatures for functions that application code
 can provide to NoGraphs for graph adaptation.
 
 Vertex identity
@@ -132,9 +123,7 @@ Vertex identity
 
    Example: See `tutorial <equivalence_class_example>`.
 
-   NoGraphs provides the following default implementation of a VertexToID function:
-
-   .. autofunction:: vertex_as_id
+.. autofunction:: vertex_as_id
 
 
 .. _outgoing_edges:
@@ -149,8 +138,6 @@ are:
 - The **first element is always the vertex the edge leads to**.
 - Then, **in some cases, a weight value follows**.
 - Then, **in some cases, an object that represents edge labels follows**.
-- The **vertex is not the only element** of the edge (because otherwise, we
-  just use the vertex itself instead of a tuple).
 
 This leads to the following structures that are used in the signatures of
 NoGraphs:
@@ -176,15 +163,14 @@ to have a special structure:
 
 - The **first argument is always the current vertex** (outgoing edges
   from this vertex will be reported to NoGraphs)
-- The **second argument is always the current strategy object**
+- The **second argument is always the current traversal object**
   (see tutorial section about `search-aware graphs <search_aware_graphs>`)
 
-  In the following, type variable *T_strategy* is used as placeholder for
-  the type of the `strategy <nographs.Strategy>` object (traversal strategy, resp.
-  search strategy).
+  In the following, type variable *T_traversal* is used as placeholder for
+  the type of the traversal object.
 
-  .. data:: T_strategy
-     :value: TypeVar("T_strategy", bound=Strategy)
+  .. data:: T_traversal
+     :value: TypeVar("T_traversal")
 
 - The **result needs to be iterable**.
 
@@ -193,28 +179,28 @@ to have a special structure:
     section `outgoing edges <outgoing_edges>`).
 
     **Application code might need to provide a weight**
-    (because the used traversal or search strategy requires it) or an
-    **edge label object** (because it guarantees this to the strategy so that
-    this data is included in results of the traversal or search). In these cases,
+    (because the used traversal strategy requires it) or an
+    **edge label object** (because it guarantees this to the traversal strategy so that
+    this data is included in results of the traversal). In these cases,
     the weight, resp. the edge label object, needs to be **of the proper types**
-    (as needed by the strategy or as declared in typed code).
+    (as needed by the traversal or as declared in typed code).
 
     **If such data is provided without such need, it can be of arbitrary types.**
 
 These building rules lead to the following combinations of signature elements:
 
-**Functions for strategies that accept edges with and without weights:**
+**Functions for traversals that accept edges with and without weights:**
 
 .. data:: NextVertices
 
-   alias of Callable[[`T_vertex`, `T_strategy`], Iterable[`T_vertex`]]
+   alias of Callable[[`T_vertex`, `T_traversal`], Iterable[`T_vertex`]]
 
    For a given vertex and a `Traversal`, report
    (positively) connected neighbor vertices.
 
 .. data:: NextEdges
 
-   | alias of Callable[[`T_vertex`, `T_strategy`], Iterable[Union[
+   | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
    |     `WeightedUnlabeledOutEdge` [`T_vertex`, Any],
    |     `UnweightedLabeledOutEdge` [`T_vertex`, Any],
    |     `WeightedLabeledOutEdge` [`T_vertex`, Any, Any]]]]
@@ -222,81 +208,40 @@ These building rules lead to the following combinations of signature elements:
    Like NextVertices, but instead of connected vertices, **return outgoing**
    **edges with or without weights and with or without labels**, and
    the weight and labels can be of arbitrary type (not need to match the
-   types used to instantiate the strategy), because the strategy will ignore
+   types used to instantiate the traversal), because the traversal will ignore
    weights and labels.
 
 .. data:: NextLabeledEdges
 
-    | alias of Callable[[`T_vertex`, `T_strategy`], Iterable[Union[
+    | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
     |     `WeightedLabeledOutEdge` [`T_vertex`, Any, `T_labels`],
     |     `UnweightedLabeledOutEdge` [`T_vertex`, `T_labels`]]
 
     Here, **a labels object must be given**, and it needs to match the edge
-    data type used to instantiate the strategy in order to ensure correct
+    data type used to instantiate the traversal in order to ensure correct
     functioning of NoGraphs.
 
-**Functions for strategies that accept only edges with weights:**
+**Functions for traversals that accept only edges with weights:**
 
 .. data:: NextWeightedEdges
 
-   | alias of Callable[[`T_vertex`, `T_strategy`], Iterable[Union[
+   | alias of Callable[[`T_vertex`, `T_traversal`], Iterable[Union[
    |     `WeightedUnlabeledOutEdge` [`T_vertex`, `T_weight`],
    |     `WeightedLabeledOutEdge` [`T_vertex`, `T_weight`, Any]]]]
 
     Here, **a weight must be given**, and it needs to match the weight type
-    used to instantiate the strategy in order to ensure correct
+    used to instantiate the traversal in order to ensure correct
     functioning of NoGraphs. Labels are not necessary, and if given,
     can have arbitrary type.
 
 .. data:: NextWeightedLabeledEdges
 
-   | alias of callable[[`T_vertex`, `T_strategy`], Iterable[
+   | alias of callable[[`T_vertex`, `T_traversal`], Iterable[
    |     `WeightedLabeledOutEdge` [`T_vertex`, `T_weight`, `T_labels`]]]
 
    Here, **both a weight and labels must be given**, and they need to match
-   the weight and labels types used to instantiate the strategy in order
+   the weight and labels types used to instantiate the traversal in order
    to ensure correct functioning of NoGraphs.
-
-**Functions for bidirectional search strategies:**
-
-Here, two adjacency functions of the same type are needed, one for reporting
-outedges from a given vertex, and one for reporting inedges leading to a given
-vertex.
-
-.. data:: BNextVertices
-
-   | alias of tuple[
-   |     `NextVertices` [`T_vertex`, `T_strategy`],
-   |     `NextVertices` [`T_vertex`, `T_strategy`],
-   | ]
-
-.. data:: BNextEdges
-
-   | alias of tuple[
-   |     `NextEdges` [`T_vertex`, `T_strategy`],
-   |     `NextEdges` [`T_vertex`, `T_strategy`],
-   | ]
-
-.. data:: BNextLabeledEdges
-
-   | alias of tuple[
-   |     `NextLabeledEdges` [`T_vertex`, `T_strategy`, `T_labels`],
-   |     `NextLabeledEdges` [`T_vertex`, `T_strategy`, `T_labels`],
-   | ]
-
-.. data:: BNextWeightedEdges
-
-   | alias of tuple[
-   |     `NextWeightedEdges` [`T_vertex`, `T_strategy`, `T_weight`],
-   |     `NextWeightedEdges` [`T_vertex`, `T_strategy`, `T_weight`],
-   | ]
-
-.. data:: BNextWeightedLabeledEdges
-
-   | alias of tuple[
-   |     `NextWeightedLabeledEdges` [`T_vertex`, `T_strategy`, `T_weight`, `T_labels`],
-   |     `NextWeightedLabeledEdges` [`T_vertex`, `T_strategy`, `T_weight`, `T_labels`],
-   | ]
 
 
 Edges as part of trees or paths
@@ -340,15 +285,6 @@ NoGraphs returns the edges as part of computed results with our without labels:
    |    `WeightedLabeledFullEdge` [`T_vertex`, `T_weight`, `T_labels`]]
 
 
-Traversal and search strategies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: Strategy
-      :members:
-
-
-See `traversal strategies <traversal_api>` and `search strategies <search_api>`.
-
 .. _traversal_api:
 
 Traversal strategies
@@ -361,8 +297,6 @@ Common methods
 
   Abstract Class. Its subclasses provide methods to iterate through vertices
   and edges using some specific traversal strategies.
-
-  Bases: `Strategy <nographs.Strategy>` [`T_vertex`, `T_vertex_id`, `T_labels`]
 
   .. automethod:: __iter__
 
@@ -545,45 +479,14 @@ Examples: See `the comparing examples here <examples_weighted_graphs>`.
    :show-inheritance: yes
 
 
-.. _search_api:
-
-Bidirectional search strategies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-BSearchBreadthFirstFlex
-.......................
-
-Example: See `here <example-bsearch-breadth-first>`.
-
-.. autoclass:: BSearchBreadthFirstFlex
-
-.. autoclass:: BSearchBreadthFirst
-   :show-inheritance: yes
-
-BSearchShortestPathFlex
-.......................
-
-Example: See `here <example-bsearch-shortest-path>`.
-
-.. autoclass:: BSearchShortestPathFlex
-
-.. autoclass:: BSearchShortestPath
-   :show-inheritance: yes
-
-
 .. _paths_api:
 
-Paths containers and paths
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Paths
+~~~~~
 
 .. autoclass:: Paths
    :members:
    :exclude-members: append_edge
-   :special-members: __contains__, __getitem__
-
-.. autoclass:: Path
-   :members:
-   :exclude-members: from_bidirectional_search, of_nothing, from_vertex
    :special-members: __contains__, __getitem__
 
 ..

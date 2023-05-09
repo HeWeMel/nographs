@@ -12,6 +12,25 @@ Basic types used in NoGraphs.
 
 T_vertex = TypeVar("T_vertex")
 T_vertex_id = TypeVar("T_vertex_id", bound=Hashable)
+
+""" T_weight: Type bound for weights.
+Discussion:
+- The real runtime-requirements of NoGraphs for weight values are:
+  - They are **mutual comparable**,
+  - they are **comparable to float('infinity')** or the supremal value
+    provided by the application and
+  - it is possible to **add them up**.
+- Real cannot be specified possible here, since float, int and Decimal are
+  not seen as Real by MyPy. And both PEP 484 and Guide von Rossum himself
+  clearly recommends to specify float instead of Real.
+- And both sources state, that for Python, int is acceptable as float. So,
+  the application can use values of Union(int, Literal[float("infinity"))) or
+  Union[range(max_weight), Literal[max_weight]] for weight values and
+  the needed supremal value. Note, that both expressions are no
+  type specification existing type checkers can process, in practice,
+  float has to be specified.
+"""
+
 T = TypeVar("T")
 
 
@@ -20,11 +39,6 @@ class Weight(Protocol[T]):
     @abstractmethod
     def __add__(self: T, value: T) -> T:
         """Return self+value."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __sub__(self: T, value: T) -> T:
-        """Return self-value."""
         raise NotImplementedError
 
     @abstractmethod
@@ -93,12 +107,6 @@ WeightedFullEdge = Union[
     WeightedLabeledFullEdge[T_vertex, T_weight, T_labels],
 ]
 WeightedOrLabeledFullEdge = Union[
-    WeightedUnlabeledFullEdge[T_vertex, T_weight],
-    UnweightedLabeledFullEdge[T_vertex, T_labels],
-    WeightedLabeledFullEdge[T_vertex, T_weight, T_labels],
-]
-AnyFullEdge = Union[
-    UnweightedUnlabeledFullEdge[T_vertex],
     WeightedUnlabeledFullEdge[T_vertex, T_weight],
     UnweightedLabeledFullEdge[T_vertex, T_labels],
     WeightedLabeledFullEdge[T_vertex, T_weight, T_labels],

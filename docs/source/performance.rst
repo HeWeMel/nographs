@@ -404,7 +404,7 @@ between several gears, with different performance:
 - GearForHashableVertexIDs, subclass **GearDefault**
 
   *GearDefault* is the gear that is used by the
-  `traversal classes with simplified API <traversals>`,
+  `traversal classes with simplified API <algorithms>`,
   where a gear cannot be chosen, and it is the most flexible gear w.r.t. typing.
   In the following, **we compare the performance**
   of `other gears <gears>` **with this base case**.

@@ -30,17 +30,11 @@ what gives us flexibility, and we can
 use the mechanisms of NoGraphs for necessary computation, what makes the
 implementation easier.
 
-**Example:** Transportation problem
+**Example:**
 
 The following example illustrates how graph operations can be used for defining
 a graph. For the sake of the example, the different steps are done isolated
 from each other, even if they could have been combined easily.
-
-We specify the horizontal, vertical and diagonal movements of a truck in a 10 x 10
-array of locations, where it can pick up goods, and that it drives slower the heavier
-it is. We like to know the optimal route for delivering all the goods at the
-home position, including the decision, whether or not intermediate deliveries
-at the home position speed up the travel.
 
 Step 1: We define a graph that connects an integer with itself and with
 neighboring integers:
@@ -77,14 +71,14 @@ two dimensions (horizontally, vertically, diagonally, and the zero move):
    If you need a **graph intersection**, do the same, but build the intersection of
    the two edge sets, instead of the union.
 
-Step 4: We model the routes of the truck between the home position and 4 positions with
-goods. Only the travel distances measured in the number of needed moves according to
-step 3 are relevant for our further steps, not the individual positions along a route.
+Step 4: We model the routes of a truck between a home position and 4 positions with
+goods. Only the travel distances measured in the needed moves according to step 3 are
+relevant for our further steps, not the individual positions along a route.
 
 We use **graph abstraction** to simplify our model accordingly and to preserve the
 distance measure. The new graph with its restricted vertices and its weighted edges
 are defined by function next_vertices_pos, and the weights are calculated from move
-counts (here: vertex depths, computed by a Breadth First Search) in the previous graph.
+counts (here: vertex depths) in the previous graph.
 
 .. code-block:: python
 
@@ -130,20 +124,22 @@ goods it carries. We model this as follows:
    ...         else:  # loading
    ...             new_at_home = at_home
    ...             new_on_truck = on_truck.union((position_to_good[new_position],))
-   ...         # Time for move is distance * (1+no_of_goods)
+   ...         # Time for move is distance * no_of_goods
    ...         yield ((new_position, new_on_truck, new_at_home),
    ...                distance * (1+len(on_truck)))
 
 Step 6: The truck starts its route at the home position. Our goal is to find the most
 performant way for the truck to get all goods and carry them back to the home
-position. So, our start state and our goal state are:
+position.
 
 .. code-block:: python
 
    >>> start = home_position, frozenset(), frozenset()
    >>> goal = home_position, frozenset(), frozenset((0, 1, 2, 3))
 
-We solve the problem by using the Dijkstra shortest paths algorithm of
+We do not now, whether the truck performs better by repeatedly returning to
+the home position with parts of the goods or by collecting all the goods and then
+returning to the home position. We use the Dijkstra shortest paths algorithm of
 NoGraphs for the analysis with cost optimization.
 
 .. code-block:: python
@@ -163,7 +159,3 @@ NoGraphs for the analysis with cost optimization.
    (2, 9) (1, 2) (3,)
    (0, 4) (0, 1, 2) (3,)
    (4, 0) () (0, 1, 2, 3)
-
-The result shows that a solution with minimal costs is: Drive from the home position to
-(9, 4) and get the good from there, bring it back home, get the other goods in the
-order (7, 9), (2, 9), and (0, 4), and then bring them home.

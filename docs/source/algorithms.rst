@@ -5,7 +5,7 @@ Traversal algorithms
    Import nographs for doctests of this document. Does not go into docs.
    >>> import nographs as nog
 
-Based on your NextVertices or NextEdges function,
+Based on you NextVertices or NextEdges function,
 NoGraphs gives you **traversal algorithms in the form
 of iterators**.
 You can use them to **traverse your graph** following some specific traversal
@@ -26,8 +26,8 @@ class documentation in the API reference for details.
     - Visits and reports vertices in *breadth first order*, i.e., **with ascending
       depth** (the depth of a vertex is the edge count of the path with least edges
       from a start vertex).
-      A vertex is reported before the first outgoing edge is taken.
-      Start vertices are not reported.
+      A vertex (with the exception of start vertices) is reported before the
+      first outgoing edge is taken.
 
     - The traversal state provides **vertex depth** / **search depth**, **paths**
       (optionally), and set of **visited vertices**.
@@ -42,8 +42,8 @@ class documentation in the API reference for details.
     - Follows just one outgoing edge per vertex as long as possible,
       and **goes back a step to some already visited vertex and follows a
       further edge starting there only when necessary** to come to new vertices.
-      **A vertex is reported before the first outgoing edge is taken**.
-      Start vertices are not reported.
+      **A vertex** (with the exception of start vertices)
+      **is reported before the first outgoing edge is taken**.
 
     - The traversal state provides **search depth** (optionally),
       **paths** (optionally), and set of **visited vertices**.
@@ -157,8 +157,7 @@ See the respective class documentation in the API reference for details.
 
     - Traverses your graph
       **from short to long distances (minimal sum of edge weights)** from
-      some start vertices, and report the vertices in this order.
-      Start vertices are not reported.
+      some start vertices.
 
     - The traversal state provides **vertex distance**, **search depth**,
       **paths** (optionally) and **distances** (optionally).
@@ -175,7 +174,6 @@ See the respective class documentation in the API reference for details.
 
     - **Finds the shortest path (minimal sum of edge weights)** from one of the start
       vertices to the goal vertex.
-      Start vertices are not reported.
 
     - The traversal state provides **path length**, **search depth** and
       **paths** (optionally). For the goal vertex, the path length is the
@@ -309,9 +307,7 @@ Transition **1. Instantiation** of a traversal class, leading to state *created*
 
 State **A. created** (inactive)
 
-  In this state, the traversal has not been started so far. Thus, you cannot use any of
-  the iteration methods of the traversal object and its public attributes contain
-  arbitrary content:
+  In this state, you cannot use any of the iterator methods of the traversal object:
 
   .. code-block:: python
 
@@ -327,8 +323,9 @@ Transition **2. Starting** a traversal, leading from any state to state *started
 
   - You **choose one or more start vertices**.
   - Optionally, you choose between some **traversal options**, e.g., that paths
-    should be created, and whether there should be a calculation limit for
-    the traversal.
+    should be created, and - for labeled edges - whether the labels are to be
+    reported in the paths, and whether there should be a calculation limit for
+    the traversal
 
   .. code-block:: python
 
@@ -346,8 +343,7 @@ Transition **2. Starting** a traversal, leading from any state to state *started
 
 State **B. started** (active)
 
-  In this state, you can
-  **use the traversal object for iterating over the graph**:
+  In this state, you can use the **iterator methods of the traversal object**:
 
   - It is *Iterable*, i.e., you can use it in statements like
     **for ... in traversal**
@@ -370,13 +366,9 @@ State **B. started** (active)
   Each (partial) iteration will **continue the traversal** where the
   previous one has ended.
 
-  **When a vertex is expanded** (the traversal calls the `NextEdges` or `NextVertices`
-  function provided by the application)
-  **or a vertex is reported, specific attributes of the traversal object**
-  **contain additional data** about the state of the traversal
-  w.r.t. this vertex (see the API reference of the
-  `traversal classes <traversal-classes-api>`).
-
+  **When a vertex is reported, specific attributes of the traversal contain
+  additional data** about the state of the traversal (see the
+  API reference of the `traversal classes <traversal-classes-api>`).
 
   .. code-block:: python
 
@@ -389,7 +381,7 @@ State **B. started** (active)
      4 2
      8 3
 
-     >>> # Skip till one of the listed vertices is reached, repeat, stop on last one
+     >>> # Skip till 32, report till 64
      >>> for vertex in traversal.go_for_vertices_in([128, 32]):
      ...     print(vertex, traversal.depth)
      32 5
@@ -425,6 +417,8 @@ State **C. exhausted** (inactive)
   your chosen start vertices, the iterator is exhausted. Upon calls, it raises
   a *StopIteration* exception. This ends loops like the *for* loop.
 
+  You can still start the traversal again, if you like.
+
   .. code-block:: python
 
      >>> # iterator will be exhausted after vertex -512
@@ -437,54 +431,8 @@ State **C. exhausted** (inactive)
      Traceback (most recent call last):
      StopIteration
 
-  You can still start the traversal again, if you like.
-
-At any state:
-
-  Method **state_to_str() returns the content of the public state attributes** of the
-  traversal in form of a string. It can be used for logging and debugging.
-
-  Some attributes of a traversal are containers that cannot iterate their content, or
-  collections that guarantee for the validity of stored results only for vertices that
-  have already been reported (see the API reference of the
-  `traversal classes <traversal-classes-api>`).
-  If state_to_str is called with some vertices as parameter, it also returns the
-  respective state data for these vertices.
-
-  **Example:** When a vertex is expanded, we print the state in default form,
-  and when it is reported, we print the state in full form.
-
-  .. code-block:: python
-
-    >>> edges = {0: ((1,2), (2,1)), 1: ((3,2),), 2: ((3,2),)}
-    >>> def next_edges(vertex, t):
-    ...     print(f"Expanded: {vertex}. State: {t.state_to_str()}")
-    ...     return edges.get(vertex, ())
-    >>> start = 0
-
-    >>> traversal = nog.TraversalShortestPaths(next_edges).start_from(
-    ...     start, keep_distances=True)
-    >>> visited = [start]
-    >>> for vertex in traversal:
-    ...    visited.append(vertex)
-    ...    print(f"Reported: {vertex}. State: {traversal.state_to_str(visited)}"
-    ...         )  # doctest: +NORMALIZE_WHITESPACE
-    Expanded: 0. State: {'distance': 0, 'depth': 0}
-    Reported: 2. State: {'distance': 1, 'depth': 1, 'distances[0]': 0,
-      'distances[2]': 1}
-    Expanded: 2. State: {'distance': 1, 'depth': 1}
-    Reported: 1. State: {'distance': 2, 'depth': 1, 'distances[0]': 0,
-      'distances[2]': 1, 'distances[1]': 2}
-    Expanded: 1. State: {'distance': 2, 'depth': 1}
-    Reported: 3. State: {'distance': 3, 'depth': 2, 'distances[0]': 0,
-      'distances[2]': 1, 'distances[1]': 2, 'distances[3]': 3}
-    Expanded: 3. State: {'distance': 3, 'depth': 2}
-
-  .. versionchanged:: 3.1
-
-     Method state_to_str() introduced.
-
 .. _class_specific_methods:
+
 
 Methods for depth and distance ranges
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -634,10 +582,9 @@ The following code is a fully typed variant of the example of the
     >>> traversal = nog.TraversalShortestPaths[int, int, Any](next_edges)
     >>> traversal.start_from(0, build_paths=True).go_to(5)  # derived type: int
     5
-    >>> traversal.distance  # derived type: Union[int, float]
+    >>> traversal.distance  # derived type: float (type of object is int)
     24
-    >>> tuple(traversal.paths.iter_vertices_from_start(5)
-    ... )  # Derived type: tuple[int, ...]
+    >>> tuple(traversal.paths.iter_vertices_from_start(5))  # derived type: tuple[int]
     (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)
 
 .. tip::
@@ -658,5 +605,5 @@ The following code is a fully typed variant of the example of the
    And a TraversalShortestPathsFlex with these generic types is allowed to
    return floats, additionally to the T_weight specified by the application code.
 
-   It is possible to avoid this by choosing the `gear (see there) <gears>` that
+   It is possible to avoid this be choosing the `gear (see there) <gears>` that
    fits the typing needs of the application optimally.

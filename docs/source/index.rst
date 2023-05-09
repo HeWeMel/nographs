@@ -11,8 +11,7 @@ NoGraphs: Graph analysis on the fly
    concept_and_examples
    graphs_and_adaptation
    graph_operations
-   traversals
-   bidirectional_search
+   algorithms
    vertex_identity
    gears
    gadgets
@@ -38,38 +37,21 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 **Feature overview**
 
-- `Unidirectional traversal algorithms <traversals>`: DFS, BFS, topological search,
+- `Algorithms <algorithms>`: DFS, BFS, topological search,
   Dijkstra, A\* and MST.
-- `Bidirectional search algorithms <bidirectional_search>`: BFS and Dijkstra.
-- Flexible graph notion:
-
-  - Infinite directed multigraphs with loops and
-    attributes (this includes
-    `multiple adjacency, cycles, self-loops <supported-special-cases>`,
-    `directed edges <graphs_without_attributes>`,
-    `weighted edges and attributed edges <graphs_with_attributes>`).
-  - Infinite graphs are supported, but need to be
-    locally finite (i.e., a vertex has only finitely many outgoing edges).
-
-- Generic API. The application can define the following:
-
-  - `Vertices <vertices>`: Can be anything except for None. Hashable vertices can be
-    used directly, unhashable vertices can be used together with
-    `hashable identifiers <vertex_identity>`.
-  - `Edge weights and distances <weights>`: Wide range of data types
-    supported (float, int, Decimal, mpmath.mpf and others), e.g.,
-    for high precision computations.
-  - `Edge attributes <graphs_with_attributes>`: Any object, e.g, a container
-    with further data.
-  - `Identity and equivalence of vertices <vertex_identity>`.
-  - Bookkeeping: `Several sets of bookkeeping data structures <replace-internals>`
-    are predefined, optimized for different situations (data types used by the
-    application, hashing vs. indexing, collections for *Python* objects or *C* native
-    data types,...); `Adaptable and extendable <new_gear>`, e.g., specialized
-    collections of 3rd party libraries can be integrated easily and runtime
-    efficiently.
-
-- Results: `Reachability, depth, distance, paths and trees <traversals>`.
+- Flexible graph notion: Infinite directed multigraphs with loops and
+  attributes (this includes
+  `multiple adjacency, cycles, self-loops <supported-special-cases>`,
+  `directed edges <graphs_without_attributes>`,
+  `weighted edges and edges with application specific attributes
+  <graphs_with_attributes>`).
+  `Vertices <vertices>` can be nearly anything.
+  `Wide range of data types for edge weights <weights>` and path length
+  supported (float, int, Decimal, mpmath.mpf and others), e.g.,
+  for high precision computations.
+  Infinite graphs are supported, but need to be
+  locally finite (i.e., a vertex has only finitely many outgoing edges).
+- Results: `Reachability, depth, distance, paths and trees <algorithms>`.
   `Paths <paths_api>` can be
   `calculated with vertices, edges or attributed edges <general-start_from>`
   and can be iterated in both directions.
@@ -80,7 +62,13 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   graph operations (union, intersection, several types of products), the
   computation of `search-aware graphs <search_aware_graphs>`, and
   `traversals of vertex equivalence classes on the fly <vertex_identity>`.
-  Bookkeeping data can be
+- Flexible bookkeeping:
+  `Several sets of bookkeeping data structures <replace-internals>`,
+  optimized for different situations (data types used by the application,
+  hashing vs. indexing, collections for *Python* objects or *C* native data types,
+  ...); `Adaptable and extendable <new_gear>`, e.g., specialized collections of
+  3rd party libraries can be integrated easily and runtime efficiently. Internal
+  bookkeeping data can be
   `pre-initialized and accessed during computations <initializing_bookkeeping>`.
 - Typing: The API `can be used fully typed <typing>` (optionally).
 - Implementation: Pure Python (>=3.9). It introduces no further dependencies.
@@ -124,7 +112,7 @@ paths* from 0 to 5.
 We do not know which part of the graph is necessary to look at in order to find the
 shortest path and to make sure, it is really the shortest. So, we use the
 traversal strategy *TraversalShortestPaths* of NoGraphs (see
-`Traversal algorithms <traversals>`). It implements the well-known *Dijkstra*
+`Traversal algorithms <algorithms>`). It implements the well-known *Dijkstra*
 graph algorithm in the lazy evaluation style of NoGraphs.
 
 .. code-block:: python

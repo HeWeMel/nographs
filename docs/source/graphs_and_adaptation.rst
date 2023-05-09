@@ -124,13 +124,13 @@ A `NextEdges` function has the following signature:
 
     (Note: Some algorithms of NoGraphs
     require weights, others just ignore them. See section
-    `traversal algorithms <traversals>`.)
+    `traversal algorithms <algorithms>`.)
 
   - **The labels object (optionally) comes next.**
 
     (Note: If you inform NoGraphs that you provide a labels object, it will be
     included in analysis results. Otherwise, the labels object will be ignored.
-    See section `traversal algorithms <traversals>`.)
+    See section `traversal algorithms <algorithms>`.)
 
 .. versionchanged:: 3.0
 
@@ -175,9 +175,8 @@ You can directly use any hashable python object as vertex, with the exception of
    specific hashable data structures.
 
 Additionally, a vertex can be an object that is not hashable, if you provide a
-`VertexToID <VertexToID>` function that computes a hashable identifier for it.
-The term *identifier* means: if the identifiers of two vertex objects are equal, the
-vertex objects denote the same vertex.
+`VertexToID <VertexToID>` function that computes a hashable identifier for it,
+and the hash stays the same during computations of the library.
 For further details, see the `section about vertex identity <vertex_identity>`.
 
 .. tip::
@@ -207,9 +206,8 @@ NoGraphs supports a large range of number types as edge weights.
    as edge weights.
 
    If NoGraphs computes distances, their type will be determined by the type of
-   your edge weights (with the exception of zero distance, represented by int 0,
-   and infinite distance, represented by float("infinity") by default, see
-   `GearDefault <gear_default>`).
+   your edge weights (with the exception of zero distance and infinite distance;
+   they are floats by default, see `GearDefault <gear_default>`).
 
 For details, see the `API documentation <nographs.Weight>`. See section `typing`,
 if you like to work strictly type safe with weights.
@@ -219,6 +217,9 @@ if you like to work strictly type safe with weights.
 In the following graph, the vertices *i* with numbers *0, 1, ...* are connected by edges
 *(i, i+1), ...* with weights *1/2, 1/4, 1/8, ...*. The distances
 (*0, 1/2, 3/4, 7/8, ...*) of the vertices *i* from vertex *0* approach *1*.
+
+We go until the distance reaches a value with a goal difference to *1* of *0.5\**64*.
+We expect this to happen at vertex *64*.
 
 .. code-block:: python
 
@@ -234,9 +235,14 @@ In the following graph, the vertices *i* with numbers *0, 1, ...* are connected 
     ...       if 1 - traversal.distance <= goal_difference:
     ...          return vertex
 
+    >>> test_with_small_weights(0.5)
+    Traceback (most recent call last):
+    AssertionError: Distance 1 reached at vertex=54
 
-We go until the distance reaches a value with a goal difference to *1* of *0.5\**64*.
-We expect this to happen at vertex *64*.
+    >>> import decimal
+    >>> decimal.getcontext().prec = 70  # precision (number of places)
+    >>> test_with_small_weights(decimal.Decimal(0.5))
+    64
 
 In the first test, we use *float* as type of our edge weights. We run into an
 AssertionError that states, that the distance reaches value *1* at vertex *54*.
@@ -245,12 +251,6 @@ What happens here? At vertex *54*, the distance from vertex *0*, i.e., the sum o
 is rounded to *1*. So, we get a wrong result because the precision supported by
 *float* is not high enough.
 
-.. code-block:: python
-
-    >>> test_with_small_weights(0.5)
-    Traceback (most recent call last):
-    AssertionError: Distance 1 reached at vertex=54
-
 Happily, with NoGraphs, we are not limited to using floats.
 In the second test, we use *Decimal* with a precision of 70 places as type of
 our edge weights. When NoGraphs adds up such edge weights, it always gets
@@ -258,12 +258,6 @@ our edge weights. When NoGraphs adds up such edge weights, it always gets
 determines the type of distances calculated by NoGraphs. This time, we get the
 correct result.
 
-.. code-block:: python
-
-    >>> import decimal
-    >>> decimal.getcontext().prec = 70  # precision (number of places)
-    >>> test_with_small_weights(decimal.Decimal(0.5))
-    64
 
 .. _supported-special-cases:
 

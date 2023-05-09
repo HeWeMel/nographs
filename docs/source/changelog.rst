@@ -1,30 +1,6 @@
 ChangeLog
 ---------
 
-**v3.1.0** (2023-04-23)
-
-- Bidirectional search strategies introduced. They implement DFS and Dijkstra
-  Shortest Paths in a bidirectional variant.
-
-- All strategies:
-
-  - Method state_to_str() introduced. It eases logging for
-    debugging of graph definitions.
-
-  - The state attributes now have defined content in the two phases
-    'before the traversal has been started' and 'after the traversal has been started,
-    but before it expanded or reported the first vertex'.
-
-  - The behaviour of method go_for_vertices_in() is
-    now also defined for the case of an empty vertex set.
-
-- Exports: minimized
-
-Notes:
-
-- Protocol Weight: A weight type now needs to also provide a __sub__ method.
-  The documented compatibility guarantees are not reduced by this.
-
 **v3.0.3** (2023-02-09)
 
 - Small typing problem solved that the new MyPy version 1.0.0 discovered
@@ -47,7 +23,7 @@ Error corrections:
 
 **v3.0.1** (2022-12-29)
 
-- Class Position: support for multiplying an integer; new option non_zero_counts of
+- Position: support for multiplying an integer; new option non_zero_counts of
   method moves
 
 Error corrections:
@@ -123,7 +99,7 @@ the API are untouched (e.g., most of the examples of the tutorial run unchanged)
 **Till v1.6.0** (2021-05)
 
 - Further algorithms added
-- More support functions for traversal and graph adaptation added
+- More support functions for traversal and graph adaption added
 - Better runtime & memory performance
 
 **v1.0.0** (2021-05)

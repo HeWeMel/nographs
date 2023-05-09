@@ -34,11 +34,9 @@ if __name__ == "__main__":
     test_suite = unittest.TestSuite()
 
     # Unittests from doc tests in module with special test cases
-
-    for file in pathlib.Path("tests").glob("*.py"):
-        name = file.name.removesuffix(".py")
-        __import__(name)
-        test_suite.addTests(doctest.DocTestSuite(name))
+    for file in ["test_code"]:
+        __import__(file)
+        test_suite.addTests(doctest.DocTestSuite(file))
 
     # Unittests from unit test classes in some unit test files in tests folder
     new_suite = unittest.defaultTestLoader.discover("tests", pattern="test_unit*.py")
@@ -47,7 +45,7 @@ if __name__ == "__main__":
     # Unittests from doc tests in modules of package
     modules = ("types", "strategies", "matrix_gadgets", "edge_gadgets", "paths")
     for f in modules:
-        temp_module = importlib.import_module("._" + f, "nographs")
+        temp_module = importlib.import_module("." + f, "nographs")
         test_suite.addTests(doctest.DocTestSuite(temp_module))
 
     # Unittests from doc tests in documentation

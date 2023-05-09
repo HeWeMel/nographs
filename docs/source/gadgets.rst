@@ -5,7 +5,7 @@ Gadgets
    Import nographs for doctests of this document. Does not go into docs.
    >>> import nographs as nog
 
-The functions and classes explained in this section ease the adaptation
+The functions and classes explained in this section ease the adaption
 of existing graphs, especially for quick tests with some small examples.
 
 They do not belong to the core of NoGraphs, are not needed for
@@ -36,15 +36,6 @@ respective application of the function:
      ...    edges1, add_inverted=False, attributes=False)
 
   - **Iterable of labeled and/or weighted edges**, e.g. a tuple or list, and
-    the **labels and weights should be ignored**
-
-    .. code-block:: python
-
-     >>> edges2 = (('A', 'B', 30), ('A', 'C', 10), ('C', 'D', 10))
-     >>> next_vertices_2 = nog.adapt_edge_iterable(
-     ...    edges2, add_inverted=False, attributes=False)
-
-  - **Iterable of labeled and/or weighted edges**, e.g. a tuple or list, and
     the **labels and/or weights should be used**
 
     .. code-block:: python
@@ -52,6 +43,15 @@ respective application of the function:
      >>> edges2 = (('A', 'B', 30), ('A', 'C', 10), ('C', 'D', 10))
      >>> next_edges_1 = nog.adapt_edge_iterable(
      ...    edges2, add_inverted=False, attributes=True)
+
+  - **Iterable of labeled and/or weighted edges**, e.g. a tuple or list, and
+    the **labels and weights should be ignored**
+
+    .. code-block:: python
+
+     >>> edges2 = (('A', 'B', 30), ('A', 'C', 10), ('C', 'D', 10))
+     >>> next_vertices_2 = nog.adapt_edge_iterable(
+     ...    edges2, add_inverted=False, attributes=False)
 
 ..
    Hidden DocTests:
@@ -66,18 +66,15 @@ respective application of the function:
    >>> tuple(traversal.start_from('A', build_paths=True))
    ('C', 'D', 'B')
 
-**Parameters:**
+Parameter *attributes* informs function `adapt_edge_index` whether the given
+**graph consists of labeled and/or weights edges**
+and the **labels and/or weights should be take into the generated function**.
 
-- Parameter *attributes* informs function `adapt_edge_index` whether the given
-  **graph consists of labeled and/or weights edges**
-  and the **labels and/or weights should be take into the generated function**.
-
-- Set parameter *add_inverted* to True, **if your graph is undirected** (i.e., two
-  vertices are always either connected by edges in both directions or not connected
-  by any edge),
-  **but in your data structure, each edge is given only in one direction**.
-  Then, for each given edge, the edge in the opposite direction will be added
-  automatically.
+Set parameter *add_inverted* to True, **if your graph is undirected** (i.e., two
+vertices are always either connected by edges in both directions or not connected
+by any edge), **but in your data structure, each edge is given only in one direction**.
+Then, for each given edge, the edge in the opposite direction will be added
+automatically.
 
 For more details, see the `API reference <adapt_edge_iterable>`.
 
@@ -291,8 +288,8 @@ using the **example of a maze stored in a string**.
 
        >>> next_vertices = a.next_vertices_from_forbidden("#")
 
-   With both together, we can search for paths that go from start to goal vertices
-   and avoid the forbidden positions:
+   With both together, we can search for paths from start to goal vertices
+   and avoiding the forbidden positions:
 
    .. code-block:: python
 
@@ -454,7 +451,7 @@ Example: Hand-made NextVertices function for a maze
 +++++++++++++++++++++++++++++++++++++++++++++++++++
 
 In the following example code, we use the functionality of classes *Array* and
-*Position* to manually define a maze adaptation function.
+*Position* to manually define a maze adaption function.
 
 We initiate a NoGraphs array by our maze:
 

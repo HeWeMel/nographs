@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'NoGraphs'
-copyright = '2022 - 2023, Helmut Melcher'
+copyright = '2022, Helmut Melcher'
 author = 'Helmut Melcher'
 
 

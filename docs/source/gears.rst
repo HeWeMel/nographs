@@ -24,10 +24,8 @@ uses internally. In the following sections, we discuss them.
 Choosing the optimal gear
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As already said, for each of the classes described in the sections
-`traversal algorithms <traversals>` and
-`bidirectional search algorithms <bidirectional_search>`,
-there is another, more flexible class,
+As already said, for each of the traversal classes described in section
+`traversal algorithms <algorithms>`, there is another, more flexible class,
 with "Flex" appended to the class name. These classes have two more parameters,
 *vertex_to_id* (see `vertex identity <vertex_identity>`) and *gear*. In this section,
 we explain the latter parameter.
@@ -46,18 +44,16 @@ Syntactically, a gear is an implementation of protocol `nographs.Gear`
 Each of its methods is a factory that creates one of the kinds of data structures
 that NoGraphs needs for its algorithms.
 
-NoGraphs offers the following predefined gears. **The three main classes support**
-**different types of vertices and vertex IDs**, and their respective
-**subclasses are special cases for specific types of weights/distances**
-(and suitable choices of the values representing zero and infinite distance).
+NoGraphs offers the following predefined gears:
 
 .. _gear_for_hashable_vertex_ids:
 
 1. Class `nographs.GearForHashableVertexIDs`
 
   Supports **hashable vertex IDs** (either, your vertices are hashable, or you
-  assign hashable IDs to them, see `vertex identity <vertex_identity>`).
-
+  assign hashable IDs to them, see `vertex identity <vertex_identity>`)
+  and **different data types for weights** (the values for zero and infinite
+  distance have to be chosen accordingly).
 
   Creates *set* and *dict* collections for NoGraphs. Such collections are
   quite **flexible, but they store Python objects** by reference. As long as NoGraphs
@@ -68,27 +64,27 @@ NoGraphs offers the following predefined gears. **The three main classes support
   application does not need or work with them at this point of time.
 
   The traversal classes with simplified API as described in section
-  `traversal algorithms <traversals>`, that do not allow for choosing a gear,
+  `traversal algorithms <algorithms>`, that do not allow for choosing a gear,
   use the following subclass of `nographs.GearForHashableVertexIDs` as gear:
 
 .. _gear_default:
 
   - Class `nographs.GearDefault`
 
-    Uses the **integer 0 for zero distance and float("infinity")**
-    **for infinite distance**. Distance results can be one of these values or a value
-    of the type the application uses for its edge weights.
+    Uses the integer 0 for zero distance and float("infinity")
+    for infinite distance. Distance results can be one of these values or a value of
+    the type you use for your weights.
 
     For most of the typical use cases this choice fits well. See the section about
     `weights`.
 
   For contexts where static types should be defined as narrow as possible, there are
-  three **subclasses for the common cases that**
-  **integers/floats or Decimal or only floats are used as edge weights**.
-  They all readily define zero and infinite distance by values from their respective
-  edge weight type, so that no other weight and distance types occur. The first uses
-  integer 0 and float("infinity"), see `GearDefault <gear_default>` above, but without
-  additional application-specific weight types.
+  three lightweight classes that readily implement this for the common cases that
+  integers/floats or Decimal or only floats are used as edge weights.
+  They all define zero and infinite distance by values from their respective edge weight
+  type, so that no other weight and distance types occur. The first uses integer 0 and
+  float("infinity"), see `GearDefault <gear_default>` above, but without other
+  additional weight types.
 
   - Class `nographs.GearForHashableVertexIDsAndIntsMaybeFloats`
 
@@ -103,7 +99,7 @@ NoGraphs offers the following predefined gears. **The three main classes support
   Supports **vertex IDs that are non-negative integers** (to be exact: they should be
   a dense subset of the natural numbers starting at 0). Either, your vertices are
   such numbers, or you assign such numbers as IDs to them (see section about
-  `vertex identity <vertex_identity>`).
+  `vertex identity <vertex_identity>`)
 
   Trades type flexibility and runtime for an (often large) reduction of the memory
   consumption: Uses sequence-based collections (instead of hash-based collections
@@ -115,10 +111,9 @@ NoGraphs offers the following predefined gears. **The three main classes support
   if the used numbers are *dense* enough. More details about this
   topic can be found in section `Comparison of NoGraphs gears <performance_gears>`.
 
-  There are four **subclasses for the common cases that integers/floats,**
-  **Decimal, C-native floats, or C-native integers are used as edge weights**,
-  with zero and infinite distance defined accordingly.
-  See above for the respective properties. Additionally, the two versions with C-native
+  There are four lightweight subclasses for the common cases that
+  integers/floats, Decimal or C-native floats or integers are used as edge weights.
+  See above for the respective properties. Additionally, the versions with C-native
   value types save some memory by using arrays instead of lists for storing weights
   and distances.
 
@@ -137,6 +132,7 @@ NoGraphs offers the following predefined gears. **The three main classes support
   A *GearForIntVertexIDs* (see above for its constraints on vertex ids) for
   **vertices that are non-negative integers** and fulfil one of the
   **size constraints** (number of bytes) offered by the class.
+  Supports **different data types for weights**.
 
   Trades type flexibility and runtime for an (often large) reduction of the memory
   consumption. Here, the effects described for `GearForIntVertexIDs` can be used
@@ -144,8 +140,7 @@ NoGraphs offers the following predefined gears. **The three main classes support
   are integers, too, and thus can be used as index of sequences. For more details see
   section `Comparison of NoGraphs gears <performance_gears>`.
 
-  Again, there are four **subclasses for common type cases** and
-  respective choices of zero and infinity distance. See subclasses
+  Again, there are four lightweight subclasses for common type cases. See subclasses
   of `GearForIntVertexIDs <gear_for_int_vertex_ids>` for the respective properties.
 
   - Class `nographs.GearForIntVerticesAndIDsAndIntsMaybeFloats`
@@ -182,15 +177,14 @@ and a gear that can be chosen as parameter *gear* of our test function *gear_tes
    ...    path = traversal.paths[vertex]
    ...    print([traversal.distance, tuple(path[:5]), tuple(path[-5:])])
 
-1. First, we test
-with *GearDefault*:
+First, we test with *GearDefault*.
 
 .. code-block:: python
 
    >>> gear_test(nog.GearDefault())
    [816674, (0, 1, 2, 8, 14), (1199976, 1199982, 1199988, 1199994, 1200000)]
 
-2. We have not changed `vertex identity <vertex_identity>`, so our vertices are
+We have not changed `vertex identity <vertex_identity>`, so our vertices are
 also our vertex ids. And they are numbered from 0 on. Thus, we can also use
 *GearForIntVertexIDs*. In the following, we do that, in the variant
 with integer edge weights and float("infinity") for infinite distances
@@ -201,10 +195,10 @@ with integer edge weights and float("infinity") for infinite distances
    >>> gear_test(nog.GearForIntVertexIDsAndIntsMaybeFloats())
    [816674, (0, 1, 2, 8, 14), (1199976, 1199982, 1199988, 1199994, 1200000)]
 
-3. Our vertices themselves, not only their vertex ids, are numbered from 0 on, and our
+Our vertices themselves, not only their vertex ids, are numbered from 0 on, and our
 weights are integers values that can be stored in float objects. Thus, we can also use
-*GearForIntVerticesAndIDsAndCFloats* (again, just as example, since we have several
-options here):
+*GearForIntVerticesAndIDsAndCFloats* (again, just as example, we have several options
+here):
 
 .. code-block:: python
 
@@ -243,7 +237,7 @@ Side note about the implementation:
 
 - Instead, NoGraphs directly knows how to work with hash-oriented
   and with index-oriented collections in a generalized way, and in specific
-  and rare cases, that are not relevant for the runtime performance, an adaptation layer
+  and rare cases, that are not relevant for the runtime performance, an adaption layer
   steps in, that deals with the differences between different types of collections. So,
   NoGraphs can provide high flexibility and performance, but does not need duplicated
   and adapted code.
@@ -267,8 +261,8 @@ factory methods.
 
 **Example:**
 
-Let us assume we had installed package *intbitset* from PyPI. Intbitset is a 3rd party
-library that efficiently handles sets of integers.
+Let us assume we had installed package intbitset from PyPI. Intbitset is a 3rd party
+library offered on MyPI. It efficiently handles sets of integers.
 
 We use the example of the `previous section <choosing_gear>`, but we like to
 find out the depth of vertex 1200000 w.r.t vertex 0.
@@ -279,34 +273,28 @@ for our scenario.
 
 So, in a subclass of `nographs.GearForIntVerticesAndIDsAndCFloats`, we simply
 overwrite method *vertex_id_set*, that returns a suitable implementation of a vertex
-id set for given vertices, by an implementation that returns an *intbitset*.
+id set for given vertices, by a method that returns an *intbitset*.
 
 .. code-block:: python
 
    >>> from intbitset import intbitset  # type: ignore
+   >>>
    >>> class GearBitsetAndArrayForIntVerticesAndCFloats(
    ...     nog.GearForIntVerticesAndIDsAndCFloats
    ... ):
    ...    def vertex_id_set(self, vertices):
    ...       return intbitset(vertices)
 
-We can use the new gear just like the predefined ones:
-
-.. code-block:: python
-
-   >>> our_gear = GearBitsetAndArrayForIntVerticesAndCFloats()
+   >>> gear = GearBitsetAndArrayForIntVerticesAndCFloats()
    >>> traversal = nog.TraversalBreadthFirstFlex(
-   ...     next_edges=next_edges, gear=our_gear, vertex_to_id=nog.vertex_as_id)
+   ...     next_edges=next_edges, gear=gear, vertex_to_id=nog.vertex_as_id)
    >>> traversal.start_from(0).go_to(1200000)
    1200000
    >>> traversal.depth
    200000
 
-Section `Comparison of NoGraphs gears <performance_gears>` shows the
-`effect of this change <gear_results>` on performance for the example of
-a benchmark: intbitset reduces the memory needed for storing vertex sets
-as much as the step from GearDefault to GearForIntVerticesAndIDs can, but
-without the 50% runtime disadvantage that GearForIntVerticesAndIDs has.
+Section `Comparison of NoGraphs gears <performance_gears>` shows the effect of
+this change on performance.
 
 
 .. _initializing_bookkeeping:
@@ -314,8 +302,8 @@ without the 50% runtime disadvantage that GearForIntVerticesAndIDs has.
 Pre-initializing bookkeeping data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `start_from <general-start_from>` methods of most of the
-`strategy classes <traversals>` offer options that the application can use
+The `start_from <general-start_from>` methods of most
+`strategy classes <algorithms>` offer options that the application can use
 to provide data about some specific start state.
 An example: In `BreadthFirstSearch <nographs.TraversalBreadthFirst>`,
 the application can provide a collection *already_visited* with vertices that
@@ -338,7 +326,9 @@ for more details.
 This can be used for several purposes. Here are some examples:
 
 - You provide your own implementation, that does the **bookkeeping in your own way**,
-  e.g. directly in your vertex objects.
+  e.g. directly in your vertex objects. Note: It is likely that
+  this makes the traversal slower, since NoGraphs uses the high performance
+  data structures of the Python standard library.
 
 - You provide an object of a suitable container of the standard library or of an
   external library, NoGraphs does the bookkeeping in there, and like this, you get

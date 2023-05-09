@@ -4,8 +4,8 @@ from collections.abc import Sequence, Iterator, MutableMapping
 from typing import Optional, Any, Generic, cast, Union
 from abc import ABC, abstractmethod
 
-from ._types import (
-    T,
+import nographs
+from nographs import (
     T_vertex,
     T_vertex_id,
     T_labels,
@@ -14,15 +14,11 @@ from ._types import (
     LabeledOutEdge,
     UnweightedUnlabeledFullEdge,
     UnweightedLabeledFullEdge,
-)
-from ._gear_collections import (
+    VertexIdToVertexMapping,
+    VertexIdToPathEdgeDataMapping,
     GettableSettableForGearProto,
     VertexSequenceWrapperForMappingProto,
     access_to_vertex_mapping_expect_none,
-)
-from ._gears import (
-    VertexIdToVertexMapping,
-    VertexIdToPathEdgeDataMapping,
 )
 
 
@@ -233,7 +229,8 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
         The method allows for expressions like *paths[vertex]*.
 
-        In fully typed code, you can use the following alternative:
+        In fully typed code, you can use an equivalent and fully typed alternative
+        for paths without resp. with labels:
 
         .. code-block:: python
 
@@ -250,38 +247,34 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         """
 
 
-class DummyPredecessorOrAttributesMapping(MutableMapping[T_vertex_id, T]):
-    def __getitem__(self, key: T_vertex_id) -> T:
-        raise KeyError
-
-    def __delitem__(self, key: T_vertex_id) -> None:
-        raise KeyError
-
-    def __iter__(self) -> Iterator[T_vertex_id]:
-        return iter(())
-
-    def __len__(self) -> int:
-        return 0
-
-    def __contains__(self, key: object) -> bool:
-        return False
-
-    def __setitem__(self, key: T_vertex_id, value: T) -> None:
-        raise RuntimeError(
-            "Cannot add a path, " + "traversal not started or no paths requested."
-        )
-
-
-class PathsDummy(Paths[T_vertex, T_vertex_id, T_labels]):
+class _PathsDummy(Paths[T_vertex, T_vertex_id, Any]):
     """Empty and non-functional default Paths container. Raises RuntimeError
     for all methods returning or iterating a Path, and __contains__ returns False.
     """
 
-    def __init__(self, vertex_to_id: VertexToID[T_vertex, T_vertex_id]) -> None:
-        super().__init__(
-            DummyPredecessorOrAttributesMapping[T_vertex_id, T_vertex](),
-            vertex_to_id,
-        )
+    class MappingOfNothing(MutableMapping[T_vertex_id, T_vertex]):
+        def __getitem__(self, key: T_vertex_id) -> T_vertex:
+            raise KeyError
+
+        def __delitem__(self, key: T_vertex_id) -> None:
+            raise KeyError
+
+        def __iter__(self) -> Iterator[T_vertex_id]:
+            return iter(())
+
+        def __len__(self) -> int:
+            return 0
+
+        def __contains__(self, key: object) -> bool:
+            return False
+
+        def __setitem__(self, key: T_vertex_id, value: T_vertex):
+            raise RuntimeError(
+                "Cannot add a path, " + "traversal not started or no paths requested."
+            )
+
+    def __init__(self):
+        super().__init__(_PathsDummy.MappingOfNothing(), nographs.vertex_as_id)
 
     def _check_vertex(self, vertex: T_vertex) -> T_vertex_id:
         """Raise RuntimeError with helpful explanation. This method
@@ -304,7 +297,7 @@ class PathsDummy(Paths[T_vertex, T_vertex_id, T_labels]):
 
 class PathsOfUnlabeledEdges(Paths[T_vertex, T_vertex_id, Any]):
     """
-    Paths of edges that are not labeled, i.e., for some starting vertex, an
+    Path of edges that are not labeled, i.e., for some starting vertex, an
     edge leading to a specific end vertex is represented only by this end
     vertex.
 
@@ -328,7 +321,7 @@ class PathsOfUnlabeledEdges(Paths[T_vertex, T_vertex_id, Any]):
 
     def append_edge(
         self, from_vertex: T_vertex, to_vertex_id: T_vertex_id, to_edge: Any
-    ) -> None:
+    ):
         """Create a new path that starts with the existing path to
         from_vertex and ends with the given vertex (resp. id).
 
@@ -357,7 +350,7 @@ class PathsOfUnlabeledEdges(Paths[T_vertex, T_vertex_id, Any]):
 
 class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
     """
-    Paths of edges that are labeled, i.e., for some starting vertex, an
+    Path of edges that are labeled, i.e., for some starting vertex, an
     edge leading to a specific end vertex is represented by a tuple that
     starts with the end vertex and, optionally, contains additional data.
 
@@ -399,7 +392,7 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
 
     def append_edge(
         self, from_vertex: T_vertex, to_vertex_id: T_vertex_id, to_edge: LabeledOutEdge
-    ) -> None:
+    ):
         """Create a new path that starts with the existing path to
         from_vertex and ends with the given vertex (resp. id). The additional
         edge data provided in to_edge after to_vertex is stored in the path,

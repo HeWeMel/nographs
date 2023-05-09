@@ -314,10 +314,10 @@ class _GettableSettableForGearAssertNoCall(
     is really called by mistake.
     """
 
-    def __getitem__(self, item: T_hashable_key_contra) -> T_value_co:
+    def __getitem__(self, item):
         raise AssertionError(called_by_mistake)
 
-    def __setitem__(self, item: T_hashable_key_contra, value: T_value_contra) -> None:
+    def __setitem__(self, item, value):
         raise AssertionError(called_by_mistake)
 
 
@@ -336,45 +336,35 @@ class _VertexSequenceWrapperAssertNoCall(
     is really called by mistake.
     """
 
-    def sequence(
-        self,
-    ) -> GettableSettableForGearProto[T_hashable_key, T_value_contra, T_value_co]:
+    def sequence(self):
         raise AssertionError(called_by_mistake)
 
-    def default(self) -> T_value_co:
+    def default(self):
         raise AssertionError(called_by_mistake)
 
-    def extend_and_set(self, key: T_hashable_key_contra, value: T_value_contra) -> None:
+    def extend_and_set(self, key, value):
         raise AssertionError(called_by_mistake)
 
-    def update_from_keys(self, elements: Iterable[T_hashable_key]) -> None:
+    def update_from_keys(self, elements):
         raise AssertionError(called_by_mistake)
 
-    def index_and_bit_method(
-        self,
-    ) -> Optional[Callable[[T_hashable_key, int], tuple[T_hashable_key, int]]]:
+    def index_and_bit_method(self):
         raise AssertionError(called_by_mistake)
 
-    def update_from_keys_values(
-        self, elements: Iterable[tuple[T_hashable_key_contra, T_value_contra]]
-    ) -> None:
+    def update_from_keys_values(self, elements):
         raise AssertionError(called_by_mistake)
 
-    def update_default(
-        self, elements: Iterable[tuple[T_hashable_key_contra, T_value_contra]]
-    ) -> None:
+    def update_default(self, elements):
         raise AssertionError(called_by_mistake)
 
-    def _from_iterable(
-        self, elements: Iterable[T_hashable_key]
-    ) -> "_VertexSequenceWrapperAssertNoCall":
+    def _from_iterable(self, elements):
         raise AssertionError(called_by_mistake)
 
 
 # - Set
 
 
-class _VertexSetByWrapper(
+class VertexSetByWrapper(
     VertexSequenceWrapperForSetProto[T_hashable_key, int, int],
     VertexSet[T_hashable_key],
     ABC,
@@ -392,14 +382,14 @@ class _VertexSetByWrapper(
 def get_wrapper_from_vertex_set(
     vertex_set: VertexSet[T_hashable_key],
 ) -> Optional[VertexSequenceWrapperForSetProto[T_hashable_key, int, int]]:
-    """If *vertex_set* is implemented by a _VertexSetByWrapper,
+    """If *vertex_set* is implemented by a VertexSetByWrapper,
     return its wrapper, otherwise return None. The class encapsulates the
     down cast and the argumentation for its correctness.
     """
-    if isinstance(vertex_set, _VertexSetByWrapper):
+    if isinstance(vertex_set, VertexSetByWrapper):
         # VertexSet is invariant in T_hashable_key. So,
         # having a VertexSet[T_hashable_key] also means having a
-        # _VertexSetByWrapper[T_hashable_key], and thus a
+        # VertexSetByWrapper[T_hashable_key], and thus a
         # VertexSequenceWrapperForSetProto[T_hashable_key, int, int].
         return cast(
             VertexSequenceWrapperForSetProto[T_hashable_key, int, int], vertex_set
@@ -417,7 +407,7 @@ def access_to_vertex_set(
     Callable[[T_hashable_key, int], tuple[T_hashable_key, int]],
 ]:
     """
-    If *vertex_set* is implemented by a _VertexSetByWrapper,
+    If *vertex_set* is implemented by a VertexSetByWrapper,
     return True, the wrapper, the wrapped sequence,
     and either True and the index_and_bit_method of the wrapper, if available,
     or False and a dummy function. It the returned sequence raises an IndexError
@@ -454,7 +444,7 @@ def access_to_vertex_set(
 # - Mapping (without None)
 
 
-class _VertexMappingByWrapper(
+class VertexMappingByWrapper(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value],
     VertexMapping[T_hashable_key, T_value],
     ABC,
@@ -472,14 +462,14 @@ class _VertexMappingByWrapper(
 def get_wrapper_from_vertex_mapping(
     vertex_mapping: VertexMapping[T_hashable_key, T_value]
 ) -> Optional[VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value]]:
-    """If *vertex_mapping* is implemented by a _VertexMappingByWrapper,
+    """If *vertex_mapping* is implemented by a VertexMappingByWrapper,
     return its wrapper, otherwise return None. The class encapsulates the
     down cast and the argumentation for its correctness.
     """
-    if isinstance(vertex_mapping, _VertexMappingByWrapper):
+    if isinstance(vertex_mapping, VertexMappingByWrapper):
         # VertexMapping is invariant in T_hashable_key and T_value. So,
         # having a VertexMapping[T_hashable_key, T_value] also means having a
-        # _VertexMappingByWrapper[T_hashable_key, T_value, T_value] , and thus a
+        # VertexMappingByWrapper[T_hashable_key, T_value, T_value] , and thus a
         # VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value].
         return cast(
             VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value],
@@ -496,7 +486,7 @@ def access_to_vertex_mapping(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value],
 ]:
     """
-    If *vertex_mapping* is implemented by a _VertexMappingByWrapper,
+    If *vertex_mapping* is implemented by a VertexMappingByWrapper,
     return True, the wrapped sequence for direct access,
     and the wrapper to extend to sequence if necessary.
     Otherwise, return False, the vertex_mapping itself, and a
@@ -512,7 +502,7 @@ def access_to_vertex_mapping(
     if wrapper is None:
         # The vertex_mapping returned here never raises an IndexError,
         # because it is a VertexMapping (see there) but is no
-        # _VertexMappingByWrapper.
+        # VertexMappingByWrapper.
         return (
             False,
             vertex_mapping,
@@ -531,7 +521,7 @@ def access_to_vertex_mapping(
 # - Mapping with None
 
 
-class _VertexMappingByWrapperWithNone(
+class VertexMappingByWrapperWithNone(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, Optional[T_value]],
     VertexMapping[T_hashable_key, T_value],
     ABC,
@@ -551,14 +541,14 @@ def get_wrapper_from_vertex_mapping_with_none(
 ) -> Optional[
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, Optional[T_value]]
 ]:
-    """If *vertex_mapping* is implemented by a _VertexMappingByWrapper,
+    """If *vertex_mapping* is implemented by a VertexMappingByWrapper,
     return its wrapper, otherwise return None. The class encapsulates the
     down cast and the argumentation for its correctness.
     """
-    if isinstance(vertex_mapping, _VertexMappingByWrapperWithNone):
+    if isinstance(vertex_mapping, VertexMappingByWrapperWithNone):
         # VertexMapping is invariant in T_hashable_key and T_value. So,
         # having a VertexMapping[T_hashable_key, T_value] also means having a
-        # _VertexMappingByWrapperWithNone[T_hashable_key, T_value], and thus a
+        # VertexMappingByWrapperWithNone[T_hashable_key, T_value], and thus a
         # VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value].
         return cast(
             VertexSequenceWrapperForMappingProto[
@@ -577,8 +567,8 @@ def access_to_vertex_mapping_expect_none(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, Optional[T_value]],
 ]:
     """
-    If *vertex_mapping* is implemented by a _VertexMappingByWrapper or a
-    _VertexMappingByWrapperWithNone,
+    If *vertex_mapping* is implemented by a VertexMappingByWrapper or a
+    VertexMappingByWrapperWithNone,
     return True, the wrapped sequence for direct access, and the wrapper to
     extend to sequence if necessary.
     Otherwise, return False, the vertex_mapping itself, and a
@@ -713,7 +703,7 @@ class VertexSequenceWrapper(
 
 
 class VertexSetWrappingSequence(
-    VertexSequenceWrapper[int, int], _VertexSetByWrapper[NonNegativeDenseInt], ABC
+    VertexSequenceWrapper[int, int], VertexSetByWrapper[NonNegativeDenseInt], ABC
 ):
     """A VertexSequenceWrapper that emulates a VertexSet for
     non-negative dense integer keys based on an underlying SequenceForGearProto.
@@ -1042,7 +1032,7 @@ class VertexMappingWrappingSequence(VertexSequenceWrapper[T_value, T_default_val
 
 class VertexMappingWrappingSequenceWithNone(
     VertexMappingWrappingSequence[T_value, None],
-    _VertexMappingByWrapperWithNone[NonNegativeDenseInt, T_value],
+    VertexMappingByWrapperWithNone[NonNegativeDenseInt, T_value],
 ):
     """Special case: sequence can/will store None as values"""
 
@@ -1051,7 +1041,7 @@ class VertexMappingWrappingSequenceWithNone(
 
 class VertexMappingWrappingSequenceWithoutNone(
     VertexMappingWrappingSequence[T_value, T_value],
-    _VertexMappingByWrapper[NonNegativeDenseInt, T_value],
+    VertexMappingByWrapper[NonNegativeDenseInt, T_value],
 ):
     """Special case: sequence can/will not store None as values"""
 

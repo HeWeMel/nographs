@@ -1,10 +1,7 @@
-import sys
-from decimal import Decimal, getcontext
+import decimal
+from decimal import Decimal
 from collections.abc import Iterator
-from typing import Any, TypeVar, Union, TYPE_CHECKING
-
-if sys.version_info >= (3, 11):
-    from typing import assert_type
+from typing import Any, TypeVar, TYPE_CHECKING
 import unittest
 
 from mpmath import mp, mpf  # type: ignore
@@ -12,12 +9,7 @@ from mpmath import mp, mpf  # type: ignore
 import nographs as nog
 
 
-# --- Types ---
-
 T_any_typical_weight_type = TypeVar("T_any_typical_weight_type", float, Decimal, mpf)
-
-
-# --- Tests ---
 
 
 class Test1(unittest.TestCase):
@@ -52,7 +44,7 @@ class Test1(unittest.TestCase):
             test_with_small_weights(float(0), float("0.5"), float(1))
         self.assertEqual(cm.exception.args, ("Error: Distance stays constant",))
 
-        getcontext().prec = 75  # precision (number of places)
+        decimal.getcontext().prec = 75  # precision (number of places)
         self.assertEquals(
             test_with_small_weights(Decimal(0), Decimal("0.5"), Decimal(1)), 65
         )
@@ -61,7 +53,7 @@ class Test1(unittest.TestCase):
         self.assertEquals(test_with_small_weights(mpf(0), mpf("0.5"), mpf(1)), 65)
 
     def test_typing_docs_example(self) -> None:
-        def next_edges(i: int, _: Any) -> Iterator[tuple[int, int]]:
+        def next_edges(i: int, _) -> Iterator[tuple[int, int]]:
             j = (i + i // 6) % 6
             yield i + 1, j * 2 + 1
             if i % 2 == 0:
@@ -73,19 +65,10 @@ class Test1(unittest.TestCase):
         v = traversal.start_from(0, build_paths=True).go_to(5)
         d = traversal.distance
         p = tuple(traversal.paths.iter_vertices_from_start(v))
-        if sys.version_info >= (3, 11):
-            if TYPE_CHECKING:
-                # for Python>=3.11, check types
-                assert_type(v, int)
-                assert_type(d, Union[int, float])
-                assert_type(p, tuple[int, ...])
-        else:
-            reveal_type = print  # will never be used; just for IDEs
-            # for Python<3.11, reveal types
-            if TYPE_CHECKING:
-                reveal_type(v)  # reveals: int
-                reveal_type(d)  # reveals: Union[int, float]
-                reveal_type(p)  # reveals: tuple[int, ...]
+        if TYPE_CHECKING:  # pragma: no cover
+            reveal_type(v)  # noqa: F821, reveals: int
+            reveal_type(d)  # noqa: F821, reveals: float
+            reveal_type(p)  # noqa: F821, reveals: tuple[int, ...]
         self.assertEquals(v, 5)
         self.assertEquals(d, 24)
         self.assertEquals(p, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5))
