@@ -9,7 +9,7 @@ from collections.abc import (
     MutableSet,
     MutableMapping,
 )
-from typing import TypeVar, Optional, Any, Union, cast, Generic
+from typing import TypeVar, Optional, Any, Union, cast, Generic, TypeAlias
 
 from ._gear_collections import (
     get_wrapper_from_vertex_set,
@@ -79,7 +79,7 @@ class Strategy(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
 T_strategy = TypeVar("T_strategy", bound=Strategy)
 
-NextVertices = Callable[[T_vertex, T_strategy], Iterable[T_vertex]]
+NextVertices: TypeAlias = Callable[[T_vertex, T_strategy], Iterable[T_vertex]]
 
 NextEdges = Callable[[T_vertex, T_strategy], Iterable[OutEdge[T_vertex, Any, Any]]]
 
@@ -158,7 +158,7 @@ NextWeightedMaybeLabeledEdges = Callable[
 
 # The same, but as a tuple, for bidirectional search strategies
 
-BNextEdgesOrVertices = tuple[
+BNextEdgesOrVertices: TypeAlias = tuple[
     NextEdgesOrVertices[T_vertex, T_strategy, T_labels],
     NextEdgesOrVertices[T_vertex, T_strategy, T_labels],
 ]
