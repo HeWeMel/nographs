@@ -135,7 +135,7 @@ goods it carries. We model this as follows:
    ...                distance * (1+len(on_truck)))
 
 Step 6: The truck starts its route at the home position. Our goal is to find the most
-performant way for the truck to get all goods and carry them back to the home
+time efficient way for the truck to get all goods and carry them back to the home
 position. So, our start state and our goal state are:
 
 .. code-block:: python
@@ -155,15 +155,15 @@ NoGraphs for the analysis with cost optimization.
    65
    >>> for position, on_truck, at_home in traversal.paths[vertex]:
    ...     # Truck positions, goods on the truck, and goods at home position
-   ...     print(position, tuple(on_truck), tuple(at_home))
-   (4, 0) () ()
-   (9, 4) (3,) ()
-   (4, 0) () (3,)
-   (7, 9) (2,) (3,)
-   (2, 9) (1, 2) (3,)
-   (0, 4) (0, 1, 2) (3,)
-   (4, 0) () (0, 1, 2, 3)
+   ...     print(position, sorted(on_truck), sorted(at_home))
+   (4, 0) [] []
+   (9, 4) [3] []
+   (4, 0) [] [3]
+   (7, 9) [2] [3]
+   (2, 9) [1, 2] [3]
+   (0, 4) [0, 1, 2] [3]
+   (4, 0) [] [0, 1, 2, 3]
 
-The result shows that a solution with minimal costs is: Drive from the home position to
-(9, 4) and get the good from there, bring it back home, get the other goods in the
-order (7, 9), (2, 9), and (0, 4), and then bring them home.
+The result shows that a solution with minimal driving time is: Drive from the home
+position to (9, 4) and get the good from there, bring it back home, get the other
+goods in the order (7, 9), (2, 9), and (0, 4), and then bring them home.

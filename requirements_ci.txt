@@ -1,0 +1,8 @@
+# -- packages needed for ci pipeline for qa --
+black
+coverage>=6.3
+flake8
+mypy
+# -- additional packaged used only for test with them --
+mpmath
+intbitset ; implementation_name == "cpython"  # missing on PyPy 3.11

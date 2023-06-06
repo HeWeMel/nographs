@@ -41,6 +41,10 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - `Unidirectional traversal algorithms <traversals>`: DFS, BFS, topological search,
   Dijkstra, A\* and MST.
 - `Bidirectional search algorithms <bidirectional_search>`: BFS and Dijkstra.
+- Results: `Reachability, depth, distance, paths and trees <traversals>`.
+  `Paths <paths_api>` can be
+  `calculated with vertices, edges, or attributed edges <general-start_from>`,
+  and can be iterated in both directions.
 - Flexible graph notion:
 
   - Infinite directed multigraphs with loops and
@@ -51,7 +55,7 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   - Infinite graphs are supported, but need to be
     locally finite (i.e., a vertex has only finitely many outgoing edges).
 
-- Generic API. The application can define the following:
+- Generic API:
 
   - `Vertices <vertices>`: Can be anything except for None. Hashable vertices can be
     used directly, unhashable vertices can be used together with
@@ -61,7 +65,8 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
     for high precision computations.
   - `Edge attributes <graphs_with_attributes>`: Any object, e.g, a container
     with further data.
-  - `Identity and equivalence of vertices <vertex_identity>`.
+  - `Identity and equivalence of vertices <vertex_identity>` can be
+    chosen / defined.
   - Bookkeeping: `Several sets of bookkeeping data structures <replace-internals>`
     are predefined, optimized for different situations (data types used by the
     application, hashing vs. indexing, collections for *Python* objects or *C* native
@@ -69,10 +74,6 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
     collections of 3rd party libraries can be integrated easily and runtime
     efficiently.
 
-- Results: `Reachability, depth, distance, paths and trees <traversals>`.
-  `Paths <paths_api>` can be
-  `calculated with vertices, edges or attributed edges <general-start_from>`
-  and can be iterated in both directions.
 - Flexible API: The concept of implicit graphs that NoGraphs is based on
   allows for an API that eases
   `graph operations <graph_operations>` like
@@ -84,8 +85,11 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   `pre-initialized and accessed during computations <initializing_bookkeeping>`.
 - Typing: The API `can be used fully typed <typing>` (optionally).
 - Implementation: Pure Python (>=3.9). It introduces no further dependencies.
-- Runtime and memory performance: Have been goals. In its domain, it
-  often even `outperforms <performance>` *Rust*- and *C*-based libraries.
+- CI tests: For all supported versions of Python and both supported interpreters
+  CPython and PyPy, both code and docs, 100% code coverage.
+- Runtime and memory performance: Have been goals (CPython). In its domain, it often
+  even `outperforms <performance>` *Rust*- and *C*-based libraries.
+  If you need an even higher performance, using PyPy could be an option.
 - Source: Available `here <https://github.com/HeWeMel/nographs>`__.
 - Licence: `MIT <https://github.com/HeWeMel/nographs/blob/main/LICENSE>`__.
 

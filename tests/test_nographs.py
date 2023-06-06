@@ -45,7 +45,8 @@ if __name__ == "__main__":
     test_suite.addTests(new_suite)
 
     # Unittests from doc tests in modules of package
-    modules = ("types", "strategies", "matrix_gadgets", "edge_gadgets", "paths")
+    modules = ("types", "strategies", "matrix_gadgets", "edge_gadgets", "paths",
+               "compatibility")
     for f in modules:
         temp_module = importlib.import_module("._" + f, "nographs")
         test_suite.addTests(doctest.DocTestSuite(temp_module))

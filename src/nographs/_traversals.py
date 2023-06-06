@@ -34,6 +34,7 @@ from ._paths import (
     PathsDummy,
 )
 from ._strategies import (
+    StrRepr,
     Strategy,
     T_strategy,
     NextVertices,
@@ -364,12 +365,23 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels]):
     def _traverse(self) -> Iterator[T_vertex]:
         """Has to be implemented in subclass"""
 
-    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
-        more = dict()
-        if vertices is not None and self._build_paths:
-            for vertex in vertices:
-                more[f"paths[{vertex}]"] = self.paths[vertex]
-        return self._state_and_more_to_str(less=["paths"], more=more)
+    def _improve_state(
+        self, state: dict[str, Any], vertices: Optional[Iterable[T_vertex]] = None
+    ) -> None:
+        # Convert a Paths object to an object that can be converted to a str.
+        # Paths in the paths object are only valid for reported vertices,
+        # and these do not need to be hashable. So, we cannot convert them
+        # to a dict and from there to a string.
+        del state["paths"]
+        if vertices is not None:
+            state["paths"] = (
+                StrRepr.from_iterable(
+                    (vertex, self.paths[vertex]) for vertex in vertices
+                )
+                if self._build_paths
+                else dict()
+            )
+        super()._improve_state(state, vertices)
 
 
 # -------------- Traversal strategies for unweighted edges -----------------
@@ -419,6 +431,16 @@ class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
             self._is_tree,
         )
         super()._start()
+
+    def _improve_state(
+        self, state: dict[str, Any], vertices: Optional[Iterable[T_vertex]] = None
+    ) -> None:
+        # Visited, a MutableSet, is typically not ordered. str(self.visited)
+        # results in different strings for different interpreters (PyPy) and
+        # the keys are not sorted. Here, we create a normalized description.
+        del state["visited"]
+        state["visited"] = StrRepr.from_set(self.visited)
+        super()._improve_state(state, vertices)
 
 
 class _TraversalWithoutWeightsBasic(
@@ -2551,23 +2573,19 @@ class TraversalShortestPathsFlex(
 
         return my_generator()
 
-    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
-        more = dict[str, Any]()
+    def _improve_state(
+        self, state: dict[str, Any], vertices: Optional[Iterable[T_vertex]] = None
+    ) -> None:
+        # Assignments in distances are only valid for reported vertices. Thus,
+        # we need to convert only keys/values for requested vertices to a string,
+        # not the whole MutableMapping. So, we special case this attribute here.
+        del state["distances"]
         if vertices is not None:
-            if self._build_paths:
-                for vertex in vertices:
-                    more[f"paths[{vertex}]"] = self.paths[vertex]
-            if self._vertex_to_id is vertex_as_id:
-                for vertex in vertices:
-                    more[f"distances[{vertex}]"] = self.distances[
-                        self._vertex_to_id(vertex)
-                    ]
-            else:
-                for vertex in vertices:
-                    more[f"distances[vertex_to_id({vertex})]"] = self.distances[
-                        self._vertex_to_id(vertex)
-                    ]
-        return self._state_and_more_to_str(less=["paths", "distances"], more=more)
+            vertex_to_id, distances = self._vertex_to_id, self.distances
+            state["distances"] = StrRepr.from_iterable(
+                (v_id := vertex_to_id(vertex), distances[v_id]) for vertex in vertices
+            )
+        super()._improve_state(state, vertices)
 
 
 class TraversalShortestPaths(
@@ -3007,23 +3025,19 @@ class TraversalAStarFlex(
                     (n_guess, next(unique_no), neighbor, n_path_edge_count),
                 )
 
-    def state_to_str(self, vertices: Optional[Iterable[T_vertex]] = None) -> str:
-        more = dict[str, Any]()
+    def _improve_state(
+        self, state: dict[str, Any], vertices: Optional[Iterable[T_vertex]] = None
+    ) -> None:
+        # Assignments in distances are only valid for reported vertices. Thus,
+        # we need to convert only keys/values for requested vertices to a string,
+        # not the whole MutableMapping. So, we special case this attribute here.
+        del state["distances"]
         if vertices is not None:
-            if self._build_paths:
-                for vertex in vertices:
-                    more[f"paths[{vertex}]"] = self.paths[vertex]
-            if self._vertex_to_id is vertex_as_id:
-                for vertex in vertices:
-                    more[f"distances[{vertex}]"] = self.distances[
-                        self._vertex_to_id(vertex)
-                    ]
-            else:
-                for vertex in vertices:
-                    more[f"distances[vertex_to_id({vertex})]"] = self.distances[
-                        self._vertex_to_id(vertex)
-                    ]
-        return self._state_and_more_to_str(less=["paths", "distances"], more=more)
+            vertex_to_id, distances = self._vertex_to_id, self.distances
+            state["distances"] = StrRepr.from_iterable(
+                (v_id := vertex_to_id(vertex), distances[v_id]) for vertex in vertices
+            )
+        super()._improve_state(state, vertices)
 
 
 class TraversalAStar(

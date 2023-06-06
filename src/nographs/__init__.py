@@ -92,6 +92,7 @@ from ._paths import (
     # DummyPredecessorOrAttributesMapping,
 )
 from ._strategies import (
+    # StrRepr,
     Strategy,
     T_strategy,
     NextVertices,  # Usable, in rare cases, for typing application-defined functions

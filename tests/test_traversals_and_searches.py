@@ -8,6 +8,7 @@ from typing import Any, Iterable, Union, TypeVar, Optional, Protocol, Generic
 import nographs as nog
 from nographs import T, Strategy, T_vertex, T_vertex_id, T_labels, T_weight
 from nographs._compatibility import pairwise
+from nographs._strategies import StrRepr  # NOQA F401 (import needed by doc tests)
 
 # ----- Utilities: Printing test results -----
 
@@ -93,7 +94,9 @@ def results_with_visited(
     org_dict = _results_of_traversal(traversal, start_vertices)
     if org_dict["visited"] is not traversal.visited:
         print("traversal.visited before and while traversal differ!")
-    print("All visited:", list(traversal.visited))
+    visited = list(traversal.visited)
+    visited.sort()
+    print("All visited:", visited)
 
 
 def results_with_distances(
@@ -619,27 +622,27 @@ class GraphWithoutEdges:
     >>> f = FNoEdgesGoalIsStart()
 
     >>> list(nog.TraversalBreadthFirst(f.next_vertices).start_from(f.start))
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     []
     >>> list(nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
     ...     compute_depth=True))
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     []
     >>> list(nog.TraversalNeighborsThenDepth(f.next_vertices).start_from(f.start,
     ...     compute_depth=True))
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     []
     >>> list(nog.TraversalTopologicalSort(f.next_vertices).start_from(f.start))
-    ? 0: {'visited': {0}, 'depth': 0, 'cycle_from_start': []}
+    ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {}}
     [0]
     >>> list(nog.TraversalShortestPaths(f.next_edges).start_from(f.start))
-    ? 0: {'distance': 0, 'depth': 0, 'distances[0]': 0}
+    ? 0: {'distance': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {}}
     []
     >>> list(nog.TraversalMinimumSpanningTree(f.next_edges).start_from(f.start))
-    ? 0: {'edge': None}
+    ? 0: {'edge': None, 'paths': {}}
     []
     >>> list(nog.TraversalAStar(f.next_edges).start_from(f.heuristic, f.start))
-    ? 0: {'path_length': 0, 'depth': 0, 'distances[0]': 0}
+    ? 0: {'path_length': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {}}
     []
     >>> d, p = nog.BSearchBreadthFirst(f.next_vertices_bi).start_from(f.start_bi)
     >>> print(d, list(p))
@@ -653,7 +656,7 @@ class GraphWithoutEdges:
 
     >>> traversal = nog.TraversalBreadthFirst(f.next_vertices)
     >>> traversal.start_from(f.start).go_to(f.goal, fail_silently=True) is None
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     True
     >>> traversal.start_from(f.start).go_to(f.goal)
     Traceback (most recent call last):
@@ -661,7 +664,7 @@ class GraphWithoutEdges:
     >>> list(traversal.start_from(f.start).go_for_vertices_in(
     ...    (f.goal,), fail_silently=True)
     ... )
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     []
     >>> list(traversal.start_from(f.start).go_for_vertices_in((f.goal,)))
     Traceback (most recent call last):
@@ -673,7 +676,7 @@ class GraphWithoutEdges:
     Traceback (most recent call last):
     KeyError: 'No path to (a) goal vertex found'
     >>> length, path = search.start_from(f.start_bi, fail_silently=True)
-    ? 0: {'visited': {0}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
     >>> print(length, type(path))
     -1 <class 'nographs._path.PathOfUnlabeledEdges'>
 
@@ -1056,7 +1059,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': 1, 'paths[[1]]': ([0], [1])}
+    {'depth': 1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalDepthFirstFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1064,7 +1067,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': ([0], [1])}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalNeighborsThenDepthFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1072,7 +1075,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': ([0], [1])}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalTopologicalSortFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1080,8 +1083,8 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': 1, 'cycle_from_start': [], 'paths[[1]]': ([0],
-      [1])}
+    {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1}, 'paths': {[1]: ([0],
+      [1])}}
     >>> search = nog.BSearchBreadthFirstFlex(
     ...     first_of, nog.GearDefault(), f.next_vertices_bi)
     >>> test_bidirectional(search, f.start, f.goal, labeled_paths=False)
@@ -1097,7 +1100,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': 1, 'paths[[1]]': ([0], [1])}
+    {'depth': 1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalBreadthFirstFlex(
     ...     first_of, nog.GearDefault(),
     ...     next_labeled_edges=f.next_edges)
@@ -1107,7 +1110,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'visited': {0, 1}, 'depth': 1, 'paths[[1]]': (([0], [1], 2),)}
+    {'depth': 1, 'visited': {0, 1}, 'paths': {[1]: (([0], [1], 2),)}}
 
     >>> traversal = nog.TraversalDepthFirstFlex(
     ...     first_of, nog.GearDefault(),
@@ -1117,7 +1120,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': ([0], [1])}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
 
     >>> traversal = nog.TraversalDepthFirstFlex(
     ...     first_of, nog.GearDefault(),
@@ -1128,7 +1131,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': (([0], [1], 2),)}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: (([0], [1], 2),)}}
 
     >>> traversal = nog.TraversalNeighborsThenDepthFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1137,7 +1140,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': ([0], [1])}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
 
     >>> traversal = nog.TraversalNeighborsThenDepthFlex(
     ...     first_of, nog.GearDefault(),
@@ -1148,7 +1151,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'visited': {0, 1}, 'depth': -1, 'paths[[1]]': (([0], [1], 2),)}
+    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: (([0], [1], 2),)}}
 
     >>> traversal = nog.TraversalShortestPathsFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1157,8 +1160,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'distance': 1, 'depth': 1, 'paths[[1]]': ([0], [1]),
-      'distances[vertex_to_id([1])]': 0}
+    {'distance': 1, 'depth': 1, 'distances': {1: 0}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalShortestPathsFlex(
     ...     first_of, nog.GearDefault(),
     ...     next_labeled_edges=f.next_edges)
@@ -1168,8 +1170,8 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'distance': 1, 'depth': 1, 'paths[[1]]': (([0], [1], 2),),
-      'distances[vertex_to_id([1])]': 0}
+    {'distance': 1, 'depth': 1, 'distances': {1: 0}, 'paths': {[1]: (([0], [1],
+      2),)}}
 
     >>> traversal = nog.TraversalMinimumSpanningTreeFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1178,7 +1180,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'edge': ([0], [1], 1, 2), 'paths[[1]]': ([0], [1])}
+    {'edge': ([0], [1], 1, 2), 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalMinimumSpanningTreeFlex(
     ...     first_of, nog.GearDefault(),
     ...     next_labeled_edges=f.next_edges)
@@ -1188,7 +1190,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'edge': ([0], [1], 1, 2), 'paths[[1]]': (([0], [1], 2),)}
+    {'edge': ([0], [1], 1, 2), 'paths': {[1]: (([0], [1], 2),)}}
 
     >>> traversal = nog.TraversalTopologicalSortFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1197,8 +1199,8 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'visited': {0, 1}, 'depth': 1, 'cycle_from_start': [], 'paths[[1]]': ([0],
-      [1])}
+    {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1}, 'paths': {[1]: ([0],
+      [1])}}
     >>> traversal = nog.TraversalTopologicalSortFlex(
     ...     first_of, nog.GearDefault(),
     ...     next_labeled_edges=f.next_edges)
@@ -1208,8 +1210,8 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'visited': {0, 1}, 'depth': 1, 'cycle_from_start': [], 'paths[[1]]': (([0],
-      [1], 2),)}
+    {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1}, 'paths': {[1]: (([0],
+      [1], 2),)}}
 
     >>> traversal = nog.TraversalAStarFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1219,8 +1221,7 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'path_length': 1, 'depth': 1, 'paths[[1]]': ([0], [1]),
-      'distances[vertex_to_id([1])]': 1}
+    {'path_length': 1, 'depth': 1, 'distances': {1: 1}, 'paths': {[1]: ([0], [1])}}
     >>> traversal = nog.TraversalAStarFlex(
     ...     first_of, nog.GearDefault(),
     ...     next_labeled_edges=f.next_edges)
@@ -1231,8 +1232,8 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'path_length': 1, 'depth': 1, 'paths[[1]]': (([0], [1], 2),),
-      'distances[vertex_to_id([1])]': 1}
+    {'path_length': 1, 'depth': 1, 'distances': {1: 1}, 'paths': {[1]: (([0], [1],
+      2),)}}
 
     >>> search = nog.BSearchBreadthFirstFlex(
     ...     first_of, nog.GearDefault(),
@@ -1273,52 +1274,52 @@ class VertexToIdWithGoForVerticesInAndGoTo:
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'visited': {0, 1, 2, 3}, 'depth': 3, 'paths[[3]]': ([0], [1], [2], [3])}
+    {'depth': 3, 'visited': {0, 1, 2, 3}, 'paths': {[3]: ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalDepthFirstFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[1], [2], [3], [4]]
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[[3]]': ([0], [1], [2], [3])}
+    {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {[3]: ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalNeighborsThenDepthFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[1], [2], [3], [4]]
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[[3]]': ([0], [1], [2], [3])}
+    {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {[3]: ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalShortestPathsFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[1], [2], [3], [4]]
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'distance': 3, 'depth': 3, 'paths[[3]]': ([0], [1], [2], [3]),
-      'distances[vertex_to_id([3])]': 0}
+    {'distance': 3, 'depth': 3, 'distances': {3: 0}, 'paths': {[3]: ([0], [1], [2],
+      [3])}}
     >>> test_traversal(nog.TraversalMinimumSpanningTreeFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[1], [2], [3], [4]]
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'edge': ([2], [3], 1, 3), 'paths[[3]]': ([0], [1], [2], [3])}
+    {'edge': ([2], [3], 1, 3), 'paths': {[3]: ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalTopologicalSortFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[4], [3], [2], [1], [0]]
     [[3], [1]]
     [3]
     ([0], [1], [2], [3])
-    {'visited': {0, 1, 2, 3, 4}, 'depth': 3, 'cycle_from_start': [], 'paths[[3]]':
-      ([0], [1], [2], [3])}
+    {'depth': 3, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4}, 'paths': {[3]:
+      ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalAStarFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges), f.heuristic)
     [[1], [2], [3], [4]]
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'path_length': 3, 'depth': 3, 'paths[[3]]': ([0], [1], [2], [3]),
-      'distances[vertex_to_id([3])]': 3}
+    {'path_length': 3, 'depth': 3, 'distances': {3: 3}, 'paths': {[3]: ([0], [1],
+      [2], [3])}}
     >>> test_bsearch(nog.BSearchBreadthFirstFlex(
     ...     first_of, nog.GearDefault(), next_labeled_edges=f.next_edges_bi))
     3 []
@@ -1384,14 +1385,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = nog.TraversalBreadthFirst(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 1: {'visited': {0, 1, 2}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
-        ? 2: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {1: (0, 1)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1399,28 +1400,28 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> traversal = nog.TraversalDepthFirst(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': -1, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1428,57 +1429,58 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> traversal = nog.TraversalNeighborsThenDepth(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': -1, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': -1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': -1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> traversal = nog.TraversalTopologicalSort(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]': (0,)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 2: {'visited': {0, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0,
-          2)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 0: {'visited': {0, 1, 2, 3}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
+        After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0:
+          (0,)}}
+        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0: (0,)}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2}, 'paths': {2: (0,
+          2)}}
+        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3:
+          (0, 2, 3)}}
+        -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {2:
+          (0, 2)}}
+        ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
+          (0,)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> search = nog.BSearchBreadthFirst(f.next_vertices_bi)
         >>> l, p = search.start_from(f.start_bi, build_path=True)
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ?<3: {'visited': {3}, 'depth': 0, 'paths[3]': (3,)}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ?<3: {'depth': 0, 'visited': {3}, 'paths': {3: (3,)}}
         >>> print(l, list(p))
         2 [0, 1, 3]
         """
@@ -1494,14 +1496,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     nog.vertex_as_id, gear, f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 1: {'visited': {0, 1, 2}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
-        ? 2: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {1: (0, 1)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1510,14 +1512,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1525,14 +1527,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     nog.vertex_as_id, gear, f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': -1, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1541,14 +1543,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1556,14 +1558,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     nog.vertex_as_id, gear, f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': -1, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': -1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': -1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[3]': (0, 2, 3)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': -1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': -1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1571,30 +1573,31 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     nog.vertex_as_id, gear, f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]': (0,)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 2: {'visited': {0, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0,
-          2)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 0: {'visited': {0, 1, 2, 3}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
+        After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0:
+          (0,)}}
+        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0: (0,)}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2}, 'paths': {2: (0,
+          2)}}
+        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3:
+          (0, 2, 3)}}
+        -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {2:
+          (0, 2)}}
+        ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
+          (0,)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> search = nog.BSearchBreadthFirstFlex(
         ...     nog.vertex_as_id, gear, f.next_vertices_bi)
         >>> l, p = search.start_from(f.start_bi, build_path=True)
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ?<3: {'visited': {3}, 'depth': 0, 'paths[3]': (3,)}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ?<3: {'depth': 0, 'visited': {3}, 'paths': {3: (3,)}}
         >>> print(l, list(p))
         2 [0, 1, 3]
         """
@@ -1611,15 +1614,15 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(
         ...     f.start, build_paths=True, already_visited=already_visited)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
+        After start: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         All paths: [(0,), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
-        >>> print("Already visited:", already_visited)
+        >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
         Traceback (most recent call last):
@@ -1631,15 +1634,15 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     f.start, build_paths=True, compute_depth=True,
         ...     already_visited=already_visited)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
+        After start: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         All paths: [(0,), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
-        >>> print("Already visited:", already_visited)
+        >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
         Traceback (most recent call last):
@@ -1651,15 +1654,15 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     f.start, build_paths=True, compute_depth=True,
         ...     already_visited=already_visited)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
+        After start: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         All paths: [(0,), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
-        >>> print("Already visited:", already_visited)
+        >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
         Traceback (most recent call last):
@@ -1670,22 +1673,22 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(
         ...     f.start, build_paths=True, already_visited=already_visited)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0, 1}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
-        ? 0: {'visited': {0, 1}, 'depth': 0, 'cycle_from_start': [], 'paths[0]': (0,)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0,
-          2)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]':
-          (0, 2, 3)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]':
-          (0, 2, 3)}
-        -> 2: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[2]':
-          (0, 2)}
-        -> 0: {'visited': {0, 1, 2, 3}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
+        After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1}, 'paths':
+          {0: (0,)}}
+        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1}, 'paths': {0: (0,)}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2}, 'paths': {2: (0,
+          2)}}
+        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {3:
+          (0, 2, 3)}}
+        -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {3:
+          (0, 2, 3)}}
+        -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {2:
+          (0, 2)}}
+        -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
+          (0,)}}
         All paths: [(0,), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
-        >>> print("Already visited:", already_visited)
+        >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
         Traceback (most recent call last):
@@ -1704,12 +1707,12 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     f.start, build_paths=True, already_visited=already_visited)
 
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0, 1}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
+        After start: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         All paths: [(0,), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
         >>> print("Already visited:", already_visited)
@@ -1728,14 +1731,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     next_edges=f.next_edges)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 1: {'visited': {0, 1, 2}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
-        ? 2: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 1, 3)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {1: (0, 1)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1744,14 +1747,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1760,14 +1763,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        -> 1: {'visited': {0, 1}, 'depth': 1, 'paths[1]': (0, 1)}
-        -> 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        ? 2: {'visited': {0, 1, 2}, 'depth': 1, 'paths[2]': (0, 2)}
-        -> 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 3: {'visited': {0, 1, 2, 3}, 'depth': 2, 'paths[3]': (0, 2, 3)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'paths[1]': (0, 1)}
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
@@ -1775,29 +1778,30 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ...     next_edges=f.next_edges)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
-        ? 0: {'visited': {0}, 'depth': 0, 'cycle_from_start': [], 'paths[0]': (0,)}
-        ? 2: {'visited': {0, 2}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0, 2)}
-        ? 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 3: {'visited': {0, 2, 3}, 'depth': 2, 'cycle_from_start': [], 'paths[3]': (0,
-          2, 3)}
-        -> 2: {'visited': {0, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[2]': (0,
-          2)}
-        ? 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 1: {'visited': {0, 1, 2, 3}, 'depth': 1, 'cycle_from_start': [], 'paths[1]':
-          (0, 1)}
-        -> 0: {'visited': {0, 1, 2, 3}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-          (0,)}
+        After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0:
+          (0,)}}
+        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0: (0,)}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2}, 'paths': {2: (0,
+          2)}}
+        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3:
+          (0, 2, 3)}}
+        -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {2:
+          (0, 2)}}
+        ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
+          (0, 1)}}
+        -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
+          (0,)}}
         All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
         All visited: [0, 1, 2, 3]
 
         >>> search = nog.BSearchBreadthFirst(next_edges=f.next_edges_bi)
         >>> l, p = search.start_from(f.start_bi, build_path=True)
-        ? 0: {'visited': {0}, 'depth': 0, 'paths[0]': (0,)}
-        ?<3: {'visited': {3}, 'depth': 0, 'paths[3]': (3,)}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        ?<3: {'depth': 0, 'visited': {3}, 'paths': {3: (3,)}}
         >>> print(l, list(p))
         2 [0, 1, 3]
         """
@@ -1810,20 +1814,20 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = nog.TraversalBreadthFirst(f.next_vertices,is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        ? 1: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        -> 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        -> 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        ? 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        -> 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
-        -> 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        ? 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        -> 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        -> 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
-        ? 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
-        ? 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        ? 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        ? 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
+        After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        ? 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
+        -> 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        -> 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        -> 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
+        ? 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
+        ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        ? 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
         All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
         All visited: []
 
@@ -1831,20 +1835,20 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        ? 1: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        -> 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        ? 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        -> 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
-        ? 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
-        -> 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        ? 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        -> 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        ? 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        -> 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        ? 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        -> 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
-        ? 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
+        After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        -> 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        ? 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        -> 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
+        ? 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
+        -> 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        ? 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        ? 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        -> 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
+        ? 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
         All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
         All visited: []
 
@@ -1852,50 +1856,50 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        ? 1: {'visited': set(), 'depth': 0, 'paths[1]': (1,)}
-        -> 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        -> 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        ? 3: {'visited': set(), 'depth': 1, 'paths[3]': (1, 3)}
-        -> 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        -> 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
-        ? 7: {'visited': set(), 'depth': 2, 'paths[7]': (1, 3, 7)}
-        ? 6: {'visited': set(), 'depth': 2, 'paths[6]': (1, 3, 6)}
-        ? 2: {'visited': set(), 'depth': 1, 'paths[2]': (1, 2)}
-        -> 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
-        -> 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        ? 5: {'visited': set(), 'depth': 2, 'paths[5]': (1, 2, 5)}
-        ? 4: {'visited': set(), 'depth': 2, 'paths[4]': (1, 2, 4)}
+        After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
+        -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        ? 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
+        -> 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        -> 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
+        ? 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
+        ? 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
+        ? 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
+        -> 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
         All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
         All visited: []
 
         >>> traversal = nog.TraversalTopologicalSort(f.next_vertices, is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'visited': set(), 'depth': 0, 'cycle_from_start': [], 'paths[1]':
-          (1,)}
-        ? 1: {'visited': set(), 'depth': 0, 'cycle_from_start': [], 'paths[1]': (1,)}
-        ? 3: {'visited': set(), 'depth': 1, 'cycle_from_start': [], 'paths[3]': (1, 3)}
-        ? 7: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[7]': (1, 3,
-          7)}
-        -> 7: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[7]': (1, 3,
-          7)}
-        ? 6: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[6]': (1, 3,
-          6)}
-        -> 6: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[6]': (1, 3,
-          6)}
-        -> 3: {'visited': set(), 'depth': 1, 'cycle_from_start': [], 'paths[3]': (1, 3)}
-        ? 2: {'visited': set(), 'depth': 1, 'cycle_from_start': [], 'paths[2]': (1, 2)}
-        ? 5: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[5]': (1, 2,
-          5)}
-        -> 5: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[5]': (1, 2,
-          5)}
-        ? 4: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[4]': (1, 2,
-          4)}
-        -> 4: {'visited': set(), 'depth': 2, 'cycle_from_start': [], 'paths[4]': (1, 2,
-          4)}
-        -> 2: {'visited': set(), 'depth': 1, 'cycle_from_start': [], 'paths[2]': (1, 2)}
-        -> 1: {'visited': set(), 'depth': 0, 'cycle_from_start': [], 'paths[1]': (1,)}
+        After start: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1:
+          (1,)}}
+        ? 1: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1: (1,)}}
+        ? 3: {'depth': 1, 'cycle_from_start': [], 'visited': {}, 'paths': {3: (1, 3)}}
+        ? 7: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {7: (1, 3,
+          7)}}
+        -> 7: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {7: (1, 3,
+          7)}}
+        ? 6: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {6: (1, 3,
+          6)}}
+        -> 6: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {6: (1, 3,
+          6)}}
+        -> 3: {'depth': 1, 'cycle_from_start': [], 'visited': {}, 'paths': {3: (1, 3)}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {}, 'paths': {2: (1, 2)}}
+        ? 5: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {5: (1, 2,
+          5)}}
+        -> 5: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {5: (1, 2,
+          5)}}
+        ? 4: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {4: (1, 2,
+          4)}}
+        -> 4: {'depth': 2, 'cycle_from_start': [], 'visited': {}, 'paths': {4: (1, 2,
+          4)}}
+        -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {}, 'paths': {2: (1, 2)}}
+        -> 1: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1: (1,)}}
         All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
         All visited: []
         """
@@ -1914,14 +1918,15 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = nog.TraversalShortestPaths(next_edges=f.next_edges)
     >>> traversal = traversal.start_from(f.start, build_paths=True, keep_distances=True)
     >>> results_with_distances(traversal, {f.start})
-    After start: {'distance': inf, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    ? 0: {'distance': 0, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 2: {'distance': 1, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 1}
-    ? 2: {'distance': 1, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 1}
-    -> 1: {'distance': 2, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 2}
-    ? 1: {'distance': 2, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 2}
-    -> 3: {'distance': 3, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 3}
-    ? 3: {'distance': 3, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 3}
+    After start: {'distance': inf, 'depth': 0, 'distances': {0: 0}, 'paths': {0:
+      (0,)}}
+    ? 0: {'distance': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 2: {'distance': 1, 'depth': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    ? 2: {'distance': 1, 'depth': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    -> 1: {'distance': 2, 'depth': 1, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
+    ? 1: {'distance': 2, 'depth': 1, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
+    -> 3: {'distance': 3, 'depth': 2, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
+    ? 3: {'distance': 3, 'depth': 2, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
     All distances: {0: 0, 1: 2, 2: 1, 3: 3}
 
@@ -1937,12 +1942,13 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = traversal.start_from(
     ...     f.start, build_paths=True, known_distances=known_distances)
     >>> results_with_distances(traversal, {f.start})
-    After start: {'distance': inf, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 2}
-    ? 0: {'distance': 2, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 2: {'distance': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 0}
-    ? 2: {'distance': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 0}
-    -> 3: {'distance': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 0}
-    ? 3: {'distance': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 0}
+    After start: {'distance': inf, 'depth': 0, 'distances': {0: 2}, 'paths': {0:
+      (0,)}}
+    ? 0: {'distance': 2, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
+    ? 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
+    -> 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
+    ? 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
     All paths: [(0,), (0, 2), (0, 2, 3)]
     All distances: {0: 0, 1: 0, 2: 0, 3: 0}
     >>> traversal.distances is known_distances
@@ -1955,12 +1961,13 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = traversal.start_from(
     ...     f.start, build_paths=True, known_distances=known_distances)
     >>> results_with_distances(traversal, {f.start})
-    After start: {'distance': inf, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 2}
-    ? 0: {'distance': 2, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 2: {'distance': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 0}
-    ? 2: {'distance': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 0}
-    -> 3: {'distance': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 0}
-    ? 3: {'distance': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 0}
+    After start: {'distance': inf, 'depth': 0, 'distances': {0: 2}, 'paths': {0:
+      (0,)}}
+    ? 0: {'distance': 2, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
+    ? 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
+    -> 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
+    ? 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
     All paths: [(0,), (0, 2), (0, 2, 3)]
     All distances: {0: 0, 1: 0, 2: 0, 3: 0}
     >>> traversal.distances is known_distances
@@ -1972,14 +1979,14 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=fmst.next_edges)
     >>> traversal = traversal.start_from(fmst.start, build_paths=True)
     >>> results_standard(traversal, {fmst.start})
-    After start: {'edge': None, 'paths[0]': (0,)}
-    ? 0: {'edge': None, 'paths[0]': (0,)}
-    -> 2: {'edge': (0, 2, 1), 'paths[2]': (0, 2)}
-    ? 2: {'edge': (0, 2, 1), 'paths[2]': (0, 2)}
-    -> 1: {'edge': (0, 1, 2), 'paths[1]': (0, 1)}
-    ? 1: {'edge': (0, 1, 2), 'paths[1]': (0, 1)}
-    -> 3: {'edge': (2, 3, 3), 'paths[3]': (0, 2, 3)}
-    ? 3: {'edge': (2, 3, 3), 'paths[3]': (0, 2, 3)}
+    After start: {'edge': None, 'paths': {0: (0,)}}
+    ? 0: {'edge': None, 'paths': {0: (0,)}}
+    -> 2: {'edge': (0, 2, 1), 'paths': {2: (0, 2)}}
+    ? 2: {'edge': (0, 2, 1), 'paths': {2: (0, 2)}}
+    -> 1: {'edge': (0, 1, 2), 'paths': {1: (0, 1)}}
+    ? 1: {'edge': (0, 1, 2), 'paths': {1: (0, 1)}}
+    -> 3: {'edge': (2, 3, 3), 'paths': {3: (0, 2, 3)}}
+    ? 3: {'edge': (2, 3, 3), 'paths': {3: (0, 2, 3)}}
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
 
 
@@ -1990,17 +1997,19 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = nog.TraversalAStar(next_edges=fa.next_edges)
     >>> traversal = traversal.start_from(fa.heuristic, fa.start, build_paths=True)
     >>> results_standard(traversal, {fa.start})
-    After start: {'path_length': inf, 'depth': 0, 'paths[0]': (0,), 'distances[0]':
-      0}
-    ? 0: {'path_length': 0, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 1: {'path_length': 3, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 3}
-    ? 1: {'path_length': 3, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 3}
-    -> 2: {'path_length': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 3}
-    ? 2: {'path_length': 3, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 3}
-    -> 3: {'path_length': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 5}
-    ? 3: {'path_length': 5, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 5}
-    -> 4: {'path_length': 1, 'depth': 1, 'paths[4]': (0, 4), 'distances[4]': 1}
-    ? 4: {'path_length': 1, 'depth': 1, 'paths[4]': (0, 4), 'distances[4]': 1}
+    After start: {'path_length': inf, 'depth': 0, 'distances': {0: 0}, 'paths': {0:
+      (0,)}}
+    ? 0: {'path_length': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 1: {'path_length': 3, 'depth': 1, 'distances': {1: 3}, 'paths': {1: (0, 1)}}
+    ? 1: {'path_length': 3, 'depth': 1, 'distances': {1: 3}, 'paths': {1: (0, 1)}}
+    -> 2: {'path_length': 3, 'depth': 1, 'distances': {2: 3}, 'paths': {2: (0, 2)}}
+    ? 2: {'path_length': 3, 'depth': 1, 'distances': {2: 3}, 'paths': {2: (0, 2)}}
+    -> 3: {'path_length': 5, 'depth': 2, 'distances': {3: 5}, 'paths': {3: (0, 2,
+      3)}}
+    ? 3: {'path_length': 5, 'depth': 2, 'distances': {3: 5}, 'paths': {3: (0, 2,
+      3)}}
+    -> 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (0, 4)}}
+    ? 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (0, 4)}}
     All paths: [(0,), (0, 1), (0, 2), (0, 2, 3), (0, 4)]
 
 
@@ -2015,15 +2024,17 @@ class NormalGraphTraversalsWithWeights:
     ...     known_distances=known_distances,
     ...     known_path_length_guesses=known_path_length_guesses)
     >>> results_standard(traversal, {fa.start})
-    After start: {'path_length': inf, 'depth': 0, 'paths[0]': (0,), 'distances[0]':
-      2}
-    ? 0: {'path_length': 2, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 2}
-    -> 2: {'path_length': 5, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 5}
-    ? 2: {'path_length': 5, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 5}
-    -> 3: {'path_length': 7, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 7}
-    ? 3: {'path_length': 7, 'depth': 2, 'paths[3]': (0, 2, 3), 'distances[3]': 7}
-    -> 4: {'path_length': 3, 'depth': 1, 'paths[4]': (0, 4), 'distances[4]': 3}
-    ? 4: {'path_length': 3, 'depth': 1, 'paths[4]': (0, 4), 'distances[4]': 3}
+    After start: {'path_length': inf, 'depth': 0, 'distances': {0: 2}, 'paths': {0:
+      (0,)}}
+    ? 0: {'path_length': 2, 'depth': 0, 'distances': {0: 2}, 'paths': {0: (0,)}}
+    -> 2: {'path_length': 5, 'depth': 1, 'distances': {2: 5}, 'paths': {2: (0, 2)}}
+    ? 2: {'path_length': 5, 'depth': 1, 'distances': {2: 5}, 'paths': {2: (0, 2)}}
+    -> 3: {'path_length': 7, 'depth': 2, 'distances': {3: 7}, 'paths': {3: (0, 2,
+      3)}}
+    ? 3: {'path_length': 7, 'depth': 2, 'distances': {3: 7}, 'paths': {3: (0, 2,
+      3)}}
+    -> 4: {'path_length': 3, 'depth': 1, 'distances': {4: 3}, 'paths': {4: (0, 4)}}
+    ? 4: {'path_length': 3, 'depth': 1, 'distances': {4: 3}, 'paths': {4: (0, 4)}}
     All paths: [(0,), (0, 2), (0, 2, 3), (0, 4)]
     >>> print("Distance at goal:", known_distances[fa.goal])
     Distance at goal: 7
@@ -2062,20 +2073,26 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = nog.TraversalShortestPaths(fsb.next_edges, is_tree=True)
     >>> traversal = traversal.start_from(fsb.start, build_paths=True)
     >>> results_with_distances(traversal, {fsb.start})
-    After start: {'distance': inf, 'depth': 0, 'paths[1]': (1,), 'distances[1]': 0}
-    ? 1: {'distance': 0, 'depth': 0, 'paths[1]': (1,), 'distances[1]': 0}
-    -> 2: {'distance': 2, 'depth': 1, 'paths[2]': (1, 2), 'distances[2]': inf}
-    ? 2: {'distance': 2, 'depth': 1, 'paths[2]': (1, 2), 'distances[2]': inf}
-    -> 3: {'distance': 3, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': inf}
-    ? 3: {'distance': 3, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': inf}
-    -> 4: {'distance': 6, 'depth': 2, 'paths[4]': (1, 2, 4), 'distances[4]': inf}
-    ? 4: {'distance': 6, 'depth': 2, 'paths[4]': (1, 2, 4), 'distances[4]': inf}
-    -> 5: {'distance': 7, 'depth': 2, 'paths[5]': (1, 2, 5), 'distances[5]': inf}
-    ? 5: {'distance': 7, 'depth': 2, 'paths[5]': (1, 2, 5), 'distances[5]': inf}
-    -> 6: {'distance': 9, 'depth': 2, 'paths[6]': (1, 3, 6), 'distances[6]': inf}
-    ? 6: {'distance': 9, 'depth': 2, 'paths[6]': (1, 3, 6), 'distances[6]': inf}
-    -> 7: {'distance': 10, 'depth': 2, 'paths[7]': (1, 3, 7), 'distances[7]': inf}
-    ? 7: {'distance': 10, 'depth': 2, 'paths[7]': (1, 3, 7), 'distances[7]': inf}
+    After start: {'distance': inf, 'depth': 0, 'distances': {1: 0}, 'paths': {1:
+      (1,)}}
+    ? 1: {'distance': 0, 'depth': 0, 'distances': {1: 0}, 'paths': {1: (1,)}}
+    -> 2: {'distance': 2, 'depth': 1, 'distances': {2: inf}, 'paths': {2: (1, 2)}}
+    ? 2: {'distance': 2, 'depth': 1, 'distances': {2: inf}, 'paths': {2: (1, 2)}}
+    -> 3: {'distance': 3, 'depth': 1, 'distances': {3: inf}, 'paths': {3: (1, 3)}}
+    ? 3: {'distance': 3, 'depth': 1, 'distances': {3: inf}, 'paths': {3: (1, 3)}}
+    -> 4: {'distance': 6, 'depth': 2, 'distances': {4: inf}, 'paths': {4: (1, 2,
+      4)}}
+    ? 4: {'distance': 6, 'depth': 2, 'distances': {4: inf}, 'paths': {4: (1, 2, 4)}}
+    -> 5: {'distance': 7, 'depth': 2, 'distances': {5: inf}, 'paths': {5: (1, 2,
+      5)}}
+    ? 5: {'distance': 7, 'depth': 2, 'distances': {5: inf}, 'paths': {5: (1, 2, 5)}}
+    -> 6: {'distance': 9, 'depth': 2, 'distances': {6: inf}, 'paths': {6: (1, 3,
+      6)}}
+    ? 6: {'distance': 9, 'depth': 2, 'distances': {6: inf}, 'paths': {6: (1, 3, 6)}}
+    -> 7: {'distance': 10, 'depth': 2, 'distances': {7: inf}, 'paths': {7: (1, 3,
+      7)}}
+    ? 7: {'distance': 10, 'depth': 2, 'distances': {7: inf}, 'paths': {7: (1, 3,
+      7)}}
     All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
     All distances: {1: 0, 2: inf, 3: inf, 4: inf, 5: inf, 6: inf, 7: inf}
 
@@ -2084,21 +2101,29 @@ class NormalGraphTraversalsWithWeights:
     >>> traversal = nog.TraversalAStar(next_edges=fsb.next_edges)
     >>> traversal = traversal.start_from(fsb.heuristic, fsb.start, build_paths=True)
     >>> results_standard(traversal, {fsb.start})
-    After start: {'path_length': inf, 'depth': 0, 'paths[1]': (1,), 'distances[1]':
-      0}
-    ? 1: {'path_length': 0, 'depth': 0, 'paths[1]': (1,), 'distances[1]': 0}
-    -> 3: {'path_length': 3, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': 3}
-    ? 3: {'path_length': 3, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': 3}
-    -> 6: {'path_length': 9, 'depth': 2, 'paths[6]': (1, 3, 6), 'distances[6]': 9}
-    ? 6: {'path_length': 9, 'depth': 2, 'paths[6]': (1, 3, 6), 'distances[6]': 9}
-    -> 2: {'path_length': 2, 'depth': 1, 'paths[2]': (1, 2), 'distances[2]': 2}
-    ? 2: {'path_length': 2, 'depth': 1, 'paths[2]': (1, 2), 'distances[2]': 2}
-    -> 4: {'path_length': 6, 'depth': 2, 'paths[4]': (1, 2, 4), 'distances[4]': 6}
-    ? 4: {'path_length': 6, 'depth': 2, 'paths[4]': (1, 2, 4), 'distances[4]': 6}
-    -> 5: {'path_length': 7, 'depth': 2, 'paths[5]': (1, 2, 5), 'distances[5]': 7}
-    ? 5: {'path_length': 7, 'depth': 2, 'paths[5]': (1, 2, 5), 'distances[5]': 7}
-    -> 7: {'path_length': 10, 'depth': 2, 'paths[7]': (1, 3, 7), 'distances[7]': 10}
-    ? 7: {'path_length': 10, 'depth': 2, 'paths[7]': (1, 3, 7), 'distances[7]': 10}
+    After start: {'path_length': inf, 'depth': 0, 'distances': {1: 0}, 'paths': {1:
+      (1,)}}
+    ? 1: {'path_length': 0, 'depth': 0, 'distances': {1: 0}, 'paths': {1: (1,)}}
+    -> 3: {'path_length': 3, 'depth': 1, 'distances': {3: 3}, 'paths': {3: (1, 3)}}
+    ? 3: {'path_length': 3, 'depth': 1, 'distances': {3: 3}, 'paths': {3: (1, 3)}}
+    -> 6: {'path_length': 9, 'depth': 2, 'distances': {6: 9}, 'paths': {6: (1, 3,
+      6)}}
+    ? 6: {'path_length': 9, 'depth': 2, 'distances': {6: 9}, 'paths': {6: (1, 3,
+      6)}}
+    -> 2: {'path_length': 2, 'depth': 1, 'distances': {2: 2}, 'paths': {2: (1, 2)}}
+    ? 2: {'path_length': 2, 'depth': 1, 'distances': {2: 2}, 'paths': {2: (1, 2)}}
+    -> 4: {'path_length': 6, 'depth': 2, 'distances': {4: 6}, 'paths': {4: (1, 2,
+      4)}}
+    ? 4: {'path_length': 6, 'depth': 2, 'distances': {4: 6}, 'paths': {4: (1, 2,
+      4)}}
+    -> 5: {'path_length': 7, 'depth': 2, 'distances': {5: 7}, 'paths': {5: (1, 2,
+      5)}}
+    ? 5: {'path_length': 7, 'depth': 2, 'distances': {5: 7}, 'paths': {5: (1, 2,
+      5)}}
+    -> 7: {'path_length': 10, 'depth': 2, 'distances': {7: 10}, 'paths': {7: (1, 3,
+      7)}}
+    ? 7: {'path_length': 10, 'depth': 2, 'distances': {7: 10}, 'paths': {7: (1, 3,
+      7)}}
     All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
     """
 
@@ -2121,19 +2146,19 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> t = nog.TraversalBreadthFirst(f.next_vertices).start_from(
     ...      start_vertices=f.start_vertices, build_paths=True)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 5}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 6: {'visited': {0, 1, 2, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 1, 2, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 2: {'visited': {0, 1, 2, 3, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    -> 4: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (0, 1, 2, 4)}
-    ? 3: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 4: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (0, 1, 2, 4)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 5}, 'paths': {1: (0, 1)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 6: {'depth': 1, 'visited': {0, 1, 2, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 1, 2, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    -> 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
+    ? 3: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> list(t.start_from(start_vertices=(), build_paths=True))
@@ -2147,36 +2172,36 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> t = nog.TraversalDepthFirst(f.next_vertices).start_from(
     ...      start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> _ = t.start_from(start_vertices=f.start_vertices)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0}
-    ? 5: {'visited': {0, 5}, 'depth': -1}
-    -> 6: {'visited': {0, 5, 6}, 'depth': -1}
-    ? 6: {'visited': {0, 5, 6}, 'depth': -1}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': -1}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': -1}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': -1}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': -1}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': -1}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': -1}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    ? 5: {'depth': -1, 'visited': {0, 5}, 'paths': {}}
+    -> 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
+    ? 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
+    -> 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
+    ? 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
+    -> 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    ? 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    ? 0: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    -> 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
+    ? 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
+    -> 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
+    ? 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> list(t.start_from(start_vertices=(), build_paths=True))
     []
@@ -2189,36 +2214,36 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> t = nog.TraversalNeighborsThenDepth(f.next_vertices).start_from(
     ...      start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> _ = t.start_from(start_vertices=f.start_vertices)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0}
-    ? 5: {'visited': {0, 5}, 'depth': -1}
-    -> 6: {'visited': {0, 5, 6}, 'depth': -1}
-    ? 6: {'visited': {0, 5, 6}, 'depth': -1}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': -1}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': -1}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': -1}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': -1}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': -1}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': -1}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': -1}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    ? 5: {'depth': -1, 'visited': {0, 5}, 'paths': {}}
+    -> 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
+    ? 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
+    -> 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
+    ? 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
+    -> 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    ? 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    ? 0: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
+    -> 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
+    ? 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
+    -> 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
+    ? 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> list(t.start_from(start_vertices=(), build_paths=True))
     []
@@ -2229,35 +2254,35 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> t = nog.TraversalTopologicalSort(f.next_vertices).start_from(
     ...      start_vertices=f.start_vertices, build_paths=True)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-      (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'cycle_from_start': [], 'paths[5]': (5,)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'cycle_from_start': [], 'paths[6]': (5,
-      6)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'cycle_from_start': [], 'paths[3]':
-      (5, 6, 3)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'cycle_from_start': [],
-      'paths[4]': (5, 6, 3, 4)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'cycle_from_start': [],
-      'paths[4]': (5, 6, 3, 4)}
-    -> 3: {'visited': {0, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[3]': (5, 6, 3)}
-    -> 6: {'visited': {0, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[6]': (5, 6)}
-    -> 5: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[5]': (5,)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[0]': (0,)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[1]': (0, 1)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[2]': (0, 1, 2)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[2]': (0, 1, 2)}
-    -> 1: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[1]': (0, 1)}
-    -> 0: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[0]': (0,)}
+    After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths':
+      {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths': {5: (5,)}}
+    ? 6: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 5, 6}, 'paths': {6: (5,
+      6)}}
+    ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 3, 5, 6}, 'paths': {3:
+      (5, 6, 3)}}
+    ? 4: {'depth': 3, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {4: (5, 6, 3, 4)}}
+    -> 4: {'depth': 3, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {4: (5, 6, 3, 4)}}
+    -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {3: (5, 6, 3)}}
+    -> 6: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {6: (5, 6)}}
+    -> 5: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {5: (5,)}}
+    ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {0: (0,)}}
+    ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 3, 4, 5, 6},
+      'paths': {1: (0, 1)}}
+    ? 2: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {2: (0, 1, 2)}}
+    -> 2: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {2: (0, 1, 2)}}
+    -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {1: (0, 1)}}
+    -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {0: (0,)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
     >>> list(t.start_from(start_vertices=(), build_paths=True))
@@ -2268,18 +2293,18 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
 
     >>> l, p = nog.BSearchBreadthFirst(fb.next_vertices_bi
     ...     ).start_from(start_and_goal_vertices=fb.start_vertices_bi)
-    ? 0: {'visited': {0, 5}, 'depth': 0}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0}
-    ?<4: {'visited': {4}, 'depth': 0}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {}}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {}}
     >>> print(l, f.goal not in p)
     3 True
     >>> l, p = nog.BSearchBreadthFirst(fb.next_vertices_bi
     ...     ).start_from(start_and_goal_vertices=fb.start_vertices_bi, build_path=True)
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    ?<4: {'visited': {4}, 'depth': 0, 'paths[4]': (4,)}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {1: (0, 1)}}
     >>> print(l, list(p))
     3 [0, 1, 2, 4]
 
@@ -2303,10 +2328,10 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> l, p = nog.BSearchBreadthFirst(tuple(reversed(fb.next_vertices_bi))
     ...     ).start_from(start_and_goal_vertices=tuple(reversed(fb.start_vertices_bi)),
     ...                  build_path=True)
-    ?<4: {'visited': {4}, 'depth': 0, 'paths[4]': (4,)}
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    ?<2: {'visited': {2, 3, 4}, 'depth': 1, 'paths[2]': (4, 2)}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    ?<2: {'depth': 1, 'visited': {2, 3, 4}, 'paths': {2: (4, 2)}}
     >>> print(l, list(p))
     3 [4, 2, 1, 0]
 
@@ -2315,19 +2340,19 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ...     next_edges=f.next_edges
     ... ).start_from(start_vertices=f.start_vertices, build_paths=True)
     >>> results_with_visited(traversal, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 5}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 6: {'visited': {0, 1, 2, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 1, 2, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 2: {'visited': {0, 1, 2, 3, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    -> 4: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (0, 1, 2, 4)}
-    ? 3: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 4: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (0, 1, 2, 4)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 5}, 'paths': {1: (0, 1)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 6: {'depth': 1, 'visited': {0, 1, 2, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 1, 2, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    -> 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
+    ? 3: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
 
@@ -2336,19 +2361,19 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ... ).start_from(
     ...     start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
     >>> results_with_visited(traversal, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
 
@@ -2357,19 +2382,19 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ... ).start_from(
     ...     start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
     >>> results_with_visited(traversal, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'paths[5]': (5,)}
-    -> 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'paths[6]': (5, 6)}
-    -> 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'paths[3]': (5, 6, 3)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'paths[4]': (5, 6, 3, 4)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'paths[0]': (0,)}
-    -> 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'paths[2]': (0, 1, 2)}
+    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
+    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
+    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
 
@@ -2377,35 +2402,35 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ...     next_edges=f.next_edges
     ... ).start_from(start_vertices=f.start_vertices, build_paths=True)
     >>> results_with_visited(traversal, f.start_vertices)
-    After start: {'visited': {0, 5}, 'depth': 0, 'cycle_from_start': [], 'paths[0]':
-      (0,), 'paths[5]': (5,)}
-    ? 5: {'visited': {0, 5}, 'depth': 0, 'cycle_from_start': [], 'paths[5]': (5,)}
-    ? 6: {'visited': {0, 5, 6}, 'depth': 1, 'cycle_from_start': [], 'paths[6]': (5,
-      6)}
-    ? 3: {'visited': {0, 3, 5, 6}, 'depth': 2, 'cycle_from_start': [], 'paths[3]':
-      (5, 6, 3)}
-    ? 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'cycle_from_start': [],
-      'paths[4]': (5, 6, 3, 4)}
-    -> 4: {'visited': {0, 3, 4, 5, 6}, 'depth': 3, 'cycle_from_start': [],
-      'paths[4]': (5, 6, 3, 4)}
-    -> 3: {'visited': {0, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[3]': (5, 6, 3)}
-    -> 6: {'visited': {0, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[6]': (5, 6)}
-    -> 5: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[5]': (5,)}
-    ? 0: {'visited': {0, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[0]': (0,)}
-    ? 1: {'visited': {0, 1, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[1]': (0, 1)}
-    ? 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[2]': (0, 1, 2)}
-    -> 2: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 2, 'cycle_from_start': [],
-      'paths[2]': (0, 1, 2)}
-    -> 1: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 1, 'cycle_from_start': [],
-      'paths[1]': (0, 1)}
-    -> 0: {'visited': {0, 1, 2, 3, 4, 5, 6}, 'depth': 0, 'cycle_from_start': [],
-      'paths[0]': (0,)}
+    After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths':
+      {0: (0,), 5: (5,)}}
+    ? 5: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths': {5: (5,)}}
+    ? 6: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 5, 6}, 'paths': {6: (5,
+      6)}}
+    ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 3, 5, 6}, 'paths': {3:
+      (5, 6, 3)}}
+    ? 4: {'depth': 3, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {4: (5, 6, 3, 4)}}
+    -> 4: {'depth': 3, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {4: (5, 6, 3, 4)}}
+    -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {3: (5, 6, 3)}}
+    -> 6: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {6: (5, 6)}}
+    -> 5: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {5: (5,)}}
+    ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 3, 4, 5, 6}, 'paths':
+      {0: (0,)}}
+    ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 3, 4, 5, 6},
+      'paths': {1: (0, 1)}}
+    ? 2: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {2: (0, 1, 2)}}
+    -> 2: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {2: (0, 1, 2)}}
+    -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {1: (0, 1)}}
+    -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {0: (0,)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All visited: [0, 1, 2, 3, 4, 5, 6]
 
@@ -2422,24 +2447,24 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     -1 <class 'nographs._path.PathOfUnlabeledEdges'>
     >>> l, p = search.start_from(start_and_goal_vertices=(fb.start_vertices, ()),
     ...                          fail_silently=True)
-    ? 0: {'visited': {0, 5}, 'depth': 0}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {}}
     >>> print(l, type(p))
     -1 <class 'nographs._path.PathOfUnlabeledEdges'>
 
     >>> l, p = search.start_from(start_and_goal_vertices=fb.start_vertices_bi)
-    ? 0: {'visited': {0, 5}, 'depth': 0}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0}
-    ?<4: {'visited': {4}, 'depth': 0}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {}}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {}}
     >>> print(l, f.goal not in p)
     3 True
     >>> l, p = search.start_from(start_and_goal_vertices=fb.start_vertices_bi,
     ...                          build_path=True)
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    ?<4: {'visited': {4}, 'depth': 0, 'paths[4]': (4,)}
-    ? 1: {'visited': {0, 1, 5, 6}, 'depth': 1, 'paths[1]': (0, 1)}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
+    ? 1: {'depth': 1, 'visited': {0, 1, 5, 6}, 'paths': {1: (0, 1)}}
     >>> print(l, list(p))
     3 [0, 1, 2, 4]
 
@@ -2450,10 +2475,10 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> l, p = nog.BSearchBreadthFirst(next_edges=tuple(reversed(fb.next_edges_bi))
     ...     ).start_from(start_and_goal_vertices=tuple(reversed(fb.start_vertices_bi)),
     ...                  build_path=True)
-    ?<4: {'visited': {4}, 'depth': 0, 'paths[4]': (4,)}
-    ? 0: {'visited': {0, 5}, 'depth': 0, 'paths[0]': (0,)}
-    ? 5: {'visited': {0, 1, 5}, 'depth': 0, 'paths[5]': (5,)}
-    ?<2: {'visited': {2, 3, 4}, 'depth': 1, 'paths[2]': (4, 2)}
+    ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
+    ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
+    ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
+    ?<2: {'depth': 1, 'visited': {2, 3, 4}, 'paths': {2: (4, 2)}}
     >>> print(l, list(p))
     3 [4, 2, 1, 0]
     """
@@ -2472,20 +2497,22 @@ class MultipleStartVerticesTraversalsWithLabels:
     >>> traversal = traversal.start_from(
     ...     start_vertices=f.start_vertices, build_paths=True)
     >>> results_with_distances(traversal, f.start_vertices)
-    After start: {'distance': inf, 'depth': 0, 'paths[0]': (0,), 'paths[5]': (5,),
-      'distances[0]': 0, 'distances[5]': 0}
-    ? 5: {'distance': 0, 'depth': 0, 'paths[5]': (5,), 'distances[5]': 0}
-    ? 0: {'distance': 0, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 1: {'distance': 1, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 0}
-    ? 1: {'distance': 1, 'depth': 1, 'paths[1]': (0, 1), 'distances[1]': 0}
-    -> 6: {'distance': 1, 'depth': 1, 'paths[6]': (5, 6), 'distances[6]': 0}
-    ? 6: {'distance': 1, 'depth': 1, 'paths[6]': (5, 6), 'distances[6]': 0}
-    -> 3: {'distance': 2, 'depth': 2, 'paths[3]': (5, 6, 3), 'distances[3]': 0}
-    ? 3: {'distance': 2, 'depth': 2, 'paths[3]': (5, 6, 3), 'distances[3]': 0}
-    -> 2: {'distance': 2, 'depth': 2, 'paths[2]': (0, 1, 2), 'distances[2]': 0}
-    ? 2: {'distance': 2, 'depth': 2, 'paths[2]': (0, 1, 2), 'distances[2]': 0}
-    -> 4: {'distance': 3, 'depth': 3, 'paths[4]': (5, 6, 3, 4), 'distances[4]': 0}
-    ? 4: {'distance': 3, 'depth': 3, 'paths[4]': (5, 6, 3, 4), 'distances[4]': 0}
+    After start: {'distance': inf, 'depth': 0, 'distances': {0: 0, 5: 0}, 'paths':
+      {0: (0,), 5: (5,)}}
+    ? 5: {'distance': 0, 'depth': 0, 'distances': {5: 0}, 'paths': {5: (5,)}}
+    ? 0: {'distance': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 1: {'distance': 1, 'depth': 1, 'distances': {1: 0}, 'paths': {1: (0, 1)}}
+    ? 1: {'distance': 1, 'depth': 1, 'distances': {1: 0}, 'paths': {1: (0, 1)}}
+    -> 6: {'distance': 1, 'depth': 1, 'distances': {6: 0}, 'paths': {6: (5, 6)}}
+    ? 6: {'distance': 1, 'depth': 1, 'distances': {6: 0}, 'paths': {6: (5, 6)}}
+    -> 3: {'distance': 2, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'distance': 2, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (5, 6, 3)}}
+    -> 2: {'distance': 2, 'depth': 2, 'distances': {2: 0}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'distance': 2, 'depth': 2, 'distances': {2: 0}, 'paths': {2: (0, 1, 2)}}
+    -> 4: {'distance': 3, 'depth': 3, 'distances': {4: 0}, 'paths': {4: (5, 6, 3,
+      4)}}
+    ? 4: {'distance': 3, 'depth': 3, 'distances': {4: 0}, 'paths': {4: (5, 6, 3,
+      4)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All distances: {0: 0, 5: 0, 6: 0, 1: 0, 2: 0, 3: 0, 4: 0}
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
@@ -2497,19 +2524,19 @@ class MultipleStartVerticesTraversalsWithLabels:
     >>> traversal = traversal.start_from(
     ...     start_vertices=f.start_vertices, build_paths=True)
     >>> results_standard(traversal, f.start_vertices)
-    After start: {'edge': None, 'paths[0]': (0,), 'paths[5]': (5,)}
-    ? 0: {'edge': None, 'paths[0]': (0,)}
-    ? 5: {'edge': None, 'paths[5]': (5,)}
-    -> 1: {'edge': (0, 1, 1), 'paths[1]': (0, 1)}
-    ? 1: {'edge': (0, 1, 1), 'paths[1]': (0, 1)}
-    -> 6: {'edge': (5, 6, 1), 'paths[6]': (5, 6)}
-    ? 6: {'edge': (5, 6, 1), 'paths[6]': (5, 6)}
-    -> 2: {'edge': (1, 2, 1), 'paths[2]': (0, 1, 2)}
-    ? 2: {'edge': (1, 2, 1), 'paths[2]': (0, 1, 2)}
-    -> 3: {'edge': (6, 3, 1), 'paths[3]': (5, 6, 3)}
-    ? 3: {'edge': (6, 3, 1), 'paths[3]': (5, 6, 3)}
-    -> 4: {'edge': (2, 4, 1), 'paths[4]': (0, 1, 2, 4)}
-    ? 4: {'edge': (2, 4, 1), 'paths[4]': (0, 1, 2, 4)}
+    After start: {'edge': None, 'paths': {0: (0,), 5: (5,)}}
+    ? 0: {'edge': None, 'paths': {0: (0,)}}
+    ? 5: {'edge': None, 'paths': {5: (5,)}}
+    -> 1: {'edge': (0, 1, 1), 'paths': {1: (0, 1)}}
+    ? 1: {'edge': (0, 1, 1), 'paths': {1: (0, 1)}}
+    -> 6: {'edge': (5, 6, 1), 'paths': {6: (5, 6)}}
+    ? 6: {'edge': (5, 6, 1), 'paths': {6: (5, 6)}}
+    -> 2: {'edge': (1, 2, 1), 'paths': {2: (0, 1, 2)}}
+    ? 2: {'edge': (1, 2, 1), 'paths': {2: (0, 1, 2)}}
+    -> 3: {'edge': (6, 3, 1), 'paths': {3: (5, 6, 3)}}
+    ? 3: {'edge': (6, 3, 1), 'paths': {3: (5, 6, 3)}}
+    -> 4: {'edge': (2, 4, 1), 'paths': {4: (0, 1, 2, 4)}}
+    ? 4: {'edge': (2, 4, 1), 'paths': {4: (0, 1, 2, 4)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
     >>> list(traversal)
@@ -2521,18 +2548,20 @@ class MultipleStartVerticesTraversalsWithLabels:
     >>> traversal = traversal.start_from(
     ...     fa.heuristic, start_vertices=fa.start_vertices, build_paths=True)
     >>> results_standard(traversal, fa.start_vertices)
-    After start: {'path_length': inf, 'depth': 0, 'paths[0]': (0,), 'paths[1]':
-      (1,), 'distances[0]': 0, 'distances[1]': 0}
-    ? 1: {'path_length': 0, 'depth': 0, 'paths[1]': (1,), 'distances[1]': 0}
-    -> 3: {'path_length': 1, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': 1}
-    ? 3: {'path_length': 1, 'depth': 1, 'paths[3]': (1, 3), 'distances[3]': 1}
-    -> 5: {'path_length': 2, 'depth': 2, 'paths[5]': (1, 3, 5), 'distances[5]': 2}
-    ? 5: {'path_length': 2, 'depth': 2, 'paths[5]': (1, 3, 5), 'distances[5]': 2}
-    ? 0: {'path_length': 0, 'depth': 0, 'paths[0]': (0,), 'distances[0]': 0}
-    -> 2: {'path_length': 1, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 1}
-    ? 2: {'path_length': 1, 'depth': 1, 'paths[2]': (0, 2), 'distances[2]': 1}
-    -> 4: {'path_length': 1, 'depth': 1, 'paths[4]': (1, 4), 'distances[4]': 1}
-    ? 4: {'path_length': 1, 'depth': 1, 'paths[4]': (1, 4), 'distances[4]': 1}
+    After start: {'path_length': inf, 'depth': 0, 'distances': {0: 0, 1: 0},
+      'paths': {0: (0,), 1: (1,)}}
+    ? 1: {'path_length': 0, 'depth': 0, 'distances': {1: 0}, 'paths': {1: (1,)}}
+    -> 3: {'path_length': 1, 'depth': 1, 'distances': {3: 1}, 'paths': {3: (1, 3)}}
+    ? 3: {'path_length': 1, 'depth': 1, 'distances': {3: 1}, 'paths': {3: (1, 3)}}
+    -> 5: {'path_length': 2, 'depth': 2, 'distances': {5: 2}, 'paths': {5: (1, 3,
+      5)}}
+    ? 5: {'path_length': 2, 'depth': 2, 'distances': {5: 2}, 'paths': {5: (1, 3,
+      5)}}
+    ? 0: {'path_length': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 2: {'path_length': 1, 'depth': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    ? 2: {'path_length': 1, 'depth': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    -> 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (1, 4)}}
+    ? 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (1, 4)}}
     All paths: [(0,), (1,), (0, 2), (1, 3), (1, 4), (1, 3, 5)]
     >>> traversal = traversal.start_from(
     ...     fa.heuristic, start_vertices=(), build_paths=True)

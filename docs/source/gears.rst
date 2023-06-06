@@ -267,8 +267,9 @@ factory methods.
 
 **Example:**
 
-Let us assume we had installed package *intbitset* from PyPI. Intbitset is a 3rd party
-library that efficiently handles sets of integers.
+Let us assume we had installed package *intbitset* for *CPython* from *PyPI*,
+and imported its module *intbitset* as *intbitset*.
+Intbitset is a 3rd party library that efficiently handles sets of integers.
 
 We use the example of the `previous section <choosing_gear>`, but we like to
 find out the depth of vertex 1200000 w.r.t vertex 0.
@@ -281,9 +282,15 @@ So, in a subclass of `nographs.GearForIntVerticesAndIDsAndCFloats`, we simply
 overwrite method *vertex_id_set*, that returns a suitable implementation of a vertex
 id set for given vertices, by an implementation that returns an *intbitset*.
 
+.. hidden
+
+   >>> try:
+   ...    from intbitset import intbitset  # type: ignore
+   ... except ImportError:  # for PyPy, we have not imported it...
+   ...     intbitset = set
+
 .. code-block:: python
 
-   >>> from intbitset import intbitset  # type: ignore
    >>> class GearBitsetAndArrayForIntVerticesAndCFloats(
    ...     nog.GearForIntVerticesAndIDsAndCFloats
    ... ):

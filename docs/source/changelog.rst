@@ -1,6 +1,13 @@
 ChangeLog
 ---------
 
+**v3.2.0** (2023-06-09)
+
+- Support for PyPy added: CI pipeline extended by tests for PyPy, incompatibility
+  of some tests with PyPy removed.
+
+- Performance data for tests on CPython updated to Python 3.11, and data for PyPy added.
+
 **v3.1.0** (2023-04-23)
 
 - Bidirectional search strategies introduced. They implement DFS and Dijkstra

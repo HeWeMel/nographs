@@ -470,14 +470,14 @@ At any state:
     ...    print(f"Reported: {vertex}. State: {traversal.state_to_str(visited)}"
     ...         )  # doctest: +NORMALIZE_WHITESPACE
     Expanded: 0. State: {'distance': 0, 'depth': 0}
-    Reported: 2. State: {'distance': 1, 'depth': 1, 'distances[0]': 0,
-      'distances[2]': 1}
+    Reported: 2. State: {'distance': 1, 'depth': 1,
+      'distances': {0: 0, 2: 1}, 'paths': {}}
     Expanded: 2. State: {'distance': 1, 'depth': 1}
-    Reported: 1. State: {'distance': 2, 'depth': 1, 'distances[0]': 0,
-      'distances[2]': 1, 'distances[1]': 2}
+    Reported: 1. State: {'distance': 2, 'depth': 1,
+      'distances': {0: 0, 2: 1, 1: 2}, 'paths': {}}
     Expanded: 1. State: {'distance': 2, 'depth': 1}
-    Reported: 3. State: {'distance': 3, 'depth': 2, 'distances[0]': 0,
-      'distances[2]': 1, 'distances[1]': 2, 'distances[3]': 3}
+    Reported: 3. State: {'distance': 3, 'depth': 2,
+      'distances': {0: 0, 2: 1, 1: 2, 3: 3}, 'paths': {}}
     Expanded: 3. State: {'distance': 3, 'depth': 2}
 
   .. versionchanged:: 3.1

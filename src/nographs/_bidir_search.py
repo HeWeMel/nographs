@@ -516,10 +516,10 @@ class BSearchShortestPathFlex(
     is found. Each vertex is visited only once.
 
     **Input:** Weighted directed graph. One or more start vertices, and one or more
-    goal vertices. Weights need to be non-negative. NextVertices (resp. NextEdges)
-    functions both for the outgoing edges from a vertex and the incoming edges to a
-    vertex have to be provided, and they need to describe the same graph. Optional
-    calculation limit.
+    goal vertices. Weights need to be non-negative. NextWeightedEdges (resp.
+    NextWeightedLabeledEdges) functions both for the outgoing edges from a vertex
+    and the incoming edges to a vertex have to be provided, and they need to describe
+    the same graph. Optional calculation limit.
 
     Note: A shortest path from a vertex *v* to itself always exists, has length 0,
     and will be found by the class, whilst TraversalShortestPaths does not report
