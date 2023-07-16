@@ -9,9 +9,12 @@ from typing import (
     Literal,
     Generic,
     Union,
-    TypeVar,
-    Tuple,
 )
+
+# Sphinx has an issue with documenting tuple[T] in HTML. Thus, for
+# type annotations, typing.Tuple is used. It is depreciated,
+# but still supported....
+from typing import Tuple
 from abc import abstractmethod
 from array import array
 from itertools import repeat
@@ -32,16 +35,6 @@ from ._gear_collections import (
     VertexMappingWrappingSequenceWithoutNone,
     VertexMappingWrappingSequenceWithNone,
 )
-
-
-# With the following, for this module, tuple is replaced by typing.Tuple.
-# (Reason: Error in Sphinx with correctly documenting tuple[T] in HTML.
-#  In the meantime, this workaround is used. typing.Tuple is depreciated,
-#  but still supported...)
-U = TypeVar("U")
-V = TypeVar("V")
-
-tuple = Tuple[U, V]
 
 
 # --- ABCs for the needed collection kinds for NoGraphs ---
@@ -147,7 +140,7 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
     @abstractmethod
     def vertex_id_to_vertex_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_vertex]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_vertex]]
     ) -> VertexIdToVertexMapping[T_vertex_id, T_vertex]:
         """Factory for a mapping from a vertex id to a vertex.
 
@@ -157,7 +150,7 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
     @abstractmethod
     def vertex_id_to_path_attributes_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_labels]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_labels]]
     ) -> VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels]:
         """Factory for a mapping from a vertex id to edge data.
 
@@ -223,7 +216,7 @@ class Gear(
 
     @abstractmethod
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_weight]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_weight]]
     ) -> VertexIdToDistanceMapping[T_vertex_id, T_weight]:
         """Factory for a mapping from a vertex id to a distance value.
 
@@ -256,10 +249,11 @@ class DefaultdictWithNiceStr(collections.defaultdict[T_vertex_id, T_weight]):
 
 
 class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
-    """Factory methods for bookkeeping collections. For graphs with hashable vertices
+    """Factory methods for bookkeeping collections. For graphs with
+    **hashable vertices**
     (or vertices made hashable by providing a `VertexToID` function to the traversal).
 
-    Uses hash-based collections (e.g., set and dict) for storing data.
+    It uses **hash-based collections** (e.g., set and dict) for storing data.
 
     :param zero: Value of type T_weight that is used to represent zero distance.
 
@@ -277,12 +271,12 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
         return set[T_vertex_id](initial_content)
 
     def vertex_id_to_vertex_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_vertex]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_vertex]]
     ) -> VertexMapping[T_vertex_id, T_vertex]:
         return dict[T_vertex_id, T_vertex](initial_content)
 
     def vertex_id_to_path_attributes_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_labels]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_labels]]
     ) -> VertexMapping[T_vertex_id, T_labels]:
         return dict[T_vertex_id, T_labels](initial_content)
 
@@ -298,7 +292,7 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
         return self._infinity_value
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[T_vertex_id, T_weight]]
+        self, initial_content: Iterable[Tuple[T_vertex_id, T_weight]]
     ) -> VertexMapping[T_vertex_id, T_weight]:
         return DefaultdictWithNiceStr[T_vertex_id, T_weight](
             lambda: self._infinity_value, initial_content
@@ -324,12 +318,15 @@ class GearDefault(
     Generic[T_vertex, T_vertex_id, T_weight, T_labels],
     GearForHashableVertexIDs[T_vertex, T_vertex_id, Union[T_weight, float], T_labels],
 ):
-    """A `GearForHashableVertexIDs` that uses the integer 0 for zero
-    distance, and float("infinity") for infinite distance and thus,
-    Union[T_weight, float] as type of distances.
+    """A `GearForHashableVertexIDs` (see there).
 
-    When using GearDefault, the choice of these two numbers has the following
-    consequences:
+    For functionality of NoGraphs that deals with edge weights and distances:
+
+    It uses the integer **0 for zero distance**, and
+    **float("infinity") for infinite distance**
+    and thus, Union[T_weight, float] as type of distances.
+
+    The choice of these two numbers has the following consequences:
 
     - Additional requirement for T_weight: Additionally to the usual requirements
       for edge weights in NoGraphs (see `T_weight`), it needs to be possible to
@@ -349,6 +346,9 @@ class GearDefault(
     because they fulfil the requirements described above:
 
        *float*, *int*, *Decimal* and class *mpf* of library *mpmath*.
+
+    Due to this wide range of supported scenarios, GearDefault is the
+    gear that is used most often in NoGraphs.
     """
 
     def __init__(self) -> None:
@@ -358,13 +358,13 @@ class GearDefault(
 class GearForHashableVertexIDsAndIntsMaybeFloats(
     GearForHashableVertexIDs[T_vertex, T_vertex_id, float, T_labels]
 ):
-    """A `GearForHashableVertexIDs` for weights that are of type float or integer.
+    """A `GearForHashableVertexIDs` for **weights that are of type float or integer**.
 
-    It uses the integer 0 for zero distance. If all occurring edge weights
+    It uses the integer **0 for zero distance**. If all occurring edge weights
     are also integers, all reported distances of reached vertices will also be
     integers. So, this gear can also be used for calculations within the integers.
 
-    It uses *float("infinity")* for infinite distance. So, infinite distance will
+    It uses **float("infinity") for infinite distance**. So, infinite distance will
     always be reported as float.
     """
 
@@ -375,7 +375,7 @@ class GearForHashableVertexIDsAndIntsMaybeFloats(
 class GearForHashableVertexIDsAndDecimals(
     GearForHashableVertexIDs[T_vertex, T_vertex_id, Decimal, T_labels]
 ):
-    """A `GearForHashableVertexIDs` for weights that are of type Decimal."""
+    """A `GearForHashableVertexIDs` for **weights that are of type Decimal**."""
 
     def __init__(self) -> None:
         super().__init__(Decimal(0), Decimal("inf"))
@@ -384,7 +384,7 @@ class GearForHashableVertexIDsAndDecimals(
 class GearForHashableVertexIDsAndFloats(
     GearForHashableVertexIDs[T_vertex, T_vertex_id, float, T_labels]
 ):
-    """A `GearForHashableVertexIDs` for weights that are of type float."""
+    """A `GearForHashableVertexIDs` for **weights that are of type float**."""
 
     def __init__(self) -> None:
         super().__init__(0.0, float("inf"))
@@ -402,13 +402,13 @@ class GearForIntVertexIDs(
     Generic[T_vertex, T_weight, T_labels],
 ):
     """Factory methods for bookkeeping collections. For graphs with
-    vertex IDs that are non-negative integers (to be exact: they should be
+    **vertex IDs that are non-negative integers** (to be exact: they should be
     a dense subset of the natural numbers starting at 0).
     (Either, your vertices are such numbers, or you assign such numbers as IDs to
     them, see tutorial section about `vertex identity <vertex_identity>`).
 
     Trades type flexibility and runtime for an (often large) reduction of the memory
-    consumption: Uses sequence-based collections (instead of hash-based collections
+    consumption: Uses **sequence-based collections** (instead of hash-based collections
     like dict and set) for bookkeeping. Arrays are preferred over lists, since there,
     data can be stored as C-native values. Boolean values are packed into integers.
 
@@ -480,14 +480,14 @@ class GearForIntVertexIDs(
         return collection_class(sequence_factory, extend_size, initial_content)
 
     def vertex_id_to_vertex_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, T_vertex]]
+        self, initial_content: Iterable[Tuple[IntVertexID, T_vertex]]
     ) -> VertexMapping[IntVertexID, T_vertex]:
         return VertexMappingWrappingSequenceWithNone[T_vertex](
             lambda: [None] * self._pre_allocate, None, 1024, initial_content
         )
 
     def vertex_id_to_path_attributes_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, T_labels]]
+        self, initial_content: Iterable[Tuple[IntVertexID, T_labels]]
     ) -> VertexMapping[IntVertexID, T_labels]:
         return VertexMappingWrappingSequenceWithNone[T_labels](
             lambda: [None] * self._pre_allocate, None, 1024, initial_content
@@ -505,7 +505,7 @@ class GearForIntVertexIDs(
         return self._infinity_value
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, T_weight]]
+        self, initial_content: Iterable[Tuple[IntVertexID, T_weight]]
     ) -> VertexMapping[IntVertexID, T_weight]:
         return VertexMappingWrappingSequenceWithoutNone[T_weight](
             lambda: [self._infinity_value] * self._pre_allocate,
@@ -518,13 +518,13 @@ class GearForIntVertexIDs(
 class GearForIntVertexIDsAndIntsMaybeFloats(
     GearForIntVertexIDs[T_vertex, float, T_labels]
 ):
-    """A `GearForIntVertexIDs` for weights that are of type float or integer.
+    """A `GearForIntVertexIDs` for **weights that are of type float or integer**.
 
-    It uses the integer 0 for zero distances. If all occurring edge weights are
+    It uses the integer **0 for zero distances**. If all occurring edge weights are
     also integers, all reported distances of reached vertices will also be integers.
     So, this gear can also be used for calculations within the integers.
 
-    It uses float(“infinity”) for infinite distance. So, infinite distance
+    It uses **float(“infinity”) for infinite distance**. So, infinite distance
     will always be reported as float.
 
     :param no_arrays: Use only lists, no arrays. See `GearForIntVertexIDs`.
@@ -546,7 +546,7 @@ class GearForIntVertexIDsAndIntsMaybeFloats(
 
 
 class GearForIntVertexIDsAndDecimals(GearForIntVertexIDs[T_vertex, Decimal, T_labels]):
-    """A `GearForIntVertexIDs` for weights that are of type Decimal.
+    """A `GearForIntVertexIDs` for **weights that are of type Decimal**.
 
     :param no_arrays: Use lists instead of arrays. See `GearForIntVertexIDs`.
 
@@ -569,8 +569,8 @@ class GearForIntVertexIDsAndDecimals(GearForIntVertexIDs[T_vertex, Decimal, T_la
 
 
 class GearForIntVertexIDsAndCFloats(GearForIntVertexIDs[T_vertex, float, T_labels]):
-    """A `GearForIntVertexIDs` for weights that are floats in the limits
-    of some C-native float type.
+    """A `GearForIntVertexIDs` for **weights that are floats in the limits**
+    **of some C-native float type**.
 
     Here, arrays and C-native storage of data are also used for distances.
 
@@ -597,7 +597,7 @@ class GearForIntVertexIDsAndCFloats(GearForIntVertexIDs[T_vertex, float, T_label
         super().__init__(0.0, float("inf"), False, no_bit_packing, pre_allocate)
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, float]]
+        self, initial_content: Iterable[Tuple[IntVertexID, float]]
     ) -> VertexMapping[IntVertexID, float]:
         return VertexMappingWrappingSequenceWithoutNone[float](
             lambda: array(
@@ -611,8 +611,8 @@ class GearForIntVertexIDsAndCFloats(GearForIntVertexIDs[T_vertex, float, T_label
 
 
 class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
-    """A `GearForIntVertexIDs` for weights that are integers in the limits
-    of some C-native integer type.
+    """A `GearForIntVertexIDs` for **weights that are integers in the limits**
+    **of some C-native integer type.**
 
     Here, arrays and C-native storage of data are also used for distances.
 
@@ -645,7 +645,7 @@ class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
         super().__init__(0, self.max_type_value, False, no_bit_packing, pre_allocate)
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, int]]
+        self, initial_content: Iterable[Tuple[IntVertexID, int]]
     ) -> VertexMapping[IntVertexID, int]:
         return VertexMappingWrappingSequenceWithoutNone[int](
             lambda: array(
@@ -663,10 +663,10 @@ class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
 
 class GearForIntVerticesAndIDs(GearForIntVertexIDs[IntVertexID, T_weight, T_labels]):
     """A `GearForIntVertexIDs` (see there for constraints on vertex ids)
-    for graphs with vertices, that are non-negative
-    integers and fulfil one of the offered size constraints.
+    for graphs with **vertices, that are non-negative integers**
+    and **fulfil one of the offered size constraints**.
 
-    Here, arrays and C-native storage of data are also used for vertices.
+    Here, **arrays and C-native storage of data are also used for vertices**.
 
     :param zero: Value used to represent zero distance.
 
@@ -706,7 +706,7 @@ class GearForIntVerticesAndIDs(GearForIntVertexIDs[IntVertexID, T_weight, T_labe
         super().__init__(zero, inf, False, no_bit_packing, pre_allocate)
 
     def vertex_id_to_vertex_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, IntVertexID]]
+        self, initial_content: Iterable[Tuple[IntVertexID, IntVertexID]]
     ) -> VertexMapping[IntVertexID, IntVertexID]:
         bytes_of_vertex_type_code = {"L": 4, "Q": 8, "I": 2}[self.vertex_type_code]
         # Highest possible vertex value will be used as NaN value.
@@ -732,13 +732,13 @@ class GearForIntVerticesAndIDs(GearForIntVertexIDs[IntVertexID, T_weight, T_labe
 class GearForIntVerticesAndIDsAndIntsMaybeFloats(
     GearForIntVerticesAndIDs[float, T_labels]
 ):
-    """A `GearForIntVerticesAndIDs` for weights that are of type float or integer.
+    """A `GearForIntVerticesAndIDs` for **weights that are of type float or integer**.
 
-    It uses the integer 0 for zero distances. If all occurring edge weights are
+    It uses the integer **0 for zero distances**. If all occurring edge weights are
     also integers, all reported distances of reached vertices will also be integers.
     So, this gear can also be used for calculations within the integers.
 
-    It uses float(“infinity”) for infinite distance. So, infinite distance
+    It uses **float(“infinity”) for infinite distance**. So, infinite distance
     will always be reported as float.
 
     :param no_bit_packing: Store boolean values in vertex sets as integers instead of
@@ -763,7 +763,7 @@ class GearForIntVerticesAndIDsAndIntsMaybeFloats(
 
 
 class GearForIntVerticesAndIDsAndDecimals(GearForIntVerticesAndIDs[Decimal, T_labels]):
-    """A `GearForIntVerticesAndIDs` for weights that are of type Decimal.
+    """A `GearForIntVerticesAndIDs` for **weights that are of type Decimal**.
 
     :param no_bit_packing: Store boolean values of vertex id sets as integers instead
       of bits. See `GearForIntVerticesAndIDs`.
@@ -787,13 +787,10 @@ class GearForIntVerticesAndIDsAndDecimals(GearForIntVerticesAndIDs[Decimal, T_la
 
 
 class GearForIntVerticesAndIDsAndCFloats(GearForIntVerticesAndIDs[float, T_labels]):
-    """A `GearForIntVerticesAndIDs` for graphs with dense non-negative integers of
-    constrained size in bytes as vertex ids AND as vertices, and edge weights
-    that are floats in the limits of some C-native float type.
+    """A `GearForIntVerticesAndIDs` for
+    **weights that are floats in the limits of some C-native float type**.
 
-    for edge weight and distance values.
-
-    Here, arrays and C-native storage of data are also used for vertices.
+    Here, **arrays and C-native storage of data are also used for weights**.
 
     :param no_bit_packing: Store boolean values of vertex id sets as integers instead
       of bits. See `GearForIntVerticesAndIDs`.
@@ -825,7 +822,7 @@ class GearForIntVerticesAndIDsAndCFloats(GearForIntVerticesAndIDs[float, T_label
         )
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, float]]
+        self, initial_content: Iterable[Tuple[IntVertexID, float]]
     ) -> VertexMapping[IntVertexID, float]:
         return VertexMappingWrappingSequenceWithoutNone[float](
             lambda: array(
@@ -839,11 +836,10 @@ class GearForIntVerticesAndIDsAndCFloats(GearForIntVerticesAndIDs[float, T_label
 
 
 class GearForIntVerticesAndIDsAndCInts(GearForIntVerticesAndIDs[int, T_labels]):
-    """A `GearForIntVerticesAndIDs` for graphs with dense non-negative integers of
-    constrained size in bytes as vertex ids AND as vertices, and integers in the limits
-    of some C-native integer type.
+    """A `GearForIntVerticesAndIDs` for
+    **weights that are integers in the limits of some C-native integer type**.
 
-    Here, arrays and C-native storage of data are also used for vertices.
+    Here, **arrays and C-native storage of data are also used for weights**.
 
     :param no_bit_packing: Store boolean values of vertex id sets as integers instead
       of bits. See `GearForIntVerticesAndIDs`.
@@ -881,7 +877,7 @@ class GearForIntVerticesAndIDsAndCInts(GearForIntVerticesAndIDs[int, T_labels]):
         )
 
     def vertex_id_to_distance_mapping(
-        self, initial_content: Iterable[tuple[IntVertexID, int]]
+        self, initial_content: Iterable[Tuple[IntVertexID, int]]
     ) -> VertexMapping[IntVertexID, int]:
         return VertexMappingWrappingSequenceWithoutNone[int](
             lambda: array(

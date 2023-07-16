@@ -45,9 +45,9 @@ Here are some cases, and examples for each case:
   In this situation, you can simply use the Python
   function *id* as *VertexToID* function.
 
-- **Mutable vertex object, and their immutable counterparts identify them**
+- **Mutable vertex objects, and their immutable counterparts identify them**
 
-  You use lists as you vertices. You know that their content will not
+  You use lists as your vertices. You know that their content will not
   change during a traversal run. And the immutable tuple counterpart of a
   vertex is well suited for getting a hash value.
 

@@ -10,35 +10,47 @@ Basic types used in NoGraphs.
 """
 
 
+T = TypeVar("T")
 T_vertex = TypeVar("T_vertex")
 T_vertex_id = TypeVar("T_vertex_id", bound=Hashable)
-T = TypeVar("T")
+T_weight = TypeVar("T_weight", bound="Weight")
 
 
 # The following class is manually documented in api.rst, keep docs consistent.
-class Weight(Protocol[T]):
+class Weight(Protocol[T_weight]):
     @abstractmethod
-    def __add__(self: T, value: T) -> T:
+    def __add__(self: T_weight, value: T_weight) -> T_weight:
         """Return self+value."""
         raise NotImplementedError
 
     @abstractmethod
-    def __sub__(self: T, value: T) -> T:
+    def __sub__(self: T_weight, value: T_weight) -> T_weight:
         """Return self-value."""
         raise NotImplementedError
 
     @abstractmethod
-    def __lt__(self: T, value: T) -> bool:
+    def __lt__(self: T_weight, value: T_weight) -> bool:
         # inherited doc string
         raise NotImplementedError
 
     @abstractmethod
-    def __le__(self: T, value: T) -> bool:
+    def __le__(self: T_weight, value: T_weight) -> bool:
         # inherited doc string
         raise NotImplementedError
 
 
-T_weight = TypeVar("T_weight", bound=Weight)
+# class IntZero(int):
+#     def __new__(cls) -> "IntZero":
+#         return super(IntZero, cls).__new__(cls, 0)
+#
+#
+# class FloatInf(float):
+#     def __new__(cls) -> "FloatInf":
+#         return super(FloatInf, cls).__new__(cls, "inf")
+#
+#
+# T_weight_zero_inf_or = Union[IntZero, FloatInf, T]
+
 
 T_labels = TypeVar("T_labels")
 

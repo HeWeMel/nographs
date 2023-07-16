@@ -7,7 +7,11 @@ from typing import Any, Iterable, Union, TypeVar, Optional, Protocol, Generic
 
 import nographs as nog
 from nographs import T, Strategy, T_vertex, T_vertex_id, T_labels, T_weight
+
+# noinspection PyProtectedMember
 from nographs._compatibility import pairwise
+
+# noinspection PyProtectedMember
 from nographs._strategies import StrRepr  # NOQA F401 (import needed by doc tests)
 
 # ----- Utilities: Printing test results -----
@@ -206,61 +210,6 @@ def adj_funcs_bi_from_list(
     return next_edges_forwards, next_edges_backwards
 
 
-# ---- Utilities: Defining adjacency functions by other means, currently unused ---
-
-# def adj_func_with_reporting_from_mapping(
-#     edges: Mapping[T_vertex, tuple[T, ...]]
-# ) -> Callable[[T_vertex, Strategy], tuple[T, ...]]:
-#     """Adapt a graph given either as NextVertices mapping or as NextEdges mapping.
-#     Return an adjacency function of the respective type that prints attributes
-#     vertex, depth and visited of the given traversal before returning
-#     adjacent vertices or edges.
-#     """
-#
-#     def graph(vertex: T_vertex, strategy: Strategy) -> tuple[T, ...]:
-#         print_filled(f"? {vertex}: {strategy.state_to_str([vertex])}")
-#         return edges.get(vertex, tuple[T, ...]())
-#
-#     return graph
-
-# def adj_func_backwards_from_forwards(
-#     next_forwards_edges: Callable[[T_vertex, Any], Iterable],
-#     vertices: Iterable[T_vertex],
-# ) -> Callable[[T_vertex, Any], Iterable]:
-#     """Create NextEdges function for backward direction based on NextEdges
-#     function (optionally with weights and/or labels) for forward direction
-#     and a vertex list. No log printing happens. Typically used if the given
-#     function also does not print log texts.
-#     """
-#     edge_dict_backwards = collections.defaultdict(list)
-#     for v in vertices:
-#         for w, *others in next_forwards_edges(v, None):
-#             edge_dict_backwards[w].append((v, *others))
-#
-#     def next_edges_backwards(vertex: T_vertex, _: Any) -> Iterable:
-#         return edge_dict_backwards.get(vertex, ())
-#
-#     return next_edges_backwards
-
-
-# def edges_from_next_vertices_dict(
-#     next_vertices_dict: Mapping[T_vertex, tuple[T_vertex, ...]]
-# ) -> Iterator[tuple[T_vertex, T_vertex]]:
-#     """List the edges that are contained in the next_vertices_dict."""
-#     for vertex, to_vertices in next_vertices_dict.items():
-#         for to_vertex in to_vertices:
-#             yield (vertex, to_vertex)
-#
-#
-# def edges_from_next_edges_dict(
-#     edge_edges_dict: Mapping[T_vertex, tuple[tuple, ...]]
-# ) -> Iterator[tuple]:
-#     """List the edges that are contained in the next_edges_dict."""
-#     for vertex, out_edges in edge_edges_dict.items():
-#         for out_edge in out_edges:
-#             yield (vertex, *out_edge)
-
-
 # ----- Test fixtures (here: graphs and special vertices -----
 
 
@@ -417,6 +366,18 @@ class FDiamond(FixtureFull[int, tuple[int, int, int]]):
         self.values_for_known_distances = ((0, 2), (1, 0))
 
 
+class FDiamondSorted(FixtureFull[int, tuple[int, int, int]]):
+    """Diamond-shaped graph of fixed size. Variant with sorted edges (as needed by
+    TraversalShortestPathsInfBranchingSorted). No heuristic is given, since it is
+    not used for this strategy.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            [(0, 2, 1), (0, 1, 2), (1, 3, 2), (2, 3, 2)], 0, 3, lambda v: 0, report=True
+        )
+
+
 class FDiamond2(FixtureFull[int, tuple[int, int, int]]):
     """Diamond-shaped graph of fixed size. Variant with weight 3 from vertices 1 and
     2 to 3 (used for MST). No heuristic is given, since it is not used for A*.
@@ -456,7 +417,8 @@ class FBSearchShortestPath(FixtureFull[int, tuple[int, int, int]]):
 
 
 class FSmallBinaryTree(FixtureFull[int, tuple[int, int, int]]):
-    """Graphs forming a binary tree with just 6 vertices"""
+    """Graphs forming a binary tree with just 6 vertices. Outgoing edges are sorted
+    by ascending weight."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -470,7 +432,8 @@ class FSmallBinaryTree(FixtureFull[int, tuple[int, int, int]]):
 
 class FMultiStart(FixtureFull[int, tuple[int, int, int]]):
     """Graph for testing multiple start vertices. Used for all strategies
-    except of A* and the bidirectional search strategies."""
+    except of A* and the bidirectional search strategies. Outgoing edges
+    are sorted by ascending weight, since all weights are equal."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -533,10 +496,12 @@ class FMultiStartB(FixtureFull[int, tuple[int, int, int]]):
 
 
 class FSpiral(Fixture[int, tuple[int, int, int]]):
-    """Graph for testing TraversalShortestPathsFlex with all gears"""
+    """Graph for testing TraversalShortestPathsFlex with all gears.
+    Outgoing edges are sorted by ascending weight.
+    """
 
     @staticmethod
-    def next_edges(i: int, _: Any) -> Iterator[tuple[int, int, int]]:
+    def next_edges(i: int, _: Any) -> Iterable[tuple[int, int, int]]:
         j = (i + i // 6) % 6
         yield i + 1, j * 2 + 1, j * 2 + 1
         if i % 2 == 0:
@@ -548,6 +513,16 @@ class FSpiral(Fixture[int, tuple[int, int, int]]):
         super().__init__(0)
         self.goal = 5
         self.focus = 2  # number of vertices at path start and end to print
+
+
+class FSpiralSorted(FSpiral):
+    """A variant of FSpiral where outgoing edges are sorted by ascending weight."""
+
+    @staticmethod
+    def next_edges(i: int, _: Any) -> Iterable[tuple[int, int, int]]:
+        out_edges = list(super(FSpiralSorted, FSpiralSorted).next_edges(i, None))
+        out_edges.sort(key=lambda e: e[1])
+        return out_edges
 
 
 class FOvertaking(FixtureFull[int, tuple[int, int, int, int]]):
@@ -637,6 +612,10 @@ class GraphWithoutEdges:
     [0]
     >>> list(nog.TraversalShortestPaths(f.next_edges).start_from(f.start))
     ? 0: {'distance': 0, 'depth': 0, 'distances': {0: 0}, 'paths': {}}
+    []
+    >>> list(nog.TraversalShortestPathsInfBranchingSorted(f.next_edges).
+    ...      start_from(f.start))
+    ? 0: {'distance': 0, 'distances': {0: inf}, 'paths': {}}
     []
     >>> list(nog.TraversalMinimumSpanningTree(f.next_edges).start_from(f.start))
     ? 0: {'edge': None, 'paths': {}}
@@ -869,6 +848,13 @@ class GraphWithOneEdgeAndPathVariants:
     True
     1
     (0, 1)
+    >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(
+    ...     next_edges=fw.next_edges)
+    >>> test(traversal, fw.goal, False, fw.start)
+    [1]
+    True
+    1
+    (0, 1)
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=fw.next_edges)
     >>> test(traversal, fw.goal, False, fw.start)
     [1]
@@ -918,6 +904,12 @@ class GraphWithOneEdgeAndPathVariants:
     >>> list(traversal.start_from(fw.start, calculation_limit=2))
     [1]
     >>> _ = list(traversal.start_from(fw.start, calculation_limit=1))
+    Traceback (most recent call last):
+    RuntimeError: Number of visited vertices reached limit
+    >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(fw.next_edges)
+    >>> list(traversal.start_from(fw.start, combined_calculation_limit=3))
+    [1]
+    >>> _ = list(traversal.start_from(fw.start, combined_calculation_limit=2))
     Traceback (most recent call last):
     RuntimeError: Number of visited vertices reached limit
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=fw.next_edges)
@@ -1974,6 +1966,45 @@ class NormalGraphTraversalsWithWeights:
     True
 
 
+    -- TraversalShortestPathsInfBranchingSorted --
+    First we test with option store_distances.
+    We also check here, whether distances and paths stay the same from
+    start_from till traversal.
+    Note: Distances are stored (and thus: printed) in order of reporting, whilst
+    TraversalShortestPaths results in an other order
+    >>> f = FDiamondSorted()
+    >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(f.next_edges)
+    >>> traversal = traversal.start_from(f.start, build_paths=True,
+    ...     store_distances=True)
+    >>> results_with_distances(traversal, {f.start})
+    After start: {'distance': inf, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    ? 0: {'distance': 0, 'distances': {0: 0}, 'paths': {0: (0,)}}
+    -> 2: {'distance': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    ? 2: {'distance': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
+    -> 1: {'distance': 2, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
+    ? 1: {'distance': 2, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
+    -> 3: {'distance': 3, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
+    ? 3: {'distance': 3, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
+    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
+    All distances: {0: 0, 2: 1, 1: 2, 3: 3}
+
+    Now we test without option store_distances.
+    >>> f = FDiamondSorted()
+    >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(f.next_edges)
+    >>> traversal = traversal.start_from(f.start, build_paths=True)
+    >>> results_with_distances(traversal, {f.start})
+    After start: {'distance': inf, 'distances': {0: inf}, 'paths': {0: (0,)}}
+    ? 0: {'distance': 0, 'distances': {0: inf}, 'paths': {0: (0,)}}
+    -> 2: {'distance': 1, 'distances': {2: inf}, 'paths': {2: (0, 2)}}
+    ? 2: {'distance': 1, 'distances': {2: inf}, 'paths': {2: (0, 2)}}
+    -> 1: {'distance': 2, 'distances': {1: inf}, 'paths': {1: (0, 1)}}
+    ? 1: {'distance': 2, 'distances': {1: inf}, 'paths': {1: (0, 1)}}
+    -> 3: {'distance': 3, 'distances': {3: inf}, 'paths': {3: (0, 2, 3)}}
+    ? 3: {'distance': 3, 'distances': {3: inf}, 'paths': {3: (0, 2, 3)}}
+    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
+    All distances: {0: inf, 2: inf, 1: inf, 3: inf}
+
+
     -- TraversalMinimumSpanningTree --
     >>> fmst = FDiamond2()
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=fmst.next_edges)
@@ -2067,8 +2098,8 @@ class NormalGraphTraversalsWithWeights:
 
 
 
-    All traversals, with option is_tree (except for MST and BSearchShortestPath,
-    they do not have the option):
+    All traversals, with option is_tree (except for MST, BSearchShortestPath,
+    and TraversalShortestPathsInfBranchingSorted, since they do not have the option):
     >>> fsb = FSmallBinaryTree()
     >>> traversal = nog.TraversalShortestPaths(fsb.next_edges, is_tree=True)
     >>> traversal = traversal.start_from(fsb.start, build_paths=True)
@@ -2484,7 +2515,7 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     """
 
 
-class MultipleStartVerticesTraversalsWithLabels:
+class MultipleStartVerticesTraversalsWithWeights:
     """-- Traversal with multiple start vertex, last 3 traversal strategies --
     Correct traversal in case of multiple start vertices. No traversal in case of no
     start vertex.
@@ -2515,6 +2546,31 @@ class MultipleStartVerticesTraversalsWithLabels:
       4)}}
     All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
     All distances: {0: 0, 5: 0, 6: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+    >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
+    >>> list(traversal)
+    []
+
+    >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(
+    ...     next_edges=f.next_edges)
+    >>> traversal = traversal.start_from(
+    ...     start_vertices=f.start_vertices, build_paths=True)
+    >>> results_with_distances(traversal, f.start_vertices)
+    After start: {'distance': inf, 'distances': {0: inf, 5: inf}, 'paths': {0: (0,),
+      5: (5,)}}
+    ? 5: {'distance': 0, 'distances': {5: inf}, 'paths': {5: (5,)}}
+    ? 0: {'distance': 0, 'distances': {0: inf}, 'paths': {0: (0,)}}
+    -> 1: {'distance': 1, 'distances': {1: inf}, 'paths': {1: (0, 1)}}
+    ? 1: {'distance': 1, 'distances': {1: inf}, 'paths': {1: (0, 1)}}
+    -> 6: {'distance': 1, 'distances': {6: inf}, 'paths': {6: (5, 6)}}
+    ? 6: {'distance': 1, 'distances': {6: inf}, 'paths': {6: (5, 6)}}
+    -> 3: {'distance': 2, 'distances': {3: inf}, 'paths': {3: (5, 6, 3)}}
+    ? 3: {'distance': 2, 'distances': {3: inf}, 'paths': {3: (5, 6, 3)}}
+    -> 2: {'distance': 2, 'distances': {2: inf}, 'paths': {2: (0, 1, 2)}}
+    ? 2: {'distance': 2, 'distances': {2: inf}, 'paths': {2: (0, 1, 2)}}
+    -> 4: {'distance': 3, 'distances': {4: inf}, 'paths': {4: (5, 6, 3, 4)}}
+    ? 4: {'distance': 3, 'distances': {4: inf}, 'paths': {4: (5, 6, 3, 4)}}
+    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
+    All distances: {0: inf, 5: inf, 1: inf, 6: inf, 3: inf, 2: inf, 4: inf}
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
     >>> list(traversal)
     []
@@ -2687,6 +2743,23 @@ class InitiationForgotten:
     Traceback (most recent call last):
     RuntimeError: Method go_for_distance_range can only be called on a Traversal object.
 
+    >>> nog.TraversalShortestPathsInfBranchingSorted.start_from(None)
+    Traceback (most recent call last):
+    RuntimeError: Method start_from can only be called on a Traversal object.
+    >>> nog.TraversalShortestPathsInfBranchingSorted.__iter__(None)
+    Traceback (most recent call last):
+    RuntimeError: Method go can only be called on a Traversal object.
+    >>> nog.TraversalShortestPathsInfBranchingSorted.go_to(None, None)
+    Traceback (most recent call last):
+    RuntimeError: Method go_to can only be called on a Traversal object.
+    >>> nog.TraversalShortestPathsInfBranchingSorted.go_for_vertices_in(None, None)
+    Traceback (most recent call last):
+    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
+    >>> nog.TraversalShortestPathsInfBranchingSorted.go_for_distance_range(
+    ...     None, None, None)
+    Traceback (most recent call last):
+    RuntimeError: Method go_for_distance_range can only be called on a Traversal object.
+
     >>> nog.TraversalAStar.start_from(None, None)
     Traceback (most recent call last):
     RuntimeError: Method start_from can only be called on a Traversal object.
@@ -2804,7 +2877,8 @@ class RandomExample:
 
 class GearTestsTraversalsWithOrWithoutLabels:
     """
-    -- TraversalShortestPathsFlex with all kinds of gears --
+    -- TraversalShortestPathsFlex and TraversalBreadthFirstFlex
+    with all kinds of gears --
 
     >>> def gear_test(gear):
     ...    f = FSpiral()
@@ -2888,9 +2962,45 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [5, ((0, 1, 1), (1, 2, 3)), ((3, 4, 7), (4, 5, 9))]
 
 
-    Three main gear types, one also without bit_packing, used for each of the
-    traversals, graph is no tree. For traversals dealing with distances, we
-    need to test this gear functionality additionally.
+    -- TraversalShortestPathsInfBranchingSortedFlex with gears for Hashable --
+    (output of TraversalShortestPathsFlex also shown, as comparison)
+
+    >>> def gear_test(gear):
+    ...    f = FSpiralSorted()
+    ...    traversal = nog.TraversalShortestPathsFlex(nog.vertex_as_id,
+    ...        gear, next_labeled_edges=f.next_edges)
+    ...    vertex = traversal.start_from(f.start, build_paths=True).go_to(f.goal)
+    ...    path = traversal.paths.iter_vertices_from_start(vertex)
+    ...    print([traversal.distance, tuple(path)])
+    ...    traversal = nog.TraversalShortestPathsInfBranchingSortedFlex(
+    ...        gear, gear, f.next_edges)
+    ...    vertex = traversal.start_from(f.start, build_paths=True).go_to(f.goal)
+    ...    path = traversal.paths[vertex]
+    ...    print([traversal.distance, tuple(path)])
+    ...    # print([traversal.distance, tuple(path[:f.focus]), tuple(path[-f.focus:])])
+
+    >>> gear_test(nog.GearForHashableVertexIDs(0, float("infinity")))
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    >>> gear_test(nog.GearDefault())
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    >>> gear_test(nog.GearForHashableVertexIDsAndIntsMaybeFloats())
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    [24, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    >>> gear_test(nog.GearForHashableVertexIDsAndDecimals())
+    [Decimal('24'), (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    [Decimal('24'), (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    >>> gear_test(nog.GearForHashableVertexIDsAndFloats())
+    [24.0, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+    [24.0, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5)]
+
+
+    -- Three main gear types, one also without bit_packing, used for each of the
+    traversals, graph is no tree. --
+
+    For traversals dealing with distances, we need to test this gear functionality
+    additionally.
 
     >>> f = FOvertaking()
     >>> test_gears = [nog.GearForHashableVertexIDsAndIntsMaybeFloats(),

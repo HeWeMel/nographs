@@ -16,6 +16,7 @@ from ._types import (
     T_vertex,
     T_vertex_id,
     T_weight,
+    # T_weight_zero_inf_or,
     T_labels,
     VertexToID,
     vertex_as_id,
@@ -29,6 +30,7 @@ from ._types import (
     UnweightedLabeledFullEdge,
     WeightedFullEdge,
     WeightedOrLabeledFullEdge,
+    AnyFullEdge,
 )
 from ._gear_collections import (
     # --- Gear collection types ---
@@ -142,15 +144,24 @@ from ._bidir_search import (
     BSearchShortestPathFlex,
     BSearchShortestPath,
 )
-from ._matrix_gadgets import (
+from ._extra_edge_gadgets import (
+    adapt_edge_index,
+    adapt_edge_iterable,
+)
+from ._extra_infinite_branching import (
+    TraversalShortestPathsInfBranchingSortedFlex,
+    TraversalShortestPathsInfBranchingSorted,
+)
+from ._extra_matrix_gadgets import (
     Vector,
     Limits,
     Position,
     Array,
 )
-from ._edge_gadgets import (
-    adapt_edge_index,
-    adapt_edge_iterable,
+from ._extra_tsp import (
+    GettableProto,
+    traveling_salesman_flex,
+    traveling_salesman,
 )
 
 __all__ = (
@@ -160,6 +171,7 @@ __all__ = (
     "T_vertex",
     "T_vertex_id",
     "T_weight",
+    # "T_weight_zero_inf_or",
     "T_labels",
     "VertexToID",
     "vertex_as_id",
@@ -173,6 +185,7 @@ __all__ = (
     "UnweightedLabeledFullEdge",
     "WeightedFullEdge",
     "WeightedOrLabeledFullEdge",
+    "AnyFullEdge",
     # -- gear collections --
     "VertexSet",
     "VertexMapping",
@@ -243,12 +256,19 @@ __all__ = (
     "BSearchBreadthFirst",
     "BSearchShortestPathFlex",
     "BSearchShortestPath",
-    # -- matrix gadgets --
+    # -- extra_edge_gadgets --
+    "adapt_edge_index",
+    "adapt_edge_iterable",
+    # -- extra_infinite_branching --
+    "TraversalShortestPathsInfBranchingSortedFlex",
+    "TraversalShortestPathsInfBranchingSorted",
+    # -- extra_matrix_gadgets --
     "Vector",
     "Limits",
     "Position",
     "Array",
-    # -- edge gadgets --
-    "adapt_edge_index",
-    "adapt_edge_iterable",
+    # -- extra_tsp --
+    "GettableProto",
+    "traveling_salesman_flex",
+    "traveling_salesman",
 )

@@ -20,8 +20,8 @@ In case you have already computed your graph, you might have stored
 it in some dictionary, tuple or list. Then, the following support functions
 might help you with `adapting <graphs_and_adaptation>` it for NoGraphs.
 
-Function `adapt_edge_iterable`
-++++++++++++++++++++++++++++++
+Function `nographs.adapt_edge_iterable`
++++++++++++++++++++++++++++++++++++++++
 
 This function returns a `NextVertices` or `NextEdges` function for graphs that are
 stored in a **list of edges**. The examples show the use cases and the

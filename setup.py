@@ -7,7 +7,7 @@ long_description = (here / 'README.rst').read_text(encoding='utf-8')
 
 setup(
     name="nographs",
-    version="3.2.0",
+    version="3.3.0",
     description=("Graph analysis – the lazy (evaluation) way: Analysis on the fly, "
                  + "for graphs, that are computed and/or adapted on the fly."),
     long_description=long_description,
@@ -37,7 +37,7 @@ setup(
         "Typing :: Typed",
     ],
     keywords=('graph,network,search,traverse,analysis,infinite,lazy,shortest,distance,'
-              + 'depth,DFS,breadth,BFS,Dijkstra,topological,MST'),
+              + 'depth,DFS,breadth,BFS,Dijkstra,topological,spanning,MST,TSP'),
     python_requires='>=3.9, <4',
     project_urls={
         'Documentation': 'https://nographs.readthedocs.io/',

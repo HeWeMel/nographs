@@ -364,3 +364,7 @@ primes.
     [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 
 
+In the tutorial section about `infinitely branching graphs <infinite_branching>`,
+we will see a simplified version of this graph
+(function `next_edges_prime_search <infinite_branching>`),
+that shows the idea of the graph more directly.

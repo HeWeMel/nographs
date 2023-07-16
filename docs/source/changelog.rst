@@ -1,6 +1,19 @@
 ChangeLog
 ---------
 
+**v3.3.0** (2023-07-16)
+
+- Extras: Algorithm for computing an exact solution for traveling salesman problems
+  added. (It exemplifies how the lazy computation style of NoGraphs' core
+  algorithms can be extended to computations in the course of problem reduction.
+  The TSP algorithm itself does not belong to the core of NoGraphs.)
+
+- Extras: Classes added, that implement a Dijkstra shortest paths algorithm for
+  infinitely branching graphs with locally sorted edges.
+  (The implemented algorithm exemplifies how a "lazy evaluation" - based problem
+  reduction allows for a graph analysis that is even more "lazy" than that of
+  NoGraphs alone.)
+
 **v3.2.0** (2023-06-09)
 
 - Support for PyPy added: CI pipeline extended by tests for PyPy, incompatibility

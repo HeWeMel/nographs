@@ -1,5 +1,5 @@
-API reference
--------------
+API reference - NoGraphs
+------------------------
 
 .. currentmodule:: nographs
 
@@ -32,10 +32,12 @@ correctly handles them.
    cannot be expressed as type bound of a TypeVar. The requirement is checked at
    runtime.)
 
+   Please note: The generic classes of NoGraphs, that have T_vertex as parameter,
+   might impose further restrictions on the possible types of vertices,
+   by using T_vertex as argument for a type parameter of a superclass where
+   this parameter has a type bound. See the documentation of the classes you use.
+
    Examples: See section `vertices <vertices>` of the tutorial.
-   If in your setting, `T_vertex` is not a subtype of `T_vertex_id`, e.g., you
-   use Hashable as `T_vertex_id`, but your vertices are not hashable, then see section
-   `identity and equivalence of vertices <vertex_identity>` of the tutorial.
 
 .. data:: T_vertex_id
    :value: TypeVar("T_vertex_id", bound=Hashable)
@@ -68,7 +70,8 @@ correctly handles them.
    Please note, that the `gear <nographs.Gear>` (combination of bookkeeping collections)
    you use might have additional requirements w.r.t. edge weights. If you manually
    set a gear, see its documentation for this aspect.
-   Traversal objects, that do not allow to change the gear, use
+   `Traversal or search strategy classes <strategy_api>`, that do not allow to
+   change the gear, use
    `GearDefault <nographs.GearDefault>`. If you use one of them, see the documentation
    of this gear for its restrictions and for examples of typical weight types for it.
 
@@ -170,9 +173,9 @@ NoGraphs:
 Next vertices and next edges functions
 ......................................
 
-Application code can use a function to inform NoGraphs about the outgoing
-edges that start at some vertex. The signature of such a function needs
-to have a special structure:
+Application code can use a function ("adjacency function") to inform NoGraphs
+about the outgoing edges that start at some vertex. The signature of such a
+function needs to have a special structure:
 
 - The **first argument is always the current vertex** (outgoing edges
   from this vertex will be reported to NoGraphs)
@@ -203,7 +206,7 @@ to have a special structure:
 
 These building rules lead to the following combinations of signature elements:
 
-**Functions for strategies that accept edges with and without weights:**
+**Adjacency functions for strategies that accept edges with and without weights:**
 
 .. data:: NextVertices
 
@@ -235,7 +238,7 @@ These building rules lead to the following combinations of signature elements:
     data type used to instantiate the strategy in order to ensure correct
     functioning of NoGraphs.
 
-**Functions for strategies that accept only edges with weights:**
+**Adjacency functions for strategies that accept only edges with weights:**
 
 .. data:: NextWeightedEdges
 
@@ -257,7 +260,7 @@ These building rules lead to the following combinations of signature elements:
    the weight and labels types used to instantiate the strategy in order
    to ensure correct functioning of NoGraphs.
 
-**Functions for bidirectional search strategies:**
+**Adjacency functions for bidirectional search strategies:**
 
 Here, two adjacency functions of the same type are needed, one for reporting
 outedges from a given vertex, and one for reporting inedges leading to a given
@@ -339,6 +342,17 @@ NoGraphs returns the edges as part of computed results with our without labels:
    |    `WeightedUnlabeledFullEdge` [`T_vertex`, `T_weight`],
    |    `WeightedLabeledFullEdge` [`T_vertex`, `T_weight`, `T_labels`]]
 
+
+.. data:: AnyFullEdge
+
+   | alias of Union[
+   | `UnweightedUnlabeledFullEdge` [`T_vertex`],
+   | `WeightedUnlabeledFullEdge` [`T_vertex`, `T_weight`],
+   | `UnweightedLabeledFullEdge` [`T_vertex`, `T_labels`],
+   | `WeightedLabeledFullEdge` [`T_vertex`, `T_weight`, `T_labels`],
+
+
+.. _strategy_api:
 
 Traversal and search strategies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -698,56 +712,3 @@ Subclasses:
 ..
   Option :members: is not given here, since the methods are just overloaded
   by appropriate implementations, but the documentation is unchanged.
-
-
-Gadgets
-~~~~~~~
-
-Gadgets for adapting edge data
-..............................
-
-Examples: See `tutorial <edge_gadgets>`.
-
-.. autofunction:: adapt_edge_index
-
-.. autofunction:: adapt_edge_iterable
-
-Gadgets for adapting array data and positions
-.............................................
-
-Examples: See `tutorial <matrix_gadgets>`.
-
-Common types
-++++++++++++
-
-.. data:: nographs.Vector
-
-   alias of Sequence[int]
-
-   A vector can be used as parameter to methods of class Position and Array.
-   In fact, a Position is itself a Vector, but with further functionality.
-
-.. data:: nographs.Limits
-
-   alias of Sequence[tuple[int, int]]
-
-   The lower (inclusive) and upper (exclusive) boundaries of the indices
-   of an Array, given per dimension.
-
-Position
-++++++++
-
-Examples: See `tutorial <tutorial_position>`.
-
-.. autoclass:: Position(my_vector: Vector)
-   :members:
-   :special-members: __add__, __sub__, __mul__
-
-Array
-+++++
-
-Examples: See `tutorial <matrix_gadgets>`.
-
-.. autoclass:: Array
-   :members:
-   :special-members: __getitem__, __setitem__

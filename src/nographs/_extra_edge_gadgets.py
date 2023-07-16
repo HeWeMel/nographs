@@ -62,7 +62,7 @@ def adapt_edge_index(
     index: Union[Mapping, Sequence], *, add_inverted: bool, attributes: bool
 ) -> Callable:
     """
-    Read a test graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple
+    Read a graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple
     or list, if integers are used as the vertices) and provide a neighbor function
     (`NextVertices` or `NextEdges`) from that data. Typically only used for test
     purposes.
@@ -179,11 +179,14 @@ def adapt_edge_iterable(
 
     :param edges: The edges of your graph, each as Sequence (start_vertex, end_vertex,
         optional_attributes...), where edge data can be either a weight, or labels,
-        or both (see `WeightedOrLabeledFullEdge`).
+        or both (see `WeightedOrLabeledFullEdge`) or none
+        (see `AnyFullEdge`).
 
     :param attributes: If set to True, the resulting neighbor function will yield
         edges with edge attributes for a given vertex and
-        can be used as `NextEdges` function.
+        can be used as `NextEdges` function, but the edges of the given graph
+        need to have attributes (`WeightedOrLabeledFullEdge`, not
+        `AnyFullEdge`).
 
         If set to False, it will yield neighbor vertices, and can be
         used as `NextVertices` function, and edge data that your edges

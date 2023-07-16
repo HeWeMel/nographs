@@ -455,6 +455,11 @@ class BSearchBreadthFirst(
        BSearchBreadthFirstFlex[
            T_vertex, T_vertex, T_labels],
       ](nog.vertex_as_id, nog.GearDefault(), *args, **keywords)
+
+    Implication:
+
+    - `GearDefault` is used, see there how it and its superclass work
+    - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
 
     def __init__(
@@ -988,6 +993,12 @@ class BSearchShortestPath(
        BSearchShortestPathFlex[
            T_vertex, T_vertex, Union[T_weight, float], T_labels],
       ](nog.vertex_as_id, nog.GearDefault(), *args, **keywords)
+
+    Implication:
+
+    - `GearDefault` is used, see there how it and its superclass work
+    - The used weights are defined by Union[T_weight, float], see `GearDefault`
+    - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
 
     def __init__(

@@ -13,11 +13,13 @@ NoGraphs: Graph analysis on the fly
    graph_operations
    traversals
    bidirectional_search
+   reduction_of_other_problems
    vertex_identity
    gears
    gadgets
    performance
    api.rst
+   api_extras.rst
    genindex
    changelog
 
@@ -35,6 +37,12 @@ The `approach <concept_and_examples>`: Graphs are
 (when, and as far as, results can already be derived).
 
 Think of it as *graph analysis - the lazy (evaluation) way*.
+
+**Documentation**
+
+- `Installation guide <installation>`
+- `Tutorial <concept_and_examples>` (contains many `examples <examples>`)
+- `API reference <api>`
 
 **Feature overview**
 
@@ -77,10 +85,11 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - Flexible API: The concept of implicit graphs that NoGraphs is based on
   allows for an API that eases
   `graph operations <graph_operations>` like
-  graph pruning, graph abstraction, the typical binary
+  graph pruning, graph abstraction, and the typical binary
   graph operations (union, intersection, several types of products), the
-  computation of `search-aware graphs <search_aware_graphs>`, and
-  `traversals of vertex equivalence classes on the fly <vertex_identity>`.
+  computation of `search-aware graphs <search_aware_graphs>`, the combination of
+  `problem reduction with lazy evaluation <reduction_of_other_problems>`,
+  and `traversals of vertex equivalence classes on the fly <vertex_identity>`.
   Bookkeeping data can be
   `pre-initialized and accessed during computations <initializing_bookkeeping>`.
 - Typing: The API `can be used fully typed <typing>` (optionally).
@@ -89,15 +98,21 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   CPython and PyPy, both code and docs, 100% code coverage.
 - Runtime and memory performance: Have been goals (CPython). In its domain, it often
   even `outperforms <performance>` *Rust*- and *C*-based libraries.
-  If you need an even higher performance, using PyPy could be an option.
+  Using PyPy `improves its performance further <performance-pypy>`.
 - Source: Available `here <https://github.com/HeWeMel/nographs>`__.
 - Licence: `MIT <https://github.com/HeWeMel/nographs/blob/main/LICENSE>`__.
 
-**Documentation**
+**Extras** (outside of the core of NoGraphs)
 
-- `Installation guide <installation>`
-- `Tutorial <concept_and_examples>` (contains many `examples <examples>`)
-- `API reference <api>`
+- Computation of exact solutions for (small)
+  `traveling salesman problems <tsp_in_nographs>` (shortest / longest route,
+  positive / zero / negative edge weights, graph does not need to be complete).
+- Dijkstra shortest paths algorithm for
+  `infinitely branching graphs with locally sorted edges <infinite_branching>`.
+- `Gadget functions <gadgets>` for test purposes. They make the easy task of
+  adapting existing explicit test graphs a no brainer, may they be
+  stored in `edge indices or edge iterables <edge_gadgets>`
+  or in `arrays <matrix_gadgets>`.
 
 
 .. _overview_example:
@@ -175,9 +190,12 @@ Can you imagine...
   of Towers of Hanoi problems in a generic way, without fixing the number of
   towers, disk sizes, and the start and goal configuration - and a specific
   problem instance is solved by just one library call?
+- Or a way for computing an exact solution for traveling salesman problems,
+  that is based on just a graph and a call of the Dijkstra single source shortest path
+  algorithm?
 - Or graphs that are dynamically
   computed based on other graphs, or on analysis results about other graphs,
-  or even on partial analysis results from already processed parts of the same graph?
+  or even on partial analysis results for already processed parts of the same graph?
 
 Let's `build it <installation>`.
 

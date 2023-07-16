@@ -40,7 +40,7 @@ the maze is described by two integer coordinates *y* and *x*. The position of th
 left corner is *(0, 0)*.
 
 For each position, the maze shows either a digit, specifying the elevation
-of the position, or a space character. On our way through the maze, we can only
+of the position, or a dot. On our way through the maze, we can only
 use positions with an elevation. In each step, we can go to a direct
 neighbor position in either horizontal or vertical direction.
 
@@ -55,33 +55,33 @@ minimum total energy costs.
 .. code-block:: python
 
     >>> maze = """\
-    ... 0000000000000000000000000000000000000000 00000 5
-    ... 0                                      0 0 0 0 4
-    ... 0 000000000000000000000000000000000000 0 0 0 0 4
-    ... 0 0                                  0 0 0 0 0 4
-    ... 0 0 00000000000000000000000000000000 0 0 0 0 0 3
-    ... 0 0 0 0                          0 0 0 0 0 0 0 2
-    ... 0 0 0 0 000000000000000000000000 0 0 0 0 0 0 0 1
-    ... 0 0 0 0 0                      0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 00000000000000000000 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0                  0 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0000000000000000 0 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0            0 0 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 00000000   0 0 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0      0   0 0 0 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0000900000000000 0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0  0   0         0 0 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0  0   0000000000000 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0  0                 0 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0  0000000000000000000 0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 0                      0 0 0 0 0
-    ... 0 0 0 0 0 0 0 0 000000000000000000000000 0 0 0 0
-    ... 0 0 0 0 0 0 0 0                          0 0 0 0
-    ... 1 0 0 0 0 0 00000000000000000000000000000000 0 0
-    ... 2 0 0 0 0 0                                  0 0
-    ... 2 0 0 0 0 000000000000000000000000000000000000 0
-    ... 2 0 0 0 0                                      0
-    ... 3 00000 0000000000000000000000000000000000000000
+    ... 0000000000000000000000000000000000000000.00000.5
+    ... 0......................................0.0.0.0.4
+    ... 0.000000000000000000000000000000000000.0.0.0.0.4
+    ... 0.0..................................0.0.0.0.0.4
+    ... 0.0.00000000000000000000000000000000.0.0.0.0.0.3
+    ... 0.0.0.0..........................0.0.0.0.0.0.0.2
+    ... 0.0.0.0.000000000000000000000000.0.0.0.0.0.0.0.1
+    ... 0.0.0.0.0......................0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.00000000000000000000.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0..................0.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0000000000000000.0.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0............0.0.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.00000000...0.0.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0......0...0.0.0.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0000900000000000.0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0..0...0.........0.0.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0..0...0000000000000.0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0..0.................0.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0..0000000000000000000.0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.0......................0.0.0.0.0
+    ... 0.0.0.0.0.0.0.0.000000000000000000000000.0.0.0.0
+    ... 0.0.0.0.0.0.0.0..........................0.0.0.0
+    ... 1.0.0.0.0.0.00000000000000000000000000000000.0.0
+    ... 2.0.0.0.0.0..................................0.0
+    ... 2.0.0.0.0.000000000000000000000000000000000000.0
+    ... 2.0.0.0.0......................................0
+    ... 3.00000.0000000000000000000000000000000000000000
     ... """.splitlines()
 
 We specify the problem by the following code:
@@ -93,7 +93,7 @@ We specify the problem by the following code:
 
    >>> def neighbors_in_grid(position):
    ...     """ For a given position, return all neighbor positions in the maze """
-   ...     # Count the regarded positions in the maze
+   ...     # Count the regarded positions in the maze (not needed for the problem itself)
    ...     global evaluated_positions
    ...     evaluated_positions += 1
    ...     # Check each neighbor position, return it if it is within the maze limits
@@ -114,12 +114,12 @@ We specify the problem by the following code:
    >>> def out_edges(previous_position, _):
    ...     """ For a given position, report outgoing edges as (to_position, weight) """
    ...     for next_position in neighbors_in_grid(previous_position):
-   ...         if content(maze, next_position) != " ":
+   ...         if content(maze, next_position) != ".":
    ...             yield next_position, weight(maze, previous_position, next_position)
    >>> def in_edges(next_position, _):
    ...     """ For a given position, report incoming edges as (from_position, weight) """
    ...     for previous_position in neighbors_in_grid(next_position):
-   ...         if content(maze, previous_position) != " ":
+   ...         if content(maze, previous_position) != ".":
    ...             yield previous_position, weight(maze, previous_position, next_position)
 
 Now, we use the traversal strategy `TraversalShortestPaths` of NoGraphs, based on
@@ -150,14 +150,15 @@ Of cause, we get the same path length in both cases.
 But **the bidirectional search regards only 270 positions** before it finds an
 optimal solution, whilst **the unidirectional search regards 685 positions**!
 This means that for the given kind of problem, the bidirectional search can
-avoid regarding a large percentage of positions w.r.t. the unidirectional search.
+avoid regarding a large percentage of positions in comparison to the unidirectional
+search.
 
 .. _example-bsearch-breadth-first:
 
 **Example for BSearchBreadthFirst:** Now, we do a similar comparison between
 `TraversalBreadthFirst` and its bidirectional search variant `BSearchBreadthFirst`.
 Here, our maze has no elevation profile, but just contains character "#" for allowed
-positions and "." for for forbidden positions. Again, we search a path from the bottom
+positions and "." for forbidden positions. Again, we search a path from the bottom
 left position to the top right position. We re-use the functions *neighbors_in_grid*
 and *content* of the previous example.
 

@@ -11,6 +11,9 @@ from mpmath import mp, mpf  # type: ignore
 
 import nographs as nog
 
+# noinspection PyProtectedMember
+from nographs._extra_tsp import GettableProto
+
 
 # --- Types ---
 
@@ -20,7 +23,7 @@ T_any_typical_weight_type = TypeVar("T_any_typical_weight_type", float, Decimal,
 # --- Tests ---
 
 
-class Test1(unittest.TestCase):
+class TestWithTypes(unittest.TestCase):
     def test_variable_edge_weights(self) -> None:
         def test_with_small_weights(
             zero: T_any_typical_weight_type,
@@ -60,7 +63,7 @@ class Test1(unittest.TestCase):
         mp.prec = 64
         self.assertEquals(test_with_small_weights(mpf(0), mpf("0.5"), mpf(1)), 65)
 
-    def test_typing_docs_example(self) -> None:
+    def test_traversal_typing_docs_example(self) -> None:
         def next_edges(i: int, _: Any) -> Iterator[tuple[int, int]]:
             j = (i + i // 6) % 6
             yield i + 1, j * 2 + 1
@@ -89,3 +92,12 @@ class Test1(unittest.TestCase):
         self.assertEquals(v, 5)
         self.assertEquals(d, 24)
         self.assertEquals(p, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5))
+
+    def test_tsp_typing_docs_example(self) -> None:
+        """The MyPy run will detect if the typing goes wrong here.
+
+        The NOQA tells flake8 that it is on purpose that g1 and g2 are
+        assigned but never used.
+        """
+        g1: GettableProto[int, str] = dict[int, str]([(0, "a"), (1, "b")])  # NOQA F841
+        g2: GettableProto[int, str] = ["a", "b"]  # NOQA F841

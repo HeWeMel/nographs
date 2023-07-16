@@ -434,7 +434,8 @@ Shortest paths in a maze with weights
 Here, vertices are tuples of *x* and *y* coordinates. A coordinate is an
 integer between 0 and 4. From each position, the horizontal and vertical
 neighbors are the successors, and a move to a neighbor has "costs" that
-depend on its position.
+depend on its position. We re-use function *neighbors_in_grid* from
+example `Breadth First Search in a maze <example-traversal-breadth-first-in-maze>`.
 
 .. code-block:: python
 

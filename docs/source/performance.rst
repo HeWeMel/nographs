@@ -649,7 +649,7 @@ computed, and in the second phase, it is analyzed. In contrast, NoGraphs is
 focused on graph analysis on the fly.
 
 The tested versions of these libraries can be found in file
-`requirements.txt <http://github.com/HeWeMel/nographs-and-others/blob/master/requirements.txt>`
+`requirements.txt <http://github.com/HeWeMel/nographs-and-others/blob/master/requirements.txt>`_
 of the benchmark.
 
 See section `comments about the used test code <library_comparison_comments>`

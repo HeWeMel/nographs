@@ -49,6 +49,14 @@ The approach: Graphs are
 
 Think of it as *graph analysis - the lazy (evaluation) way*.
 
+**Documentation**
+
+- `Homepage of the documentation <https://nographs.readthedocs.io>`__
+- `Installation guide <https://nographs.readthedocs.io/en/latest/installation.html>`__
+- `Tutorial <https://nographs.readthedocs.io/en/latest/concept_and_examples.html>`__
+  (contains many `examples <https://nographs.readthedocs.io/en/latest/concept_and_examples.html#examples>`__)
+- `API reference <https://nographs.readthedocs.io/en/latest/api.html>`__
+
 **Feature overview**
 
 - Unidirectional traversal algorithms: DFS, BFS, topological search,
@@ -64,7 +72,7 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
     attributes (this includes
     multiple adjacency, cycles, self-loops,
     directed edges,
-    weighted edges and edges with application specific attributes).
+    weighted edges and attributed edges).
   - Infinite graphs are supported, but need to be
     locally finite (i.e., a vertex has only finitely many outgoing edges).
 
@@ -91,8 +99,9 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   operations like
   graph pruning, graph abstraction, the typical binary
   graph operations (union, intersection, several types of products), the
-  computation of search-aware graphs, and
-  traversals of vertex equivalence classes on the fly.
+  computation of search-aware graphs,  the combination of
+  problem reduction with lazy evaluation,
+  and traversals of vertex equivalence classes on the fly.
   Bookkeeping data can be
   pre-initialized and accessed during computations.
 - Typing: The API can be used fully typed (optionally).
@@ -100,16 +109,20 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - CI tests: For all supported versions of Python and both supported interpreters
   CPython and PyPy, both code and docs, 100% code coverage.
 - Runtime and memory performance: Have been goals (CPython). In its domain, it often
-  even outperforms Rust- and C-based libraries.
-  If you need an even higher performance, using PyPy could be an option.
+  even outperforms Rust- and C-based libraries. Using PyPy improves its performance
+  further.
 
-**Documentation**
+**Extras** (outside of the core of NoGraphs)
 
-- `Homepage of the documentation <https://nographs.readthedocs.io>`__
-- `Installation guide <https://nographs.readthedocs.io/en/latest/installation.html>`__
-- `Tutorial <https://nographs.readthedocs.io/en/latest/concept_and_examples.html>`__
-  (contains many `examples <https://nographs.readthedocs.io/en/latest/concept_and_examples.html#examples>`__)
-- `API reference <https://nographs.readthedocs.io/en/latest/api.html>`__
+- Computation of exact solutions for (small)
+  traveling salesman problems (shortest / longest route,
+  positive / zero / negative edge weights, graph does not need to be complete)
+- Dijkstra shortest paths algorithm for
+  infinitely branching graphs with locally sorted edges.
+- Gadget functions for test purposes. They make the easy task of
+  adapting existing explicit test graphs a no brainer, may they be
+  stored in edge indices or edge iterables
+  or in arrays.
 
 **Example**
 
@@ -184,9 +197,12 @@ Can you imagine...
   of Towers of Hanoi problems in a generic way, without fixing the number of
   towers, disk sizes, and the start and goal configuration - and a specific
   problem instance is solved by just one library call?
+- Or a way for computing an exact solution for traveling salesman problems,
+  that is based on just a graph and a call of the Dijkstra single source shortest path
+  algorithm?
 - Or graphs that are dynamically
   computed based on other graphs, or on analysis results about other graphs,
-  or even on partial analysis results from already processed parts of the same graph?
+  or even on partial analysis results for already processed parts of the same graph?
 
 Let's `build it <https://nographs.readthedocs.io/en/latest/installation.html>`__.
 

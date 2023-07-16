@@ -72,20 +72,13 @@ autodoc_typehints = 'description'
 # autodoc_typehints = 'both'
 
 # Prevent the following aliases from being expanded
-# (Note: In gears.py, temporarily, due to a Sphinx bug, tuple[U, V]
-# is a TypeAlias (!) for Typing.Tuple[U, V]. It is listed here to avoid,
-# that Sphinx expands the TypeAlias.)
 aliases = ('NextVertices', 'NextEdges', 'VertexToID', 'Vector', 'Limits',
            'UnweightedUnlabeledFullEdge', 'UnweightedLabeledFullEdge',
            'WeightedUnlabeledFullEdge', 'WeightedLabeledFullEdge',
-           'WeightedOrLabeledFullEdge', 'OutEdge',
+           'WeightedOrLabeledFullEdge', 'AnyFullEdge', 'OutEdge',
            # 'VertexIdSet', 'VertexIdToDistanceMapping',
            # 'VertexIdToVertexMapping', 'VertexIdToPathEdgeDataMapping',
            )
-# The following would be helpful to conceal the tuple alias trick in Gears,
-# but when applied, the type aliases of return (!) values for Gears methods
-# are not evaluated anymore by Sphinx...
-# 'tuple',
 
 autodoc_type_aliases = {alias: alias for alias in aliases}  # | {
 # 'Vectors': 'Sequence[Vector]'}

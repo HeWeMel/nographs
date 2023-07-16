@@ -328,8 +328,10 @@ class Array:
         :param content_to_weight: Returns the weight of a move to a given position.
         :param wrap: Positions are wrapped at the array limits.
         :param diagonals: Diagonal moves are allowed.
+
+        :rtype: Callable[[Position, Any], Iterable[tuple[Position, T_weight]]]
         """
-        # inspection PyShadowingNames
+        # For reason for manually documented rtype see method items above.
         limits = self.limits()
         moves = Position.moves(dimensions=self.dimensions, diagonals=diagonals)
 

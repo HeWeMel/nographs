@@ -285,9 +285,12 @@ state which methods can be used.
 See the API reference of the `traversal classes <traversal-classes-api>` for
 further details about methods and signatures.
 
-Transition **1. Instantiation** of a traversal class, leading to state *created*
+**The state transitions**:
 
-  - In this step, you **define what graph** should be traversed
+- **Instantiation** of a traversal class, leading to state *created*
+
+  - In this step, you **choose the traversal strategy** and
+    **define what graph** should be traversed
     (you provide a `NextEdges` or a `NextVertices` function).
 
   - Optionally, you define some specific **graph properties** (see
@@ -297,31 +300,7 @@ Transition **1. Instantiation** of a traversal class, leading to state *created*
 
   The traversal object stores this data.
 
-  Example:
-
-  .. code-block:: python
-
-   >>> def next_vertices(i, _):
-   ...     return [2*i] if abs(i)<512 else []
-
-   >>> traversal = nog.TraversalBreadthFirst(next_vertices)
-
-
-State **A. created** (inactive)
-
-  In this state, the traversal has not been started so far. Thus, you cannot use any of
-  the iteration methods of the traversal object and its public attributes contain
-  arbitrary content:
-
-  .. code-block:: python
-
-     >>> next(traversal)
-     Traceback (most recent call last):
-     RuntimeError: Traversal not started, iteration not possible
-
-.. _general-start_from:
-
-Transition **2. Starting** a traversal, leading from any state to state *started*
+- **Starting** a traversal, leading from any state to state *started*
 
   You (re-) start the traversal by calling its method **start_from(...)**:
 
@@ -329,10 +308,6 @@ Transition **2. Starting** a traversal, leading from any state to state *started
   - Optionally, you choose between some **traversal options**, e.g., that paths
     should be created, and whether there should be a calculation limit for
     the traversal.
-
-  .. code-block:: python
-
-     >>> traversal = traversal.start_from(1)
 
   The traversal object creates an iterator (*base iterator*) that is able to
   traverse your graph starting at your start vertices and following the class
@@ -344,7 +319,39 @@ Transition **2. Starting** a traversal, leading from any state to state *started
      direct calls of other methods, like in
      *traversal.start_from(...).go_to(...))*.
 
-State **B. started** (active)
+**The states**:
+
+- **State created** (inactive)
+
+  The traversal has not been started so far.
+
+  Example:
+
+  .. code-block:: python
+
+   >>> def next_vertices(i, _):
+   ...     return [2*i] if abs(i)<512 else []
+
+   >>> traversal = nog.TraversalBreadthFirst(next_vertices)
+
+  In this state, you cannot use any of the iteration methods of the traversal object,
+  and its public attributes contain arbitrary content:
+
+  .. code-block:: python
+
+     >>> next(traversal)
+     Traceback (most recent call last):
+     RuntimeError: Traversal not started, iteration not possible
+
+.. _general-start_from:
+
+- **State started** (active)
+
+  Method *start_from* has already been called.
+
+  .. code-block:: python
+
+     >>> traversal = traversal.start_from(1)
 
   In this state, you can
   **use the traversal object for iterating over the graph**:
@@ -395,7 +402,7 @@ State **B. started** (active)
      32 5
      128 7
 
-  At any time, you **can restart the traversal** at the same or some
+  At any time, you can **restart the traversal** at the same or some
   other start vertices.
 
   .. code-block:: python
@@ -419,7 +426,7 @@ State **B. started** (active)
      and the methods explained in section `class_specific_methods`
      only when there are good reasons for this.
 
-State **C. exhausted** (inactive)
+- **State exhausted** (inactive)
 
   When the traversal has iterated through all vertices that are reachable from
   your chosen start vertices, the iterator is exhausted. Upon calls, it raises
@@ -439,7 +446,7 @@ State **C. exhausted** (inactive)
 
   You can still start the traversal again, if you like.
 
-At any state:
+**At any state:**
 
   Method **state_to_str() returns the content of the public state attributes** of the
   traversal in form of a string. It can be used for logging and debugging.
@@ -647,7 +654,7 @@ The following code is a fully typed variant of the example of the
    possible type of edge weights and distances, because internally, they
    use float("infinity") for infinite weight/distance and the integer 0
    for zero weight/distance. See the respective
-   `API specification <traversal_api>`.
+   `API specification <traversal_api>` and `GearDefault`.
 
    **Example:**
 
@@ -658,5 +665,23 @@ The following code is a fully typed variant of the example of the
    And a TraversalShortestPathsFlex with these generic types is allowed to
    return floats, additionally to the T_weight specified by the application code.
 
-   It is possible to avoid this by choosing the `gear (see there) <gears>` that
+   **It is possible to avoid this** by choosing the `gear (see there) <gears>` that
    fits the typing needs of the application optimally.
+
+   Examples:
+
+   - You could use `GearForHashableVertexIDsAndFloats`
+     or `GearForIntVertexIDsAndCFloats`, if you like to
+     work with float weights and distances only.
+
+   - You could use `GearForHashableVertexIDsAndDecimals` or
+     `GearForIntVertexIDsAndDecimals`, if you like to
+     work with Decimal weights and distances only.
+
+   - You could use `GearForHashableVertexIDs` or `GearForIntVertexIDs`,
+     both with 0 as *zero* value and
+     some large integer as *inf* value (it need to be larger than any integer
+     that could occur as edge weights of paths length),
+     or `GearForIntVertexIDsAndCInts` (the *zero* and *inf* values are
+     predefined here), if you like to
+     work with integer weights and distances only.
