@@ -206,4 +206,4 @@ Can you imagine...
 
 Let's `build it <https://nographs.readthedocs.io/en/latest/installation.html>`__.
 
-Welcome to NoGraphs! 
+Welcome to NoGraphs!
