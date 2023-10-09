@@ -13,4 +13,4 @@ flake8
 mypy
 # -- additional packaged used only for test with them --
 mpmath
-intbitset ; implementation_name == "cpython"  # missing on PyPy 3.11
+intbitset ; python_version < "3.12" and implementation_name == "cpython"  # missing on PyPy 3.11 and (so far) CPython 3.12
