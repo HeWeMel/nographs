@@ -56,12 +56,12 @@ class TestWithTypes(unittest.TestCase):
         self.assertEqual(cm.exception.args, ("Error: Distance stays constant",))
 
         getcontext().prec = 75  # precision (number of places)
-        self.assertEquals(
+        self.assertEqual(
             test_with_small_weights(Decimal(0), Decimal("0.5"), Decimal(1)), 65
         )
 
         mp.prec = 64
-        self.assertEquals(test_with_small_weights(mpf(0), mpf("0.5"), mpf(1)), 65)
+        self.assertEqual(test_with_small_weights(mpf(0), mpf("0.5"), mpf(1)), 65)
 
     def test_traversal_typing_docs_example(self) -> None:
         def next_edges(i: int, _: Any) -> Iterator[tuple[int, int]]:
@@ -89,9 +89,9 @@ class TestWithTypes(unittest.TestCase):
                 reveal_type(v)  # reveals: int
                 reveal_type(d)  # reveals: Union[int, float]
                 reveal_type(p)  # reveals: tuple[int, ...]
-        self.assertEquals(v, 5)
-        self.assertEquals(d, 24)
-        self.assertEquals(p, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5))
+        self.assertEqual(v, 5)
+        self.assertEqual(d, 24)
+        self.assertEqual(p, (0, 1, 2, 3, 4, 10, 16, 17, 11, 5))
 
     def test_tsp_typing_docs_example(self) -> None:
         """The MyPy run will detect if the typing goes wrong here.
