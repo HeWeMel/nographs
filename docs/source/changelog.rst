@@ -1,6 +1,10 @@
 ChangeLog
 ---------
 
+**v3.3.1** (2023-10-09)
+
+- Adapted tests to Python 3.12
+
 **v3.3.0** (2023-07-16)
 
 - Extras: Algorithm for computing an exact solution for traveling salesman problems
