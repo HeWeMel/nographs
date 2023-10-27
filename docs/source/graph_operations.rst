@@ -32,13 +32,14 @@ implementation easier.
 
 **Example:** Transportation problem
 
-The following example illustrates how graph operations can be used for defining
+This example illustrates how graph operations can be used for defining
 a graph. For the sake of the example, the different steps are done isolated
 from each other, even if they could have been combined easily.
 
 We specify the horizontal, vertical and diagonal movements of a truck in a 10 x 10
-array of locations, where it can pick up goods, and that it drives slower the heavier
-it is. We like to know the optimal route for delivering all the goods at the
+array of locations, where it can pick up goods. And we specify that it drives
+slower the heavier it is.
+We like to know the optimal route for delivering all the goods at the
 home position, including the decision, whether or not intermediate deliveries
 at the home position speed up the travel.
 
@@ -47,15 +48,15 @@ neighboring integers:
 
 .. code-block:: python
 
-   >>> def next_vertices_1d_all(i, _):
+   >>> def next_coordinates(i, _):
    ...     return (i + delta for delta in range(-1, 2))
 
 Step 2: We **prune the graph** to limit it to coordinates in the range 0...9:
 
 .. code-block:: python
 
-   >>> def next_vertices_1d(i, _):
-   ...     return filter(lambda j: j in range(10), next_vertices_1d_all(i,_))
+   >>> def next_coordinates_restricted(i, _):
+   ...     return filter(lambda j: j in range(10), next_coordinates(i,_))
 
 Step 3: We build the **tensor product of the graph with itself** to get moves in
 two dimensions (horizontally, vertically, diagonally, and the zero move):
@@ -63,9 +64,9 @@ two dimensions (horizontally, vertically, diagonally, and the zero move):
 .. code-block:: python
 
    >>> import itertools
-   >>> def next_vertices_2d(pos, _):
-   ...     return (itertools.product(next_vertices_1d(pos[0], _),
-   ...                               next_vertices_1d(pos[1], _)))
+   >>> def next_positions(pos, _):
+   ...     return (itertools.product(next_coordinates_restricted(pos[0], _),
+   ...                               next_coordinates_restricted(pos[1], _)))
 
 .. tip::
 
@@ -83,33 +84,61 @@ step 3 are relevant for our further steps, not the individual positions along a 
 
 We use **graph abstraction** to simplify our model accordingly and to preserve the
 distance measure. The new graph with its restricted vertices and its weighted edges
-are defined by function next_vertices_pos, and the weights are calculated from move
-counts (here: vertex depths, computed by a Breadth First Search) in the previous graph.
+is defined by function *next_positions_with_distances*, and the weights are calculated
+from move counts (here: vertex depths, computed by a Breadth First Search) in the
+previous graph.
 
 .. code-block:: python
 
    >>> home_position = (4, 0)
-   >>> goods_positions = (0, 4), (2, 9), (7, 9), (9, 4)  # id to position
+   >>> goods_positions = (0, 4), (2, 9), (7, 9), (9, 4)
    >>> relevant_positions = goods_positions + (home_position,)
-   >>> traversal4 = nog.TraversalBreadthFirst(next_vertices_2d)
+   >>> position_traversal = nog.TraversalBreadthFirst(next_positions)
    >>> import functools
    >>> @functools.cache
-   ... def next_vertices_pos(pos, _):
+   ... def next_positions_with_distances(pos):
    ...     goals = tuple(p for p in relevant_positions if p != pos)
-   ...     return tuple((vertex, traversal4.depth) for vertex in
-   ...                  traversal4.start_from(pos).go_for_vertices_in(goals))
+   ...     return tuple((vertex, position_traversal.depth) for vertex in
+   ...                  position_traversal.start_from(pos).go_for_vertices_in(goals))
+
+Line *@functools.cache* demonstrates how repeatedly
+needed parts of an implicit graph can be **materialized**:
+The edges computed for some vertex are stored in a cache, and later, the cache
+content is used to avoid repeated computations.
+
+Typically, next vertices or edges should be cached during several traversals
+and stored independently of a concrete traversal:
+
+- One possibility is to simply use *@functools.cache* on a function with just the
+  vertex as parameter, as demonstrated in the example. (If, additionally, you need
+  its functionality in the form of a callback function for a traversal, you can define
+  such a function with the necessary signature as a wrapper around the cached function.)
+
+- Another possibility is to implement your own caching within your
+  callback function, e.g. by using a *dict*, and cache next vertices or edges only
+  based on the current vertex.
+
+The reason for doing so is:
+
+- It makes no sense to cache edges during a single traversal, because for
+  each vertex, NoGraphs asks for next edges only once. There would be no cache hits.
+- The same holds, if edges were cached for several traversals, but for
+  each of them separately.
+- Even if several traversal runs are performed based on the same traversal object,
+  it is not a good idea to use @functools.case directly on the used NextVertices
+  or NextEdges function:
+  there is no guarantee that the callback function is always called with the
+  same traversal object (see `search aware graphs <search_aware_graphs>`) as
+  argument, and so, the cache content for several runs could again be separated
+  from each other, instead of being reused.
 
 .. tip::
 
-   - Without the line @functools.cache, this code demonstrates how **graph abstraction
-     can be done on the fly**: Calls to next_vertices_pos trigger the needed
-     computation of properties of the underlying graph defined by next_vertices_2d
-     (here, some depths are computed).
+   In a variant without the line *@functools.cache*, the code shown in this example
+   demonstrates how **graph abstraction can be done on the fly**: Calls to
+   *next_positions_with_distances* trigger the needed computation of properties of the
+   underlying graph defined by *next_positions* (here, some depths are computed).
 
-   - Together with the line @functools.cache, the code demonstrates how repeatedly
-     needed parts of a graph can be **materialized**, if the graph is defined in an
-     implicit way by using a NextVertices function: Computed edges are stored in a
-     cache and the results in the cache are used to avoid repeated computations.
 
 Step 5: At the goods positions, the truck loads the good that lays there. The truck
 is slower the more goods it carries. At the home position, the truck unloads all
@@ -117,43 +146,44 @@ goods it carries. We model this as follows:
 
 .. code-block:: python
 
-   >>> position_to_good = dict((p, g) for g, p in enumerate(goods_positions))
-   >>> def next_edges_way(state, _):
+   >>> good_of_position = dict((pos, good) for good, pos in enumerate(goods_positions))
+   >>> def next_states(state, _):
    ...     # truck position, the goods it carries, and the goods that are at home
    ...     position, on_truck, at_home = state
    ...     # Move truck
-   ...     for new_position, distance in next_vertices_pos(position, None):
+   ...     for new_position, distance in next_positions_with_distances(position):
    ...         # Load or unload it
    ...         if new_position == home_position:  # unloading
    ...             new_at_home = at_home.union(on_truck)
    ...             new_on_truck = frozenset()
    ...         else:  # loading
    ...             new_at_home = at_home
-   ...             new_on_truck = on_truck.union((position_to_good[new_position],))
+   ...             new_on_truck = on_truck.union((good_of_position[new_position],))
    ...         # Time for move is distance * (1+no_of_goods)
    ...         yield ((new_position, new_on_truck, new_at_home),
    ...                distance * (1+len(on_truck)))
 
 Step 6: The truck starts its route at the home position. Our goal is to find the most
 time efficient way for the truck to get all goods and carry them back to the home
-position. So, our start state and our goal state are:
+position. So, our start state and our goal state with their respective
+position, goods on the truck, and goods at home, are:
 
 .. code-block:: python
 
-   >>> start = home_position, frozenset(), frozenset()
-   >>> goal = home_position, frozenset(), frozenset((0, 1, 2, 3))
+   >>> start_state = home_position, frozenset(), frozenset()
+   >>> goal_state = home_position, frozenset(), frozenset((0, 1, 2, 3))
 
 We solve the problem by using the Dijkstra shortest paths algorithm of
 NoGraphs for the analysis with cost optimization.
 
 .. code-block:: python
 
-   >>> traversal = nog.TraversalShortestPaths(next_edges_way)
-   >>> traversal = traversal.start_from(start, build_paths=True)
-   >>> vertex = traversal.go_to(goal)
-   >>> traversal.distance  # The costs of the found best route
+   >>> state_traversal = nog.TraversalShortestPaths(next_states)
+   >>> _ = state_traversal.start_from(start_state, build_paths=True)
+   >>> _ = state_traversal.go_to(goal_state)
+   >>> state_traversal.distance  # The costs of the found best route
    65
-   >>> for position, on_truck, at_home in traversal.paths[vertex]:
+   >>> for position, on_truck, at_home in state_traversal.paths[goal_state]:
    ...     # Truck positions, goods on the truck, and goods at home position
    ...     print(position, sorted(on_truck), sorted(at_home))
    (4, 0) [] []

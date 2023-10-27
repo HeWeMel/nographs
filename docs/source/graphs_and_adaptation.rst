@@ -21,7 +21,7 @@ information. In the graph, the end vertex is called a *successor* of the start v
 If your graph consists of such edges, you can give the library access to it
 by providing a callback function in the form of a so-called `NextVertices` function:
 
-- Input: A **vertex** and the **traversal object**
+- Input: A **vertex** and a **traversal object**
 - Output: An **Iterable that reports the successors** of the vertex
 
 We will discuss in section `search-aware graphs <search_aware_graphs>`, what the
@@ -116,7 +116,7 @@ does not only show the visited vertices, but also the labels of the traversed ed
 
 A `NextEdges` function has the following signature:
 
-- Input: A **vertex** and the **traversal object**
+- Input: A **vertex** and a **traversal object**
 - Output: An Iterable that **reports each outgoing edge in the form of a tuple**:
 
   - **The end vertex of the edge** has to be the first element of the tuple.
@@ -300,38 +300,50 @@ as such function.
 
 With NoGraphs, you can define search-aware graphs. In your NextEdges or NextVertices
 function, you can easily use state attributes of the search, like the current search
-depth or already computed paths: as shown before, **you get the current traversal as
-second parameter**, and **the traversal object provides state information to you**.
+depth or already computed paths: as shown before,
+**you get a traversal object as second parameter**,
+and **it provides state information to you**, that is valid in the context of the call
+of your function.
+This traversal object is of the same class as the traversal object that has been used
+to start the traversal.
+(Sometimes, it is even the same object, but in other cases, it is a separate object.)
 
-Note: In the examples shown so far, we have already accessed the traversal object to
-read current state information as part of the traversal results, e.g. the depth of
-the currently visited vertex, or one of the paths that have already been calculated.
-But for search-aware graphs, we **access the state in the callback function** and
-**use it to define further parts** of the graph - and the library allows for that.
+Note: In the examples shown so far, we have already accessed
+state information when a found vertex is reported, e.g. the depth of this vertex.
+But for search-aware graphs, we
+**access state information when the callback function is called**
+and **use it to define further parts** of the graph - and the library allows for that.
 
 .. _eratosthenes_with_Dijkstra:
 
 **Example: Sieve of Eratosthenes, reduced to Dijkstra search**
 
-We implement an infinite generator version for the *Sieve of Eratosthenes*
-(see https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes) in the form of a search in an
+We implement an infinite generator of primes based on the *Sieve of Eratosthenes*
+(see https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes).
+The special thing about it is: We implement it in the form of a search in an
 infinite and search-aware graph.
 
 We represent the elements of a sequence of numbers
 *(j, j+increment, j+2\*increment, ...)*
-by tuples *(current_value_i, increment)*. These tuples are our vertices.
+by tuples *(i, increment)*. For example, the value *8* in sequence *4, 6, 8, 10...*
+is represented by *(8, 2)*. These tuples are our vertices.
 
 We start such a sequence, the *base sequence*, at *(1, 1)*. For each prime *i* that we
 find, we start an additional sequence, a *multiples sequence*,
-at *i\*i* with increment *i*. And we define edges that connect a vertex
-*(current_number, i)* of a multiples sequence with *(current_number, 1)* of
-the base sequence.
+at *(i\*i, i)*. And we define edges that connect a vertex
+*(i, increment)* of a multiples sequence with *(i, 1)* of the base sequence.
 
-**We choose the weights in such a way, that the weight of a path to a number equals the
-number itself, if it is reached by the base sequence alone, and slightly less, if the
-path goes through a multiples sequence.** Here, we use the distance of a vertex from
-the start vertex (that means: a partial result of the search), to define elements of
+We choose the weights in such a way, that **the length (sum of edge weights)**
+**of a path to a number equals**
+**the number itself, if it is reached by the base sequence alone,**
+**and slightly less, if the path goes through a multiples sequence**.
+Here, we use the distance of a vertex from the start vertex
+(that means: a partial result of the search), to define elements of
 the graphs that are still to be searched: The graph is a search-aware graph.
+
+If the shortest path from *(1, 1)* to some other vertex *(i, 1)* has a length
+of *i*, we know that there is no (shorter) path using a multiples sequence, and thus,
+that *i* is prime.
 
 .. code-block:: python
 
@@ -341,7 +353,7 @@ the graphs that are still to be searched: The graph is a search-aware graph.
     ...         # Return edge to next number i+1, path length i+1
     ...         yield (i+1, 1), (i+1) - traversal.distance
     ...         if traversal.distance == i:  # i is prime
-    ...             # (Is neither 1 nor reached via a multiples sequence)
+    ...             # (i is neither 1 nor reached via a multiples sequence)
     ...             # Then start sequence of i multiples at i*i, with
     ...             # distance advantage -0.5.
     ...             yield (i*i, i), i*i - i - 0.5
