@@ -1,6 +1,11 @@
 ChangeLog
 ---------
 
+**v3.3.2** (2024-02-04)
+
+- Added method paths.predecessor
+- Source formatting adapted to new black default
+
 **v3.3.1** (2023-10-09)
 
 - Adapted tests to Python 3.12

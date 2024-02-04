@@ -108,6 +108,20 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
             raise RuntimeError("Paths: No path for given vertex.")
         return vertex_id
 
+    def predecessor(self, vertex: T_vertex) -> Optional[T_vertex]:
+        """Return predecessor of *vertex* in path to *vertex*. Return *None* if the
+        path is empty. Raise RuntimeError is no path to *vertex* is stored.
+
+        :param vertex: The predecessor of this vertex will be returned.
+        """
+        vertex_id = self._check_vertex(vertex)
+        predecessor_collection = self._predecessor_collection
+
+        from_vertex = predecessor_collection[vertex_id]
+        if vertex == from_vertex:
+            return None  # self loop denotes empty path / end of the path
+        return from_vertex
+
     def iter_vertices_to_start(self, vertex: T_vertex) -> Iterator[T_vertex]:
         """Iterate the vertices on the path to *vertex* from the last to the
         first.
@@ -221,9 +235,7 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         )
 
     @abstractmethod
-    def __getitem__(
-        self, vertex: T_vertex
-    ) -> Union[
+    def __getitem__(self, vertex: T_vertex) -> Union[
         Sequence[T_vertex],
         Sequence[UnweightedLabeledFullEdge[T_vertex, T_labels]],
     ]:
@@ -291,9 +303,7 @@ class PathsDummy(Paths[T_vertex, T_vertex_id, T_labels]):
             "No paths available: " + "Traversal not started or no paths requested."
         )
 
-    def __getitem__(
-        self, vertex: T_vertex
-    ) -> Union[
+    def __getitem__(self, vertex: T_vertex) -> Union[
         Sequence[T_vertex],
         Sequence[UnweightedLabeledFullEdge[T_vertex, T_labels]],
     ]:

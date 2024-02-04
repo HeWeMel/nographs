@@ -14,44 +14,44 @@ class PathsHandling:
     -- Unlabeled paths --
 
     >>> gear = nog.GearDefault()
-    >>> path_unlabeled = _paths.PathsOfUnlabeledEdges(
+    >>> paths_unlabeled = _paths.PathsOfUnlabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
     ...    None
     ... )
-    >>> path_unlabeled[None]  # Calls p.iter_vertices_to_start
+    >>> paths_unlabeled[None]  # Calls p.iter_vertices_to_start
     Traceback (most recent call last):
     RuntimeError: Paths: None instead of vertex given.
-    >>> None in path_unlabeled
+    >>> None in paths_unlabeled
     Traceback (most recent call last):
     RuntimeError: Paths: None instead of vertex given.
-    >>> tuple(path_unlabeled.iter_vertices_to_start(None))
+    >>> tuple(paths_unlabeled.iter_vertices_to_start(None))
     Traceback (most recent call last):
     RuntimeError: Paths: None instead of vertex given.
-    >>> tuple(path_unlabeled.iter_edges_to_start(None))
+    >>> tuple(paths_unlabeled.iter_edges_to_start(None))
     Traceback (most recent call last):
     RuntimeError: Paths: None instead of vertex given.
-    >>> tuple(path_unlabeled.iter_edges_to_start(2))
+    >>> tuple(paths_unlabeled.iter_edges_to_start(2))
     Traceback (most recent call last):
     RuntimeError: Paths: No path for given vertex.
-    >>> path_unlabeled.append_edge(0, 0, None)
-    >>> path_unlabeled.append_edge(0, 1, None)
+    >>> paths_unlabeled.append_edge(0, 0, None)
+    >>> paths_unlabeled.append_edge(0, 1, None)
     >>> # Calls p.iter_vertices_from_start and p.iter_vertices_to_start
-    >>> path_unlabeled[1]
+    >>> paths_unlabeled[1]
     (0, 1)
     >>> # Also calls p.iter_edges_to_start
-    >>> tuple(path_unlabeled.iter_edges_from_start(1))
+    >>> tuple(paths_unlabeled.iter_edges_from_start(1))
     ((0, 1),)
-    >>> path_unlabeled.append_edge(1, 2, None)
-    >>> path_unlabeled[2]
+    >>> paths_unlabeled.append_edge(1, 2, None)
+    >>> paths_unlabeled[2]
     (0, 1, 2)
-    >>> tuple(path_unlabeled.iter_edges_from_start(2))
+    >>> tuple(paths_unlabeled.iter_edges_from_start(2))
     ((0, 1), (1, 2))
 
     -- Paths (and not overridden in PathsOfUNlabeledEdges) --
-    >>> path_unlabeled.iter_labeled_edges_from_start(2)
+    >>> paths_unlabeled.iter_labeled_edges_from_start(2)
     Traceback (most recent call last):
     RuntimeError: Edges with labels needed, and Traversal needs to know about them
-    >>> path_unlabeled.iter_labeled_edges_to_start(2)
+    >>> paths_unlabeled.iter_labeled_edges_to_start(2)
     Traceback (most recent call last):
     RuntimeError: Edges with labels needed, and Traversal needs to know about them
 
@@ -105,25 +105,25 @@ class PathsHandling:
 
     -- Unlabeled Path with sequence based predecessor--
     >>> gear = nog.GearForIntVertexIDsAndCFloats()
-    >>> path = _paths.PathsOfUnlabeledEdges(
+    >>> paths = _paths.PathsOfUnlabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
     ...    None
     ... )
-    >>> path.append_edge(0, 0, [0])
-    >>> path.append_edge(0, 1, [1])
-    >>> path[1]
+    >>> paths.append_edge(0, 0, [0])
+    >>> paths.append_edge(0, 1, [1])
+    >>> paths[1]
     (0, 1)
 
     -- Labeled Path with sequence based predecessor--
     >>> gear = nog.GearForIntVertexIDsAndCFloats()
-    >>> path = _paths.PathsOfLabeledEdges(
+    >>> paths = _paths.PathsOfLabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
     ...    gear.vertex_id_to_path_attributes_mapping(()),
     ...    None
     ... )
-    >>> path.append_edge(0, 0, [0])
-    >>> path.append_edge(0, 1, [1])
-    >>> path[1]
+    >>> paths.append_edge(0, 0, [0])
+    >>> paths.append_edge(0, 1, [1])
+    >>> paths[1]
     ((0, 1, 1),)
 
 
@@ -152,4 +152,21 @@ class PathsHandling:
     RuntimeError: Cannot add a path, traversal not started or no paths requested.
     >>> tuple(iter(predecessor)), len(predecessor), None in predecessor
     ((), 0, False)
+
+
+    -- Method predecessor --
+    >>> gear = nog.GearDefault()
+    >>> paths = _paths.PathsOfUnlabeledEdges(gear.vertex_id_to_vertex_mapping(()), None)
+    >>> paths.append_edge(0, 0, None)
+    >>> paths.append_edge(0, 1, None)
+    >>> paths.predecessor(0) is None
+    True
+    >>> paths.predecessor(1)
+    0
+    >>> paths.predecessor(2)
+    Traceback (most recent call last):
+    RuntimeError: Paths: No path for given vertex.
+    >>> paths.predecessor(None)
+    Traceback (most recent call last):
+    RuntimeError: Paths: None instead of vertex given.
     """

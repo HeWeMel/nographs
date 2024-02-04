@@ -212,7 +212,7 @@ Then, we do the same again, but we use the bidirectional search strategy
    >>> print(f"{length=}, {evaluated_positions=}")
    length=58, evaluated_positions=68
 
-Again, of cause, we get the same path length in both cases.
+Again, of course, we get the same path length in both cases.
 But **the bidirectional search regards only 68 positions** before it finds an
 optimal solution, whilst **the unidirectional search regards 257 positions**.
 

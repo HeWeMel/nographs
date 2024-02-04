@@ -172,12 +172,12 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels]):
         demanded. If labeled edges were provided (parameter *next_labeled_edges*), the
         paths contain them instead of just vertices.
         """
-        self._predecessors: VertexIdToVertexMapping[
-            T_vertex_id, T_vertex
-        ] = DummyPredecessorOrAttributesMapping[T_vertex_id, T_vertex]()
-        self._attributes: VertexIdToPathEdgeDataMapping[
-            T_vertex_id, T_labels
-        ] = DummyPredecessorOrAttributesMapping[T_vertex_id, T_labels]()
+        self._predecessors: VertexIdToVertexMapping[T_vertex_id, T_vertex] = (
+            DummyPredecessorOrAttributesMapping[T_vertex_id, T_vertex]()
+        )
+        self._attributes: VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels] = (
+            DummyPredecessorOrAttributesMapping[T_vertex_id, T_labels]()
+        )
 
     def __iter__(
         self,
@@ -271,14 +271,12 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels]):
     @overload
     def go_to(
         self, vertex: T_vertex, fail_silently: Literal[False] = False
-    ) -> T_vertex:
-        ...
+    ) -> T_vertex: ...
 
     @overload
     def go_to(
         self, vertex: T_vertex, fail_silently: Literal[True]
-    ) -> Optional[T_vertex]:
-        ...
+    ) -> Optional[T_vertex]: ...
 
     def go_to(
         self, vertex: T_vertex, fail_silently: bool = False
@@ -531,7 +529,6 @@ class _TraversalWithoutWeightsDFS(
 class TraversalBreadthFirstFlex(
     _TraversalWithoutWeightsBasic[T_vertex, T_vertex_id, T_labels]
 ):
-
     """
     Bases: `Traversal` [`T_vertex`, `T_vertex_id`, `T_labels`]
 
@@ -2242,9 +2239,9 @@ class _TraversalWithDistances(
     ) -> None:
         super().__init__(labeled_edges, is_tree, vertex_to_id, gear)
 
-        self.distances: VertexIdToDistanceMapping[
-            T_vertex_id, T_weight
-        ] = NoDistancesMapping[T_vertex_id, T_weight]()
+        self.distances: VertexIdToDistanceMapping[T_vertex_id, T_weight] = (
+            NoDistancesMapping[T_vertex_id, T_weight]()
+        )
         """ Provisional or final distance values of some vertices
         (distance from a start vertex). Without option *keep_distances*,
         the value for a vertex is removed once the vertex has been reported. With
