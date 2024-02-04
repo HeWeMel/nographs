@@ -198,9 +198,11 @@ def _traveling_salesman_int_vertices(
     # Pack transformed edge weights in nested tuples
     graph_forwards = tuple(
         tuple(
-            None
-            if (weight := graph[v][w]) is None
-            else (zero - weight if negate_weights else weight) + weight_offset
+            (
+                None
+                if (weight := graph[v][w]) is None
+                else (zero - weight if negate_weights else weight) + weight_offset
+            )
             for w in range(no_of_vertices)
         )
         for v in range(no_of_vertices)
@@ -209,9 +211,11 @@ def _traveling_salesman_int_vertices(
     # The same, but for for incoming (!) edges of some vertex
     graph_backwards = tuple(
         tuple(
-            None
-            if (weight := graph[w][v]) is None
-            else (zero - weight if negate_weights else weight) + weight_offset
+            (
+                None
+                if (weight := graph[w][v]) is None
+                else (zero - weight if negate_weights else weight) + weight_offset
+            )
             for w in range(no_of_vertices)
         )
         for v in range(no_of_vertices)
@@ -244,9 +248,12 @@ def _traveling_salesman_int_vertices(
         functools.reduce(
             operator.or_,
             (
-                1 << to_vertex
-                if from_vertex != to_vertex and edges_from_vertex[to_vertex] is not None
-                else 0
+                (
+                    1 << to_vertex
+                    if from_vertex != to_vertex
+                    and edges_from_vertex[to_vertex] is not None
+                    else 0
+                )
                 for to_vertex in range(no_of_vertices)
             ),
             0,
@@ -261,9 +268,12 @@ def _traveling_salesman_int_vertices(
         functools.reduce(
             operator.or_,
             (
-                1 << to_vertex
-                if from_vertex != to_vertex and edges_from_vertex[to_vertex] is not None
-                else 0
+                (
+                    1 << to_vertex
+                    if from_vertex != to_vertex
+                    and edges_from_vertex[to_vertex] is not None
+                    else 0
+                )
                 for to_vertex in range(no_of_vertices)
             ),
             0,

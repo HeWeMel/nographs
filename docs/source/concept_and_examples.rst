@@ -107,7 +107,12 @@ Examples
 
 In the following sections, we give some small examples that illustrate the
 described `concept elements <concept_and_examples>`
-of NoGraphs and their use in the context of different traversal algorithms.
+of NoGraphs and their use in the context of a selection of traversal algorithms.
+More examples and algorithms can be found in the respective sections of this
+tutorial.
+
+We start with algorithms that do not require edge weights. Then, we give
+examples with weighted edges.
 
 The `building blocks of graph adaptation <graphs_and_adaptation>`,
 the support for `operations on graphs <graph_operations>`
@@ -424,6 +429,94 @@ we need to *make coffee* before we can *make coffee*):
 
    >>> traversal.cycle_from_start
    ['drink coffee', 'make coffee', 'heat water', 'get water', 'make coffee']
+
+
+.. _example-longest-path-acyclic-graph:
+
+Longest path in a weighted, acyclic graph (using topological search)
+....................................................................
+
+Here, vertices are tuples of *x* and *y* coordinates. A coordinate is an
+integer between 0 and 4. There is a cost value assigned to each vertex.
+
+.. code-block:: python
+
+   >>> costs = '''
+   ... 02141
+   ... 30401
+   ... 12121
+   ... 50404
+   ... 12111
+   ... '''.strip().splitlines()
+
+The successors of a vertex are its neighbors to the right and below,
+but only those with non-zero costs.
+The graph is acyclic, meaning that a path
+starting at some vertex cannot lead back to this vertex.
+The weight of an edge to a neighbor is determined by the costs of this neighbor.
+
+.. code-block:: python
+
+   >>> def next_edges(vertex, _):
+   ...     x, y = vertex
+   ...     for dx, dy in [(1, 0), (0, 1)]:
+   ...         nx, ny = x + dx, y + dy
+   ...         if nx <= 4 and ny <= 4 and (weight := int(costs[ny][nx])) > 0:
+   ...             yield (nx, ny), weight
+
+We are searching for a path with the highest total of edge weights from
+the start vertex (0, 0) to the goal vertex (4, 4). In other words, we
+**are searching for a longest path between two vertices in a weighted, acyclic graph**.
+
+**First, for each vertex reachable from the start vertex, we compute the maximal**
+**length of a path to the goal vertex.**
+
+We use the *TraversalTopologicalSort* strategy of NoGraphs (see
+`Traversal algorithms <traversals>`).
+We traverse the vertices backwards, in topological sorting. This means: When a vertex
+is visited, all its successors have already been visited. And we can simply calculate
+the maximal length of a path from there to the goal vertex based on the maximal values
+we have calculated for its successors and on the respective weights of the edges
+leading to them. The value computed for the start vertex is the path length we are
+looking for.
+
+.. code-block:: python
+
+   >>> start_vertex, goal_vertex = (0, 0), (4, 4)
+   >>> goal_distance = dict()
+   >>> traversal = nog.TraversalTopologicalSort(next_edges=next_edges)
+   >>> for position in traversal.start_from(start_vertex):
+   ...     if position == goal_vertex:
+   ...         goal_distance[position] = 0
+   ...     else:
+   ...         goal_distance[position] = max(
+   ...             (goal_distance[successor] + weight
+   ...              for successor, weight in next_edges(position, None)
+   ...             ), default=-float('inf'))
+   >>> goal_distance[start_vertex]
+   16
+
+We did not get *-float('inf')* as result, so we can be sure, there is a path to
+the goal, and we know its maximal length.
+
+**Then, we compute a longest path, i.e., a path with the already known**
+**maximal length.**
+
+For this, we start at the start vertex, and for each vertex, we follow an edge to a
+neighbor with the maximal distance to the goal under all neighbors:
+
+.. code-block:: python
+
+    >>> path = []
+    >>> vertex = start_vertex
+    >>> while vertex != goal_vertex:
+    ...     largest = -float('inf')
+    ...     for neighbor, weight in next_edges(vertex, None):
+    ...         if largest < (distance := goal_distance[neighbor]):
+    ...             largest, vertex = distance, neighbor
+    ...     path.append(vertex)
+    >>> path
+    [(1, 0), (2, 0), (2, 1), (2, 2), (3, 2), (4, 2), (4, 3), (4, 4)]
 
 
 .. _example-shortest-paths-in-maze:

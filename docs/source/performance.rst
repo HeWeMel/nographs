@@ -596,7 +596,7 @@ task 2 of scenario 1.
 **This means: In scenario B, the lists (resp. arrays) in the bookkeeping of**
 **the sequence-based gears are half empty!**
 This reduces the memory-saving effect of using sequence- instead of set- and
-dict-based gears. But, of cause, a reduction of the needed memory to
+dict-based gears. But, of course, a reduction of the needed memory to
 22.8% (resp. 11.9%) is still better than nothing.
 
 Sometimes, counter-measures are possible:
@@ -612,7 +612,7 @@ The runtime increases by 6 percent points,
 this is the time needed for calling and executing the conversion function
 for each vertex, when a (converted) vertex id for the vertex is needed.
 
-Of cause, such a conversion can only be applied if the range of relevant vertices
+of course, such a conversion can only be applied if the range of relevant vertices
 is roughly known. Otherwise, we have to live with empty list or array cells,
 or we need to use a mapping-based (e.g., dict-based) gear.
 

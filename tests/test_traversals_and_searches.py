@@ -35,8 +35,7 @@ T_bound_comparable = TypeVar("T_bound_comparable", bound="Comparable")
 
 class Comparable(Protocol):
     @abstractmethod
-    def __lt__(self: T_bound_comparable, other: T_bound_comparable) -> bool:
-        ...
+    def __lt__(self: T_bound_comparable, other: T_bound_comparable) -> bool: ...
 
 
 class HashableComparable(Hashable, Comparable, Protocol):

@@ -179,9 +179,11 @@ class TraversalShortestPathsInfBranchingSortedFlex(
         self.distances = define_distances(
             self._gear,
             None,
-            ((vertex, zero) for vertex in self._start_vertices)
-            if store_distances
-            else (),
+            (
+                ((vertex, zero) for vertex in self._start_vertices)
+                if store_distances
+                else ()
+            ),
             self._is_tree,
         )
 

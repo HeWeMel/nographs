@@ -109,6 +109,9 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   positive / zero / negative edge weights, graph does not need to be complete).
 - Dijkstra shortest paths algorithm for
   `infinitely branching graphs with locally sorted edges <infinite_branching>`.
+- Example for computing the
+  `longest path <example-longest-path-acyclic-graph>`
+  between two vertices in a weighted, acyclic graph.
 - `Gadget functions <gadgets>` for test purposes. They make the easy task of
   adapting existing explicit test graphs a no brainer, may they be
   stored in `edge indices or edge iterables <edge_gadgets>`

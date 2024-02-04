@@ -440,7 +440,7 @@ given coordinate limits:
       ((4, 5), (5, 4))
       >>> tuple(v.neighbors(moves, limits=((0, 6), (0, 6)), wrap=True))
       ((4, 5), (5, 4), (5, 0), (0, 5))
-      >>> # When we choose wrapping, of cause we have to provide limits
+      >>> # When we choose wrapping, of course we have to provide limits
       >>> tuple(v.neighbors(moves, wrap=True))
       Traceback (most recent call last):
       RuntimeError: Limits for Option wrap missing
