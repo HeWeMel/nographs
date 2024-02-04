@@ -11,6 +11,13 @@ of iterators**.
 You can use them to **traverse your graph** following some specific traversal
 strategy and to compute values like depths, distances, paths and trees.
 
+Note that these strategies and their description below do not fully specify
+the behaviour of the implemented algorithms. For instance, if a vertex has
+edges to different successor vertices, the order in which these vertices are
+reported is often undefined. In such cases, the implementation, and the order,
+might change without prior notice.
+
+
 Classes for all graphs
 ~~~~~~~~~~~~~~~~~~~~~~
 
