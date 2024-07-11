@@ -10,6 +10,13 @@ if __name__ == "__main__":
     from utils import DocTestFinderSkippingSlowTests, DocTestParserSkippingSlowTests
     import sys
 
+    # detect if we have package pymacros4py
+    skip_macro_consistency_check = False
+    try:
+        import pymacros4py
+    except ImportError:
+        skip_macro_consistency_check = True
+
     # Choose test finder for DocTestSuite and test parser for DocFileSuite
     # When skip_slow_tests is True, skip tests marked by "doctest:+SLOW_TEST".
     # (Only tests that are not needed for 100% coverage are marked as slow. Thus,
@@ -42,6 +49,9 @@ if __name__ == "__main__":
     # coverage at 100% even during debugging.)
     for file in pathlib.Path("tests").glob("*.py"):
         file_name = file.name.removesuffix(".py")
+        if file_name == "test_expanded_template" and skip_macro_consistency_check:
+            print("Skipped", file, "(package pymacros4py not available)")
+            continue
         __import__(file_name)
         test_suite.addTests(doctest.DocTestSuite(file_name, test_finder=test_finder))
 
