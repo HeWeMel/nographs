@@ -167,7 +167,7 @@ NoGraphs offers the following predefined gears. **The three main classes support
     ...     elif i % 1200000 > 5:
     ...         yield i - 6, 1
 
-We use the next_edges function defined in section `overview <index>`.
+We use the next_edges function defined in section :doc:`overview <index>`.
 
 Instead of the traversal class `TraversalShortestPaths` used there, now, we use
 the more flexible class `TraversalShortestPathsFlex`. We provide the
