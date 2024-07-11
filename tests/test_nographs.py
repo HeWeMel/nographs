@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # detect if we have package pymacros4py
     skip_macro_consistency_check = False
     try:
-        import pymacros4py
+        import pymacros4py  # noqa: F401
     except ImportError:
         skip_macro_consistency_check = True
 
