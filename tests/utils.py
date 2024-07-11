@@ -8,7 +8,7 @@ Add the following flag to slow tests:  # doctest:+SLOW_TEST
 """
 
 import doctest
-from typing import Any
+from typing import Any, Union
 import types
 
 
@@ -21,10 +21,10 @@ class DocTestFinderSkippingSlowTests(doctest.DocTestFinder):
     def find(
         self,
         obj: object,
-        name: str | None = None,
-        module: None | bool | types.ModuleType = None,
-        globs: dict[str, Any] | None = None,
-        extraglobs: dict[str, Any] | None = None,
+        name: Union[str, None] = None,
+        module: Union[bool, types.ModuleType, None] = None,
+        globs: Union[dict[str, Any], None] = None,
+        extraglobs: Union[dict[str, Any], None] = None,
     ) -> list[doctest.DocTest]:
         tests = super().find(obj, name, module, globs, extraglobs)
         for test in tests:
@@ -42,8 +42,8 @@ class DocTestParserSkippingSlowTests(doctest.DocTestParser):
         string: str,
         globs: dict[str, Any],
         name: str,
-        filename: str | None,
-        lineno: int | None,
+        filename: Union[str, None],
+        lineno: Union[int, None],
     ) -> doctest.DocTest:
         test = super().get_doctest(string, globs, name, filename, lineno)
         test.examples = [
