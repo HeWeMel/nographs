@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from _heapq import heapify, heappop, heappush
+from heapq import heapify, heappop, heappush
 from typing import Generic, Optional, Union
 from collections.abc import Iterable, Collection
 
