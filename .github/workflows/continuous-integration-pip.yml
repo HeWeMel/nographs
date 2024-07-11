@@ -26,18 +26,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         # Override language selection
         with:
           languages: python
           setup-python-dependencies: false
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
 
   test-pip:
     needs: skip_duplicate
@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -72,16 +72,19 @@ jobs:
       - name: Run all tests (including doc tests)
         run: python ./tests/test_nographs.py
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: Build package
@@ -99,9 +102,9 @@ jobs:
 #    runs-on: ubuntu-latest
 #    steps:
 #      - name: Checkout source
-#        uses: actions/checkout@v3
+#        uses: actions/checkout@v4
 #      - name: Set up Python 3.9
-#        uses: actions/setup-python@v4
+#        uses: actions/setup-python@v5
 #        with:
 #          python-version: 3.9
 #      - name: Build package
