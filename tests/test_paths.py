@@ -118,7 +118,7 @@ class PathsHandling:
     >>> gear = nog.GearForIntVertexIDsAndCFloats()
     >>> paths = _paths.PathsOfLabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
-    ...    gear.vertex_id_to_path_attributes_mapping(()),
+    ...    gear.vertex_id_to_edge_labels_mapping(()),
     ...    None
     ... )
     >>> paths.append_edge(0, 0, [0])

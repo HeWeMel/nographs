@@ -65,10 +65,11 @@ If a VertexIdToVertexMapping is implemented by a
 VertexMappingWrappingSequenceWithNone
 class based on a wrapped sequence, NoGraphs directly accesses the sequence for
 better performance.
-(The sequence might need to represent gaps without stored values for some
-key by None as artificial value. Thus, NoGraphs must be prepared to retrieve
+The sequence might need to represent gaps without stored values for some
+key by None as artificial value, since non-empty content of T_vertex
+can be any other value. Thus, NoGraphs must be prepared to retrieve
 None from the sequence, even if it cannot store this value in case it is
-outside T_vertex. Therefore, here, VertexMappingWrappingSequenceWithNone is used.)
+outside T_vertex. Therefore, here, VertexMappingWrappingSequenceWithNone is used.
 """
 VertexIdToVertexMapping = VertexMapping[T_vertex_id, T_vertex]
 
@@ -87,22 +88,40 @@ VertexIdToDistanceMapping = VertexMapping[T_vertex_id, T_weight]
 """ABC for a collection that is intended to be used by NoGraphs for
 storing mappings from your chosen type of hashable vertex ids to edge data.
 
-If a VertexIdToPathEdgeDataMapping is implemented by a
+If a VertexIdToEdgeLabelsMapping is implemented by a
 VertexMappingWrappingSequenceWithNone
 class based on a wrapped sequence, NoGraphs directly accesses the sequence for
 better performance.
-(The sequence might need to represent gaps without stored values for some
-key by None as artificial value. Thus, NoGraphs must be prepared to retrieve
+The sequence might need to represent gaps without stored values for some
+key by None as artificial value, since non-empty content of T_labels
+can be any other value. Thus, NoGraphs must be prepared to retrieve
 None from the sequence, even if it cannot store this value because it is
 outside type T_labels.Therefore, here,
-VertexMappingWrappingSequenceWithNone is used.)
+VertexMappingWrappingSequenceWithNone is used.
 """
-VertexIdToPathEdgeDataMapping = VertexMapping[T_vertex_id, T_labels]
+VertexIdToEdgeLabelsMapping = VertexMapping[T_vertex_id, T_labels]
 
+"""
+ABC for a collection that is intended to be used by NoGraphs for
+storing mappings from vertices, represented by your chosen type of hashable
+vertex ids, to non-negative integers (e.g., time values from 0 on, that
+represent the order in that the vertices have be entered or left during a
+traversal).
+
+If a VertexIdToDistanceMapping is implemented by a
+VertexMappingWrappingSequenceWithoutNone
+class based on a wrapped sequence, NoGraphs directly accesses the sequence for
+better performance.
+"""
+VertexIdToNumberMapping = VertexMapping[T_vertex_id, int]
 
 """ ABC for a MutableSequence of vertices.
 """
 MutableSequenceOfVertices = MutableSequence[T_vertex]
+
+""" ABC for a MutableSequence of edge attributes.
+"""
+MutableSequenceOfLabels = MutableSequence[T_labels]
 
 
 # -- Private support functions --
@@ -149,9 +168,9 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
         raise NotImplementedError
 
     @abstractmethod
-    def vertex_id_to_path_attributes_mapping(
+    def vertex_id_to_edge_labels_mapping(
         self, initial_content: Iterable[Tuple[T_vertex_id, T_labels]]
-    ) -> VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels]:
+    ) -> VertexIdToEdgeLabelsMapping[T_vertex_id, T_labels]:
         """Factory for a mapping from a vertex id to edge data.
 
         :param initial_content: The collection is created with this initial content.
@@ -163,6 +182,27 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
         self, initial_content: Iterable[T_vertex]
     ) -> MutableSequenceOfVertices[T_vertex]:
         """Factory for a sequence of vertices."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sequence_of_edge_labels(
+        self, initial_content: Iterable[T_labels]
+    ) -> MutableSequenceOfLabels[T_labels]:
+        """Factory for a sequence of edge attributes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def vertex_id_to_number_mapping(
+        self, initial_content: Iterable[Tuple[T_vertex_id, int]]
+    ) -> VertexIdToNumberMapping[T_vertex_id]:
+        """Factory for a mapping from a vertex id to non-negative integers
+        starting at zero, that represent a numbering of some vertices.
+
+        If the returned mapping does not contain a value for some key,
+        its method __getitem__ needs to return 0.
+
+        :param initial_content: The collection is created with this initial content.
+        """
         raise NotImplementedError
 
 
@@ -275,7 +315,7 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
     ) -> VertexMapping[T_vertex_id, T_vertex]:
         return dict[T_vertex_id, T_vertex](initial_content)
 
-    def vertex_id_to_path_attributes_mapping(
+    def vertex_id_to_edge_labels_mapping(
         self, initial_content: Iterable[Tuple[T_vertex_id, T_labels]]
     ) -> VertexMapping[T_vertex_id, T_labels]:
         return dict[T_vertex_id, T_labels](initial_content)
@@ -284,6 +324,11 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
         self, initial_content: Iterable[T_vertex]
     ) -> MutableSequenceOfVertices[T_vertex]:
         return list[T_vertex](initial_content)
+
+    def sequence_of_edge_labels(
+        self, initial_content: Iterable[T_labels]
+    ) -> MutableSequenceOfLabels[T_labels]:
+        return list[T_labels](initial_content)
 
     def zero(self) -> T_weight:
         return self._zero_value
@@ -297,6 +342,11 @@ class GearForHashableVertexIDs(Gear[T_vertex, T_vertex_id, T_weight, T_labels]):
         return DefaultdictWithNiceStr[T_vertex_id, T_weight](
             lambda: self._infinity_value, initial_content
         )
+
+    def vertex_id_to_number_mapping(
+        self, initial_content: Iterable[Tuple[T_vertex_id, int]]
+    ) -> VertexIdToNumberMapping[T_vertex_id]:
+        return DefaultdictWithNiceStr[T_vertex_id, int](lambda: 0, initial_content)
 
 
 # Implementation note:
@@ -486,7 +536,7 @@ class GearForIntVertexIDs(
             lambda: [None] * self._pre_allocate, None, 1024, initial_content
         )
 
-    def vertex_id_to_path_attributes_mapping(
+    def vertex_id_to_edge_labels_mapping(
         self, initial_content: Iterable[Tuple[IntVertexID, T_labels]]
     ) -> VertexMapping[IntVertexID, T_labels]:
         return VertexMappingWrappingSequenceWithNone[T_labels](
@@ -504,12 +554,32 @@ class GearForIntVertexIDs(
     def infinity(self) -> T_weight:
         return self._infinity_value
 
+    def sequence_of_edge_labels(
+        self, initial_content: Iterable[T_labels]
+    ) -> MutableSequenceOfLabels[T_labels]:
+        return list[T_labels](initial_content)
+
     def vertex_id_to_distance_mapping(
         self, initial_content: Iterable[Tuple[IntVertexID, T_weight]]
     ) -> VertexMapping[IntVertexID, T_weight]:
         return VertexMappingWrappingSequenceWithoutNone[T_weight](
             lambda: [self._infinity_value] * self._pre_allocate,
             self._infinity_value,
+            1024,
+            initial_content,
+        )
+
+    def vertex_id_to_number_mapping(
+        self, initial_content: Iterable[Tuple[IntVertexID, int]]
+    ) -> VertexIdToNumberMapping[IntVertexID]:
+        # This implementation is limited to 2^32 values, meaning 2^31 vertices
+        # when numbering enter and leave events, thus 2.147.483.648 vertices.
+        return VertexMappingWrappingSequenceWithoutNone[int](
+            lambda: array(
+                "L",
+                repeat(0, self._pre_allocate),
+            ),
+            0,
             1024,
             initial_content,
         )

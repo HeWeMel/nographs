@@ -1,5 +1,49 @@
-[build-system]
-requires = ["setuptools>=57"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "nographs"
+version = "3.4.0"
+authors = [
+  { name="Dr. Helmut Melcher", email="HeWeMel@web.de" },
+]
+description = """\
+    Graph analysis – the lazy (evaluation) way: Analysis on the fly, \
+    for graphs, that are computed and/or adapted on the fly.\
+    """
+readme = "README.rst"
+requires-python = ">=3.9"
+keywords = [
+    "graph", "network", "search", "traverse", "analysis", "infinite", "lazy",
+    "shortest", "distance", "depth", "DFS", "breadth", "BFS", "Dijkstra",
+    "topological", "spanning", "MST", "TSP"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/hewemel/nographs"
+Documentation = "https://nographs.readthedocs.io/"
+Repository = "https://github.com/hewemel/nographs.git"
+Issues = "https://github.com/hewemel/nographs/issues"
+Changelog = "https://nographs.readthedocs.io/en/latest/changelog.html"
+
 [tool.coverage.report]
 exclude_lines =["pragma: no cover", "@overload"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

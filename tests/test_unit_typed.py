@@ -1,15 +1,15 @@
 import sys
 from decimal import Decimal, getcontext
-from collections.abc import Iterator
+from collections.abc import Iterator, Iterable
 from typing import Any, TypeVar, Union, TYPE_CHECKING
+
+import nographs as nog
 
 if sys.version_info >= (3, 11):
     from typing import assert_type
 import unittest
 
 from mpmath import mp, mpf  # type: ignore
-
-import nographs as nog
 
 # noinspection PyProtectedMember
 from nographs._extra_tsp import GettableProto
@@ -101,3 +101,45 @@ class TestWithTypes(unittest.TestCase):
         """
         g1: GettableProto[int, str] = dict[int, str]([(0, "a"), (1, "b")])  # NOQA F841
         g2: GettableProto[int, str] = ["a", "b"]  # NOQA F841
+
+    def test_dfs_throw(self) -> None:
+        """DFS function iter() returns a Collections.Generator. Its type is tested
+        my the MyPy run here. And The behaviour of the throw, both for stops
+        at a start vertex and at other vertices."""
+
+        def next_vertices(i: int, _: Any) -> Iterator[int]:
+            yield i + 1
+
+        stop = StopIteration()
+        traversal = nog.TraversalDepthFirst[int, None](next_vertices)
+
+        # Check effect of throw
+        it = iter(
+            traversal.start_from(start_vertices=[0, 10], report=nog.DFSEvent.ENTERING)
+        )
+        vertices = []
+        for v in it:
+            if v >= 5:
+                # noinspection PyUnresolvedReferences
+                _ = it.throw(stop)
+            vertices.append(v)
+        self.assertEqual(vertices, [0, 1, 2, 3, 4, 5, 10])
+
+        # Check if the following reports 0
+        def next_vertices2(i: int, _: Any) -> Iterable[int]:
+            return []
+
+        traversal = nog.TraversalDepthFirst[int, None](next_vertices2)
+        it = iter(
+            traversal.start_from(
+                start_vertices=[0, 0, 0], report=nog.DFSEvent.SKIPPING_START
+            )
+        )
+        self.assertEqual(next(it), 0)
+        # Check if throwing StopIteration at this moment falls through
+        try:
+            # noinspection PyUnresolvedReferences
+            _ = it.throw(stop)
+        except RuntimeError:
+            return
+        self.fail("StopIteration, thrown at illegal moment, raises RuntimeError.")

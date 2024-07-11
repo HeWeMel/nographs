@@ -1,0 +1,5 @@
+start_vertex: Optional[T_vertex] = None,
+*,
+start_vertices: Optional[Iterable[T_vertex]] = None,
+build_paths: bool = False,
+calculation_limit: Optional[int] = None,

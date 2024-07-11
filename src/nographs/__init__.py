@@ -64,7 +64,7 @@ from ._gears import (
     # VertexIdSet,
     # VertexIdToVertexMapping,
     # VertexIdToDistanceMapping,
-    # VertexIdToPathEdgeDataMapping,
+    # VertexIdToEdgeLabelsMapping,
     # MutableSequenceOfVertices,
     # -- Gear protocols
     GearWithoutDistances,
@@ -91,41 +91,29 @@ from ._paths import (
     # PathsOfUnlabeledEdges,
     # PathsOfLabeledEdges,
     # PathsDummy,
-    # DummyPredecessorOrAttributesMapping,
+    # DummyPredecessorOrLabelsMapping,
 )
+from ._path import Path
 from ._strategies import (
-    # StrRepr,
-    Strategy,
     T_strategy,
-    NextVertices,  # Usable, in rare cases, for typing application-defined functions
+    NextVertices,
     NextEdges,
     NextLabeledEdges,
     NextWeightedEdges,
     NextWeightedLabeledEdges,
-    # NextEdgesOrVertices,
-    # NextWeightedMaybeLabeledEdges,
     BNextVertices,
     BNextEdges,
     BNextLabeledEdges,
     BNextWeightedEdges,
     BNextWeightedLabeledEdges,
-    # BNextEdgesOrVertices,
-    # BNextWeightedMaybeLabeledEdges,
-    # iter_start_ids,
-    # iter_start_vertices_and_ids,
-    # define_visited,
-    # define_distances,
-    # create_paths,
-    # NoIterator,
-    # NoVisitedSet,
-    # NoDistancesMapping,
-)
-from ._traversals import (
+    Strategy,
     Traversal,
     TraversalBreadthFirstFlex,
     TraversalBreadthFirst,
     TraversalDepthFirstFlex,
     TraversalDepthFirst,
+    DFSEvent,
+    DFSMode,
     TraversalNeighborsThenDepthFlex,
     TraversalNeighborsThenDepth,
     TraversalTopologicalSortFlex,
@@ -136,21 +124,17 @@ from ._traversals import (
     TraversalAStar,
     TraversalMinimumSpanningTreeFlex,
     TraversalMinimumSpanningTree,
-)
-from ._path import Path
-from ._bidir_search import (
     BSearchBreadthFirstFlex,
     BSearchBreadthFirst,
     BSearchShortestPathFlex,
     BSearchShortestPath,
+    TraversalShortestPathsInfBranchingSortedFlex,
+    TraversalShortestPathsInfBranchingSorted,
 )
+
 from ._extra_edge_gadgets import (
     adapt_edge_index,
     adapt_edge_iterable,
-)
-from ._extra_infinite_branching import (
-    TraversalShortestPathsInfBranchingSortedFlex,
-    TraversalShortestPathsInfBranchingSorted,
 )
 from ._extra_matrix_gadgets import (
     Vector,
@@ -241,6 +225,8 @@ __all__ = (
     "TraversalBreadthFirst",
     "TraversalDepthFirstFlex",
     "TraversalDepthFirst",
+    "DFSEvent",
+    "DFSMode",
     "TraversalNeighborsThenDepthFlex",
     "TraversalNeighborsThenDepth",
     "TraversalTopologicalSortFlex",

@@ -433,6 +433,14 @@ the comparing examples `here <examples_all_graphs>`, and
 TraversalDepthFirst
 +++++++++++++++++++
 
+**Enumerations used in the definition of parameters:**
+
+.. autoclass:: DFSEvent
+
+.. autoclass:: DFSMode
+
+**About the class:**
+
 Examples: See `example-traversal-depth-first-integers` and
 the comparing examples `here <examples_all_graphs>`.
 
@@ -445,7 +453,21 @@ the comparing examples `here <examples_all_graphs>`.
 
    .. autoattribute:: visited
 
+   .. autoattribute:: event
+
+   .. autoattribute:: trace
+
+   .. autoattribute:: trace_labels
+
+   .. autoattribute:: on_trace
+
+   .. autoattribute:: index
+
    .. automethod:: start_from
+
+   .. automethod:: __iter__
+
+   .. automethod:: skip_expanding_entered_vertex
 
 .. autoclass:: TraversalDepthFirst
    :show-inheritance: yes

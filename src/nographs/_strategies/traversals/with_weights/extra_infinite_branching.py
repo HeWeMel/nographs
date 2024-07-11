@@ -1,28 +1,26 @@
 from __future__ import annotations
 
 from typing import Any, Union, Generic, Optional
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Generator
 from abc import ABC
 
-from ._types import (
+from nographs._types import (
     T_vertex_id,
     T_weight,
     WeightedUnlabeledOutEdge,
     WeightedOutEdge,
     vertex_as_id,
 )
-from ._gears import (
+from nographs._gears import (
     Gear,
     GearDefault,
     VertexIdToDistanceMapping,
 )
-from ._strategies import (
-    NextWeightedEdges,
-)
-from ._traversals import (
-    define_distances,
-    Traversal,
-    _TraversalWithDistance,
+from ...utils import define_distances
+from ...type_aliases import NextWeightedEdges
+from ..traversal import Traversal
+from .traversal_with_weights import _TraversalWithDistance
+from .shortest_paths import (
     TraversalShortestPathsFlex,
 )
 
@@ -59,6 +57,17 @@ class TraversalShortestPathsInfBranchingSortedFlex(
     | Bases: Generic[`T_vertex_id`, `T_weight`],
     | `Traversal` [`T_vertex_id`, `T_vertex_id`, Any]
 
+    :param gear: See `gears API <gears_api>` and class `Gear`.
+      Used for storing and returning results (graph data in the domain of the
+      given problem).
+
+    :param internal_gear: See `gears API <gears_api>` and class `Gear`.
+      Used for storing internal results (graph data in the domain of the
+      problem, that the given problem is reduced to).
+
+    :param next_edges: See `NextWeightedEdges` function. If None, provide
+      next_labeled_edges.
+
     **Algorithm:** Weighted shortest paths in infinitely branching
     graphs with sorted edges, implemented by
     `problem reduction <infinite_branching_in_nographs>`
@@ -85,17 +94,6 @@ class TraversalShortestPathsInfBranchingSortedFlex(
     next_labeled_edges) or *reported* (an iterator of the traversal returns it),
     the traversal provides updated values for the attributes
     *distance*, *paths*, and *distances*.
-
-    :param gear: See `gears API <gears_api>` and class `Gear`.
-      Used for storing and returning results (graph data in the domain of the
-      given problem).
-
-    :param internal_gear: See `gears API <gears_api>` and class `Gear`.
-      Used for storing internal results (graph data in the domain of the
-      problem, that the given problem is reduced to).
-
-    :param next_edges: See `NextWeightedEdges` function. If None, provide
-      next_labeled_edges.
     """
 
     def __init__(
@@ -194,7 +192,7 @@ class TraversalShortestPathsInfBranchingSortedFlex(
         super()._start()
         return self
 
-    def _traverse(self) -> Iterator[T_vertex_id]:
+    def _traverse(self) -> Generator[T_vertex_id, None, Any]:
         def next_state_edges(
             state: State[T_vertex_id],
             p_traversal: TraversalShortestPathsFlex[

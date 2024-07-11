@@ -206,7 +206,7 @@ def adapt_edge_iterable(
         else:
             # Only start and end vertices of the edge should be used. Optional
             # additional data is ignored.
-            for from_vertex, to_vertex, *data in edges:
+            for from_vertex, to_vertex, *_data in edges:
                 edge_dict[from_vertex].append(to_vertex)
                 edge_dict[to_vertex].append(from_vertex)
             return adapt_edge_index(edge_dict, add_inverted=False, attributes=False)

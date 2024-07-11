@@ -13,10 +13,7 @@ from ._gears import (
     Gear,
     GearDefault,
 )
-from ._bidir_search import (
-    BSearchShortestPathFlex,
-)
-
+from ._strategies import BSearchShortestPathFlex
 
 # -- Protocols --
 T_key_contra = TypeVar("T_key_contra", contravariant=True)
@@ -102,7 +99,7 @@ def undo_weight_changes_in_travel_length(
     # no_of_edges times.
     # (We have no multiplication in T_weight, so we repeat a subtraction. But since we
     # do this only once per vertex in the path, the additional runtime does not matter.)
-    for i in range(no_of_edges):
+    for _i in range(no_of_edges):
         length -= weight_offset
     # Undo the negation of the edge weights. We can do this in one step for the whole
     # path length.

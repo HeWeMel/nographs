@@ -1,6 +1,3 @@
-import nographs as nog  # noqa: F401 (used only by doctests)
-
-
 class MethodsOfDummyCollectionClasses:
     """-- Methods of dummy collection classes. Objects of these classes are
     used as content of traversal objects as long as the true collections
@@ -17,10 +14,7 @@ class MethodsOfDummyCollectionClasses:
     an Exceptioon or to return a constant value directly and in all cases.
 
     >>> # noinspection PyProtectedMember
-    >>> strategies = nog._strategies
-
-
-    >>> NoVisitedSet = strategies.NoVisitedSet
+    >>> from nographs._strategies.utils import NoVisitedSet
     >>> NoVisitedSet.__contains__(None, None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
@@ -42,7 +36,8 @@ class MethodsOfDummyCollectionClasses:
     RuntimeError: Traversal not started, no data to be accessed
 
 
-    >>> NoDistancesMapping = strategies.NoDistancesMapping
+    >>> # noinspection PyProtectedMember
+    >>> from nographs._strategies.utils import NoDistancesMapping
     >>> NoDistancesMapping.__getitem__(None, None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed

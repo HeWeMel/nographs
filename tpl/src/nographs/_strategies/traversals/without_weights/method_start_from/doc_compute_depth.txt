@@ -1,0 +1,4 @@
+:param compute_depth: For each reported vertex, provide the search depth is has
+    been found at (Note: Often, this information is not helpful, and the
+    computation increases memory consumption and runtime).
+

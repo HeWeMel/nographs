@@ -22,7 +22,7 @@ from ._gear_collections import (
 )
 from ._gears import (
     VertexIdToVertexMapping,
-    VertexIdToPathEdgeDataMapping,
+    VertexIdToEdgeLabelsMapping,
 )
 
 
@@ -113,6 +113,10 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         path is empty. Raise RuntimeError is no path to *vertex* is stored.
 
         :param vertex: The predecessor of this vertex will be returned.
+
+        .. versionchanged:: 3.3
+
+          Method added.
         """
         vertex_id = self._check_vertex(vertex)
         predecessor_collection = self._predecessor_collection
@@ -190,8 +194,8 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
         :param vertex: The path ending at this vertex will be iterated.
         """
-        for from_vertex, vertex, vertex_id in self._iter_raw_edges_to_start(vertex):
-            yield (from_vertex, vertex)
+        for from_vertex, to_vertex, _vertex_id in self._iter_raw_edges_to_start(vertex):
+            yield (from_vertex, to_vertex)
 
     def iter_edges_from_start(
         self, vertex: T_vertex
@@ -262,7 +266,7 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         """
 
 
-class DummyPredecessorOrAttributesMapping(MutableMapping[T_vertex_id, T]):
+class DummyPredecessorOrLabelsMapping(MutableMapping[T_vertex_id, T]):
     def __getitem__(self, key: T_vertex_id) -> T:
         raise KeyError
 
@@ -291,7 +295,7 @@ class PathsDummy(Paths[T_vertex, T_vertex_id, T_labels]):
 
     def __init__(self, vertex_to_id: VertexToID[T_vertex, T_vertex_id]) -> None:
         super().__init__(
-            DummyPredecessorOrAttributesMapping[T_vertex_id, T_vertex](),
+            DummyPredecessorOrLabelsMapping[T_vertex_id, T_vertex](),
             vertex_to_id,
         )
 
@@ -379,7 +383,7 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
     :param predecessor: The predecessor information of the paths will
         be stored in the given mapping.
 
-    :param attributes: The edge data of the paths will be stored in
+    :param labels: The edge data of the paths will be stored in
         the given mapping.
 
     :param vertex_to_id: See `VertexToID` function.
@@ -388,24 +392,24 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
     def __init__(
         self,
         predecessor: VertexIdToVertexMapping[T_vertex_id, T_vertex],
-        attributes: VertexIdToPathEdgeDataMapping[T_vertex_id, T_labels],
+        labels: VertexIdToEdgeLabelsMapping[T_vertex_id, T_labels],
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
     ):
         super().__init__(predecessor, vertex_to_id)
-        self._attributes = attributes
-        self._attributes_collection: GettableSettableForGearProto[
+        self._labels = labels
+        self._labels_collection: GettableSettableForGearProto[
             T_vertex_id, T_labels, Optional[T_labels]
         ]
-        self._attributes_wrapper: Optional[
+        self._labels_wrapper: Optional[
             VertexSequenceWrapperForMappingProto[
                 T_vertex_id, T_labels, Optional[T_labels]
             ]
         ]
         (
             _,
-            self._attributes_collection,
-            self._attributes_wrapper,
-        ) = access_to_vertex_mapping_expect_none(attributes)
+            self._labels_collection,
+            self._labels_wrapper,
+        ) = access_to_vertex_mapping_expect_none(labels)
 
     def append_edge(
         self, from_vertex: T_vertex, to_vertex_id: T_vertex_id, to_edge: LabeledOutEdge
@@ -432,31 +436,31 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
 
         data_of_edge = to_edge[-1]
         try:
-            self._attributes_collection[to_vertex_id] = data_of_edge
+            self._labels_collection[to_vertex_id] = data_of_edge
         except IndexError:
             # See access_to_vertex_mapping_expect_none for the following:
-            assert self._attributes_wrapper is not None
-            self._attributes_wrapper.extend_and_set(to_vertex_id, data_of_edge)
+            assert self._labels_wrapper is not None
+            self._labels_wrapper.extend_and_set(to_vertex_id, data_of_edge)
 
     def _iter_path_edges(
-        self, path_edges: Iterator[tuple[T_vertex, T_vertex, T_vertex_id]]
+        self, edges: Iterator[tuple[T_vertex, T_vertex, T_vertex_id]]
     ) -> Iterator[UnweightedLabeledFullEdge[T_vertex, T_labels]]:
         """Iterate given raw edge data tuples und return them as
         UnweightedLabeledFullEdge. Internal support method.
 
-        :param path_edges: tuples (from_vertex, to_vertex, to_vertex_id)
+        :param edges: tuples (from_vertex, to_vertex, to_vertex_id)
         """
-        path_attributes: Optional[T_labels]
+        labels: Optional[T_labels]
         res: UnweightedLabeledFullEdge[T_vertex, T_labels]
-        for from_vertex, vertex, vertex_id in path_edges:
+        for from_vertex, vertex, vertex_id in edges:
             # to_vertex_id is contained in self._predecessor
             # (see _iter_raw_edges_to_start).
             # So we know: No KeyError or IndexError will occur here, and we will not
             # get None as result.
-            path_attributes = self._attributes_collection[vertex_id]
-            assert path_attributes is not None
+            labels = self._labels_collection[vertex_id]
+            assert labels is not None
             # noinspection PyTypeChecker
-            res = (from_vertex, vertex, path_attributes)  # PyCharm cannot check this
+            res = (from_vertex, vertex, labels)  # PyCharm cannot check this
             yield res
 
     def iter_labeled_edges_to_start(

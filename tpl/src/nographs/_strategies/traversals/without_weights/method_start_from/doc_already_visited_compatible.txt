@@ -1,0 +1,14 @@
+:param already_visited: If provided, this set is used instead of an internal
+    one to keep vertices (resp. their hashable ids from vertex_to_id),
+    that have already been visited. This parameter can be used to get online
+    access to the internal bookkeeping of visited vertices, or to preload
+    vertices that should never be visited.
+
+    Attention: TraversalTopologicalSortFlex requires, that the collection
+    given as argument for parameter already_visited is compatible
+    (in any sense) with the collection that gear.vertex_id_set()
+    returns. If you have chosen GearDefault, you can just use a dict.
+    Otherwise, create the collection by calling gear.vertex_id_set() or use the
+    collection that another traversal with the same gear gives as attribute
+    visited.
+

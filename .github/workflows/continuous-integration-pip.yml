@@ -66,7 +66,7 @@ jobs:
           mypy src/nographs
       - name: Check source code formatting with Black
         run: |
-          black src/nographs --check --verbose --diff
+          black src/nographs tests --check --verbose --diff
       - name: Install from source (required for the pre-commit tests)
         run: python -m pip install .
       - name: Run all tests (including doc tests)

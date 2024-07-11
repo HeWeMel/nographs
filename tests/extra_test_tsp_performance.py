@@ -275,7 +275,10 @@ if __name__ == "__main__":
                 solve(
                     tsp_text + "_traveling_salesman_basic, " + mode_text,
                     lambda: _traveling_salesman_basic(
-                        graph, 0, float("inf"), find_longest=find_longest
+                        graph,  # noqa: B023
+                        0,
+                        float("inf"),
+                        find_longest=find_longest,  # noqa: B023
                     ),
                     correct_length=correct_result,
                     graph=graph,
@@ -286,7 +289,8 @@ if __name__ == "__main__":
             solve(
                 tsp_text + "traveling_salesman, " + mode_text,
                 lambda: traveling_salesman(
-                    range(len(graph)), graph, find_longest=find_longest
+                    range(len(graph)), graph,  # noqa: B023  # fmt: skip
+                    find_longest=find_longest  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
                 graph=graph,
@@ -297,10 +301,9 @@ if __name__ == "__main__":
             solve(
                 tsp_text + "traveling_salesman_flex IntVertexIDs, " + mode_text,
                 lambda: traveling_salesman_flex(
-                    range(len(graph)),
-                    graph,
+                    range(len(graph)), graph,  # noqa: B023  # fmt: skip
                     GearForIntVertexIDsAndCFloats[int, Any](),
-                    find_longest=find_longest,
+                    find_longest=find_longest,  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
                 graph=graph,
@@ -311,13 +314,13 @@ if __name__ == "__main__":
             solve(
                 tsp_text + "traveling_salesman_flex IntVerticesAndIDs, " + mode_text,
                 lambda: traveling_salesman_flex(
-                    range(len(graph)),
-                    graph,
+                    # fmt: off
+                    range(len(graph)), graph,  # noqa: B023  # fmt: skip
                     GearForIntVerticesAndIDsAndCFloats[Any](),
-                    find_longest=find_longest,
+                    find_longest=find_longest,  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
-                graph=graph,
+                graph=graph,  # noqa: B023
                 time_stats=True,
                 mem_stats=True,
             )
@@ -327,29 +330,26 @@ if __name__ == "__main__":
                 + "traveling_salesman_flex IntVerticesAndIDsAndCInt, "
                 + mode_text,
                 lambda: traveling_salesman_flex(
-                    range(len(graph)),
-                    graph,
+                    range(len(graph)), graph,  # noqa: B023  # fmt: skip
                     GearForIntVerticesAndIDsAndCInts[Any](),
-                    find_longest=find_longest,
+                    find_longest=find_longest,  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
                 graph=graph,
                 time_stats=True,
                 mem_stats=True,
             )
-
             solve(
                 tsp_text
                 + "traveling_salesman_flex IntVerticesAndIDsAndCInt I, "
                 + mode_text,
                 lambda: traveling_salesman_flex(
-                    range(len(graph)),
-                    graph,
+                    range(len(graph)), graph,  # noqa: B023  # fmt: skip
                     GearForIntVerticesAndIDsAndCInts[Any](distance_type_code="I"),
-                    find_longest=find_longest,
+                    find_longest=find_longest,  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
-                graph=graph,
+                graph=graph,  # noqa: B023
                 time_stats=True,
                 mem_stats=True,
             )

@@ -12,7 +12,7 @@ from nographs import T, Strategy, T_vertex, T_vertex_id, T_labels, T_weight
 from nographs._compatibility import pairwise
 
 # noinspection PyProtectedMember
-from nographs._strategies import StrRepr  # NOQA F401 (import needed by doc tests)
+from nographs._strategies.utils import StrRepr  # NOQA F401 (import needed by doc tests)
 
 # ----- Utilities: Printing test results -----
 
@@ -34,6 +34,7 @@ T_bound_comparable = TypeVar("T_bound_comparable", bound="Comparable")
 
 
 class Comparable(Protocol):
+
     @abstractmethod
     def __lt__(self: T_bound_comparable, other: T_bound_comparable) -> bool: ...
 
@@ -54,52 +55,77 @@ TraversalWithDepthAndVisited = Union[
 
 def _results_of_traversal(
     traversal: nog.Traversal[T_sortable_vertex, T_vertex_id, T_labels],
-    start_vertices: Iterable[T_sortable_vertex],
-) -> dict[str, Any]:
-    """Completely traverse graph and print each state, collect vertices, check
-    that path container remains the same object, print all paths, return
-    original content of __dict__ of traversal object (caller can use this
-    for further checks)."""
-    vertices = set(start_vertices)
+    additional_vertices: Iterable[T_sortable_vertex],
+) -> tuple[list[T_sortable_vertex], dict[str, Any]]:
+    """
+    Print initial state, also covering the start vertices. Then,
+    completely traverse graph, and print each state.
+
+    Return a sorted list of vertices that cover the vertices that have been reported
+    during the traversal, and the additional vertices.
+
+    Check that path container remains the same object, and return the original content
+    of __dict__ of traversal object so that the caller can perform further checks.
+    """
     # get traversal attributes before iterator starts, for comparison
     org_dict = dict(traversal.__dict__)
+    vertices = set(additional_vertices)
     print_filled(f"After start: {traversal.state_to_str(vertices)}")
     for vertex in traversal:
         vertices.add(vertex)
         print_filled(f"-> {vertex}: {traversal.state_to_str([vertex])}")
         if org_dict["paths"] is not traversal.paths:
             print("traversal.paths before and while traversal differ!")
-    # noinspection PyProtectedMember
-    if traversal._build_paths:
-        print("All paths:", [traversal.paths[vertex] for vertex in sorted(vertices)])
-    return org_dict
+    return sorted(vertices), org_dict
 
 
 def results_standard(
     traversal: nog.Traversal[T_sortable_vertex, T_vertex_id, T_labels],
     start_vertices: Iterable[T_sortable_vertex],
 ) -> None:
-    """Completely traverse graph and print each state, collect vertices, check
-    that path container remains the same object, print all paths.
     """
-    _ = _results_of_traversal(traversal, start_vertices)
+    Print the initial state, with details for the start vertices.
+    Completely traverse graph and print each state.
+    Print the final state, with details for the start vertices and the reported
+    vertices.
+    Check that path container remains the same object.
+    """
+    reported_and_start_vertices, _ = _results_of_traversal(traversal, start_vertices)
+    print("Final state for the reported and the start vertices:")
+    print_filled(traversal.state_to_str(reported_and_start_vertices))
 
 
 def results_with_visited(
-    traversal: TraversalWithDepthAndVisited[T_sortable_vertex, T_vertex_id, T_labels],
-    start_vertices: Iterable[T_sortable_vertex],
+    traversal: TraversalWithDepthAndVisited[
+        T_sortable_vertex, T_sortable_vertex, T_labels
+    ],
+    additional_vertices: Iterable[T_sortable_vertex],
+    use_reported: bool = False,
 ) -> None:
-    """Completely traverse graph and print each state, collect vertices, check
-    that path container remains the same object, print all paths.
-    Additionally, print visited container and check that it remained the same object
-    during traversal.
     """
-    org_dict = _results_of_traversal(traversal, start_vertices)
+    Like *results_standard*, but:
+
+    Print the final state with details for the visited vertices, instead of for the
+    start vertices and the reported vertices (this is useful if results are
+    computed for all visited vertices, but not all of them are reported or
+    start vertices). This behaviour can be disabled by use_reported.
+
+    And also check that traversal.visited remains the same object during traversal.
+
+    Note: This function is limited to cases where both T_vertex_id and
+    T_vertex are T_sortable_vertex, and vertex_to_id == vertex_as_id.
+    """
+    reported_and_start_vertices, org_dict = _results_of_traversal(
+        traversal, additional_vertices
+    )
     if org_dict["visited"] is not traversal.visited:
         print("traversal.visited before and while traversal differ!")
-    visited = list(traversal.visited)
-    visited.sort()
-    print("All visited:", visited)
+    if use_reported:
+        print("Final state for the reported and the start vertices:")
+        print_filled(traversal.state_to_str(reported_and_start_vertices))
+    else:
+        print("Final state for the visited vertices:")
+        print_filled(traversal.state_to_str(traversal.visited))
 
 
 def results_with_distances(
@@ -108,15 +134,17 @@ def results_with_distances(
     ],
     start_vertices: Iterable[T_sortable_vertex],
 ) -> None:
-    """Completely traverse graph and print each state, collect vertices, check
-    that path container remains the same object, print all paths.
-    Additionally, print distances container and check that it remained the same object
-    during traversal.
     """
-    org_dict = _results_of_traversal(traversal, start_vertices)
+    Like *results_standard*, but also checks that traversal.distances stays
+    the same object during the traversal.
+    """
+    reported_and_start_vertices, org_dict = _results_of_traversal(
+        traversal, start_vertices
+    )
     if org_dict["distances"] is not traversal.distances:
         print("traversal.distances before and while traversal differ!")
-    print("All distances:", str(dict(traversal.distances)))
+    print("Final state for the reported and the start vertices:")
+    print_filled(traversal.state_to_str(reported_and_start_vertices))
 
 
 def print_partial_results(
@@ -124,7 +152,7 @@ def print_partial_results(
     paths_to: Optional[T_sortable_vertex] = None,
 ) -> None:
     """Completely traverse graph, collect reported vertices, and print the
-    fist 5 and the last 5. Print path prefixes and suffixes for vertices given
+    first 5 and the last 5. Print path prefixes and suffixes for vertices given
     as parameter.
     """
     vertices = []
@@ -346,16 +374,16 @@ class FSequenceUnhashable(
         self.start_impossible_bi = (self.start, self.goal_impossible)
 
 
-class FDiamond(FixtureFull[int, tuple[int, int, int]]):
+class FDiamond(FixtureFull[int, tuple[int, int, int, int]]):
     """Diamond-shaped graph of fixed size. Variant with weight 2 from vertices 1 and
-    2 to 3 (useful foo TraversalShortestPaths). Edges can be interpreted as being
-    labeled instead of weighed. Additionally, a vertex for a test with this vertex
-    as already visited vertex is given.
+    2 to 3 (useful for TraversalShortestPaths). Additionally, a vertex for a test with
+    this vertex as already visited vertex is given, and values for know distances for
+    vertex 0 and 1.
     """
 
     def __init__(self) -> None:
         super().__init__(
-            [(0, 1, 2), (0, 2, 1), (1, 3, 2), (2, 3, 2)],
+            [(0, 1, 2, 1), (0, 2, 1, 2), (1, 3, 2, 3), (2, 3, 2, 4)],
             0,
             3,
             lambda v: 1 if v == 0 else 0,
@@ -377,7 +405,31 @@ class FDiamondSorted(FixtureFull[int, tuple[int, int, int]]):
         )
 
 
-class FDiamond2(FixtureFull[int, tuple[int, int, int]]):
+class FDiamondDFS(FixtureFull[int, tuple[int, int, int, int]]):
+    """Diamond-shaped graph of fixed size. Variant with two additional edges of kind
+    forward and back edge. Additionally, a vertex for a test with
+    this vertex as already visited vertex is given.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            [
+                (0, 3, 2, 0),  # Additional forward edge
+                (0, 1, 2, 1),
+                (0, 2, 1, 2),
+                (1, 3, 2, 3),
+                (2, 3, 2, 4),
+                (3, 0, 1, 5),  # Additional back edge
+            ],
+            0,
+            3,
+            lambda v: 1 if v == 0 else 0,
+            report=True,
+        )
+        self.vertex_for_already_visited = 1
+
+
+class FDiamondMST(FixtureFull[int, tuple[int, int, int]]):
     """Diamond-shaped graph of fixed size. Variant with weight 3 from vertices 1 and
     2 to 3 (used for MST). No heuristic is given, since it is not used for A*.
     """
@@ -431,7 +483,7 @@ class FSmallBinaryTree(FixtureFull[int, tuple[int, int, int]]):
 
 class FMultiStart(FixtureFull[int, tuple[int, int, int]]):
     """Graph for testing multiple start vertices. Used for all strategies
-    except of A* and the bidirectional search strategies. Outgoing edges
+    except of DFS, A* and the bidirectional search strategies. Outgoing edges
     are sorted by ascending weight, since all weights are equal."""
 
     def __init__(self) -> None:
@@ -451,6 +503,35 @@ class FMultiStart(FixtureFull[int, tuple[int, int, int]]):
             report=True,
         )
         self.start_vertices = (0, 5)
+        self.goal_vertices = (4,)
+
+
+class FMultiStartDFS(FixtureFull[int, tuple[int, int, int]]):
+    """Graph for testing multiple start vertices. Used for DFS - and for this,
+    it is equipped with forward, back, and cross edges and with already
+    visited start vertices.
+    Outgoing edges are sorted by ascending weight, since all weights are
+    equal."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            [
+                (0, 1, 1),
+                (1, 3, 2),  # Forward edge
+                (1, 2, 3),
+                (5, 6, 4),
+                (6, 3, 5),
+                (2, 3, 6),
+                (2, 4, 7),
+                (3, 4, 8),  # Cross edge?
+                (3, 1, 9),  # Back edge
+            ],
+            -1,
+            4,
+            lambda v: {6: 0, 3: 3}.get(v, 11),
+            report=True,
+        )
+        self.start_vertices = (0, 5, 6)
         self.goal_vertices = (4,)
 
 
@@ -527,7 +608,7 @@ class FSpiralSorted(FSpiral):
 class FOvertaking(FixtureFull[int, tuple[int, int, int, int]]):
     """Graph for testing all strategies with different gears. It can be used
     to create a distance overflow for distance values stored in an array of
-    byte."""
+    byte. It contains no cycles, which is required for topological search."""
 
     def __init__(self) -> None:
         _enough_for_index_error = (1 + 128) * 8  # index error even for seq of bits
@@ -542,6 +623,29 @@ class FOvertaking(FixtureFull[int, tuple[int, int, int, int]]):
         for v in range(1, limit, 2):
             edges.append((v, v + 3, 1, 1))
             edges.append((v, v + 1, 1, 3))
+
+        super().__init__(edges, 0, goal, lambda v: 0, report=False)
+
+
+class FOvertakingDFSWithBackEdges(FixtureFull[int, tuple[int, int, int, int]]):
+    """Graph for testing DFS with different gears. It can be used
+    to create a distance overflow for distance values stored in an array of
+    byte. And it has back edges, which is required for a full DFS test."""
+
+    def __init__(self) -> None:
+        _enough_for_index_error = (1 + 128) * 8  # index error even for seq of bits
+        goal = 2 * _enough_for_index_error
+        limit = 3 * _enough_for_index_error
+        self.last_vertex = limit + 2  # todo: Goal? Remove?
+
+        edges = []
+        for v in range(0, limit, 2):
+            edges.append((v, v + 1, 1, 1))
+            edges.append((v, v + 3, 3, 3))
+        for v in range(1, limit, 2):
+            edges.append((v, v // 2, 8, 8))
+            edges.append((v, v + 3, 1, 1))
+            edges.append((v, v + 1, 3, 3))
 
         super().__init__(edges, 0, goal, lambda v: 0, report=False)
 
@@ -600,7 +704,13 @@ class GraphWithoutEdges:
     []
     >>> list(nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
     ...     compute_depth=True))
-    ? 0: {'depth': 0, 'visited': {0}, 'paths': {}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {}}
+    []
+    >>> list(nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     compute_depth=True, compute_trace=True))
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+      {0}, 'paths': {}}
     []
     >>> list(nog.TraversalNeighborsThenDepth(f.next_vertices).start_from(f.start,
     ...     compute_depth=True))
@@ -742,22 +852,49 @@ class GraphWithoutEdges:
     ...                             next_labeled_edges=f.next_edges_bi)
     Traceback (most recent call last):
     RuntimeError: Both next_edges and next_labeled_edges provided.
+
+    4) For DFS with and without trace, we need do cover the following special
+    case: GearIntVertexID..., two start vertices, and the second comes first.
+    Line numbers at time where this test was made:
+    With trace: Line 656 of depth_first.py, line 450 of !depth_first.py
+    Without trace: Line 816 of depth_first.py, line 530 of !depth_first.py
+    >>> gear = nog.GearForIntVertexIDsAndCFloats()
+    >>> t = nog.TraversalDepthFirstFlex(
+    ...     nog.vertex_as_id, gear, f.next_vertices)
+    >>> list(t.start_from(start_vertices=[1, 0], compute_trace=True,
+    ...                   build_paths=True))
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [1], 'visited':
+      {1}, 'paths': {1: (1,)}}
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+      {0, 1}, 'paths': {0: (0,)}}
+    []
+    >>> list(t.start_from(start_vertices=[1, 0], compute_trace=False,
+    ...                   build_paths=True))
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {1}, 'paths':
+      {1: (1,)}}
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1},
+      'paths': {0: (0,)}}
+    []
     """
 
 
 class GraphWithOneEdgeAndPathVariants:
     """-- Graph with one edge --
-    Start vertex not reported (exception: topological sorting). First edge followed.
+    Start vertex not reported (exception: topological sorting, or DFS with
+    ENTERING_START). First edge followed.
     Paths not build if not demanded, and build if demanded.
     Labeled paths not allowed for unlabeled edges, and build for labeled edges, if
     demanded. Calculation limit raises Exception at exactly correct number of visited
     vertices.
 
-    >>> def test(traversal, goal, labeled_paths, *start_args):
-    ...     print(list(traversal.start_from(*start_args)))  # reported vertices
+    >>> def test(traversal, goal, labeled_paths, *start_vargs, **start_kwargs):
+    ...     print(list(traversal.start_from(*start_vargs, **start_kwargs))
+    ...         )  # reported vertices
     ...     print(goal not in traversal.paths)  # no path build if not requested
-    ...     print(next(traversal.start_from(*start_args)))  # first reported vertex
-    ...     _ = traversal.start_from(*start_args, build_paths=True).go_to(goal)
+    ...     print(next(traversal.start_from(*start_vargs, **start_kwargs))
+    ...         )  # first reported vertex
+    ...     _ = traversal.start_from(*start_vargs, **start_kwargs, build_paths=True)
+    ...     _ = traversal.go_to(goal)
     ...     if labeled_paths:  # also print just vertices (edges are default here)
     ...        print(tuple(traversal.paths.iter_vertices_from_start(1)))
     ...     print(traversal.paths[goal])
@@ -794,8 +931,36 @@ class GraphWithOneEdgeAndPathVariants:
     True
     1
     (0, 1)
+    >>> test(traversal, f.goal, False, f.start,
+    ...      report=nog.DFSEvent.ENTERING_SUCCESSOR|nog.DFSEvent.ENTERING_START)
+    [0, 1]
+    True
+    0
+    (0, 1)
+    >>> test(traversal, f.goal, False, f.start, compute_trace=True)
+    [1]
+    True
+    1
+    (0, 1)
+    >>> test(traversal, f.goal, False, f.start, compute_trace=True,
+    ...      report=nog.DFSEvent.ENTERING_SUCCESSOR|nog.DFSEvent.ENTERING_START)
+    [0, 1]
+    True
+    0
+    (0, 1)
+    >>> test(traversal, f.goal, False, f.start, compute_trace=True,
+    ...      report=nog.DFSEvent.LEAVING_SUCCESSOR|nog.DFSEvent.LEAVING_START)
+    [1, 0]
+    True
+    1
+    (0, 1)
     >>> traversal = nog.TraversalDepthFirst(next_edges=f.next_edges)
     >>> test(traversal, f.goal, False, f.start)
+    [1]
+    True
+    1
+    (0, 1)
+    >>> test(traversal, f.goal, False, f.start, compute_trace=True)
     [1]
     True
     1
@@ -881,6 +1046,11 @@ class GraphWithOneEdgeAndPathVariants:
     >>> _ = list(traversal.start_from(f.start, calculation_limit=1))
     Traceback (most recent call last):
     RuntimeError: Number of visited vertices reached limit
+    >>> list(traversal.start_from(f.start, calculation_limit=2, compute_trace=True))
+    [1]
+    >>> _ = list(traversal.start_from(f.start, calculation_limit=1, compute_trace=True))
+    Traceback (most recent call last):
+    RuntimeError: Number of visited vertices reached limit
     >>> traversal = nog.TraversalNeighborsThenDepth(next_edges=f.next_edges)
     >>> list(traversal.start_from(f.start, calculation_limit=2))
     [1]
@@ -961,6 +1131,12 @@ class GraphWithOneEdgeAndPathVariants:
     ((0, 1, 2),)
     >>> traversal = nog.TraversalDepthFirst(next_labeled_edges=f.next_edges)
     >>> test(traversal, f.goal, True, f.start)
+    [1]
+    True
+    1
+    (0, 1)
+    ((0, 1, 2),)
+    >>> test(traversal, f.goal, True, f.start, compute_trace=True)
     [1]
     True
     1
@@ -1051,6 +1227,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     {'depth': 1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
+
     >>> traversal = nog.TraversalDepthFirstFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1058,7 +1235,39 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {[1]: ([0], [1])}}
+    >>> test(traversal, f.start, f.goal, labeled_paths=False, compute_trace=True)
+    [[1]]
+    True
+    [1]
+    ([0], [1])
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1]],
+      'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
+    >>> test(traversal, f.start, f.goal, labeled_paths=False,
+    ...      report=nog.DFSEvent.ALL)
+    [[0], [1], [1], [0]]
+    True
+    [0]
+    ([0], [1])
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1]],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1}, 'paths': {[1]: ([0],
+      [1])}}
+    >>> _ = traversal.start_from(start_vertex=f.start, build_paths=True,
+    ...                          report=nog.DFSEvent.ALL)
+    >>> for v in traversal:
+    ...     print_filled(traversal.state_to_str([v]))
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [[0]], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {[0]: ([0],)}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1]],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1}, 'paths': {[1]: ([0],
+      [1])}}
+    {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [[0], [1]],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1}, 'paths': {[1]: ([0],
+      [1])}}
+    {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'trace': [[0]], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0, 1}, 'paths': {[0]: ([0],)}}
+
     >>> traversal = nog.TraversalNeighborsThenDepthFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1067,6 +1276,7 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
+
     >>> traversal = nog.TraversalTopologicalSortFlex(
     ...    first_of, nog.GearDefault(), f.next_vertices)
     >>> test(traversal, f.start, f.goal, labeled_paths=False)
@@ -1076,6 +1286,7 @@ class GraphWithOneEdgeAndVertexToId:
     ([0], [1])
     {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1}, 'paths': {[1]: ([0],
       [1])}}
+
     >>> search = nog.BSearchBreadthFirstFlex(
     ...     first_of, nog.GearDefault(), f.next_vertices_bi)
     >>> test_bidirectional(search, f.start, f.goal, labeled_paths=False)
@@ -1111,7 +1322,8 @@ class GraphWithOneEdgeAndVertexToId:
     True
     [1]
     ([0], [1])
-    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: ([0], [1])}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {[1]: ([0], [1])}}
 
     >>> traversal = nog.TraversalDepthFirstFlex(
     ...     first_of, nog.GearDefault(),
@@ -1122,7 +1334,32 @@ class GraphWithOneEdgeAndVertexToId:
     [1]
     ([0], [1])
     (([0], [1], 2),)
-    {'depth': -1, 'visited': {0, 1}, 'paths': {[1]: (([0], [1], 2),)}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {[1]: (([0], [1], 2),)}}
+    >>> test(traversal, f.start, f.goal, labeled_paths=True,
+    ...      report=nog.DFSEvent.ALL)
+    [[0], [1], [1], [0]]
+    True
+    [0]
+    ([0], [1])
+    (([0], [1], 2),)
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1]],
+      'trace_labels': [2], 'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1},
+      'paths': {[1]: (([0], [1], 2),)}}
+    >>> _ = traversal.start_from(start_vertex=f.start, build_paths=True,
+    ...                          report=nog.DFSEvent.ALL)
+    >>> for v in traversal:
+    ...     print_filled(traversal.state_to_str([v]))
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [[0]], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {[0]: ()}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1]],
+      'trace_labels': [2], 'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1},
+      'paths': {[1]: (([0], [1], 2),)}}
+    {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [[0], [1]],
+      'trace_labels': [2], 'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1},
+      'paths': {[1]: (([0], [1], 2),)}}
+    {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'trace': [[0]], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0, 1}, 'paths': {[0]: ()}}
 
     >>> traversal = nog.TraversalNeighborsThenDepthFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges)
@@ -1245,11 +1482,11 @@ class GraphWithOneEdgeAndVertexToId:
 class VertexToIdWithGoForVerticesInAndGoTo:
     """
     >>> f = FSequenceUnhashable()
-    >>> def test_traversal(traversal, *vargs):
-    ...     print(list(traversal.start_from(*vargs, f.start)))
-    ...     _ = traversal.start_from(*vargs, f.start)
+    >>> def test_traversal(traversal, *vargs, **kwargs):
+    ...     print(list(traversal.start_from(*vargs, f.start, **kwargs)))
+    ...     _ = traversal.start_from(*vargs, f.start, **kwargs)
     ...     print(list(traversal.go_for_vertices_in(f.goals)))
-    ...     _ = traversal.start_from(*vargs, f.start, build_paths=True)
+    ...     _ = traversal.start_from(*vargs, f.start, **kwargs, build_paths=True)
     ...     print(list(traversal.go_to(f.goal)))
     ...     print(traversal.paths[f.goal])
     ...     print_filled(traversal.state_to_str([f.goal]))
@@ -1272,7 +1509,16 @@ class VertexToIdWithGoForVerticesInAndGoTo:
     [[1], [3]]
     [3]
     ([0], [1], [2], [3])
-    {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {[3]: ([0], [1], [2], [3])}}
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+      'paths': {[3]: ([0], [1], [2], [3])}}
+    >>> test_traversal(nog.TraversalDepthFirstFlex(
+    ...     first_of, nog.GearDefault(), next_edges=f.next_edges), compute_trace=True)
+    [[1], [2], [3], [4]]
+    [[1], [3]]
+    [3]
+    ([0], [1], [2], [3])
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [[0], [1], [2],
+      [3]], 'visited': {0, 1, 2, 3}, 'paths': {[3]: ([0], [1], [2], [3])}}
     >>> test_traversal(nog.TraversalNeighborsThenDepthFlex(
     ...     first_of, nog.GearDefault(), next_edges=f.next_edges))
     [[1], [2], [3], [4]]
@@ -1373,6 +1619,8 @@ class NormalGraphTraversalsWithOrWithoutLabels:
     def unattributed_edges() -> None:
         """
         >>> f = FDiamond()
+        >>> fdfs = FDiamondDFS()
+
         >>> traversal = nog.TraversalBreadthFirst(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
@@ -1384,37 +1632,214 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
         ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 1, 3)}}
 
-        >>> traversal = nog.TraversalDepthFirst(f.next_vertices)
-        >>> traversal = traversal.start_from(f.start, build_paths=True,
-        ...                                  compute_depth=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
 
-        >>> traversal = nog.TraversalDepthFirst(f.next_vertices)
-        >>> traversal = traversal.start_from(f.start, build_paths=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        -> 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        For DFS, we use a special graph that, when DFS is used, generates all
+        possible kinds of edges. And we need to check all the combinations of
+        options that uses different parts of the code.
+        >>> traversal = nog.TraversalDepthFirst(fdfs.next_vertices)
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': -1, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+          {0: (0,)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2,
+          3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
+
+        >>> _ = traversal.start_from(
+        ...     fdfs.start, build_paths=True, compute_depth=True)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+          {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
+
+        >>> _ = traversal.start_from(
+        ...     fdfs.start, compute_trace=True)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': -1, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+          {0}, 'paths': {}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'visited': {0, 2}, 'paths': {}}
+        ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'visited': {0, 2}, 'paths': {}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'visited': {0, 2, 3}, 'paths': {}}
+        ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'visited': {0, 2, 3}, 'paths': {}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'visited': {0, 1, 2, 3}, 'paths': {}}
+        ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'visited': {0, 1, 2, 3}, 'paths': {}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {}}
+
+        >>> _ = traversal.start_from(fdfs.start, build_paths=True,
+        ...                          report=nog.DFSEvent.ALL)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': -1, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0],
+          'on_trace': {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'on_trace': {0, 2, 3}, 'index': {0: 1}, 'visited': {0, 2, 3}, 'paths': {0:
+          (0,)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2, 3}, 'paths': {2: (0,
+          2)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 3],
+          'on_trace': {0, 1}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 3],
+          'on_trace': {0}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2,
+          3)}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'index': {0: 1, 1: 4, 2: 2, 3:
+          3}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0,
+          2, 3)}}
+
+        >>> _ = traversal.start_from(fdfs.start, build_paths=True,
+        ...                          report=nog.DFSEvent.ALL, compute_depth=True)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 0: {'depth': 2, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'on_trace': {0, 2, 3}, 'index': {0: 1}, 'visited': {0, 2, 3}, 'paths': {0:
+          (0,)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2, 3}, 'paths': {2: (0,
+          2)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': 1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 3],
+          'on_trace': {0, 1}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': 0, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 3],
+          'on_trace': {0}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2,
+          3)}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'index': {0: 1, 1: 4, 2: 2, 3:
+          3}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0,
+          2, 3)}}
+
+        >>> _ = traversal.start_from(
+        ...    fdfs.start, build_paths=True, compute_depth=True,
+        ...    report=nog.DFSEvent.IN_OUT | nog.DFSEvent.BACK_EDGE
+        ... )
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 0: {'depth': 2, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'on_trace': {0, 2, 3}, 'visited': {0, 2, 3}, 'paths': {0: (0,)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'visited': {0, 2, 3}, 'paths': {2: (0, 2)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
+
 
         >>> traversal = nog.TraversalNeighborsThenDepth(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True,
@@ -1428,13 +1853,14 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 2, 3)}}
 
         >>> traversal = nog.TraversalNeighborsThenDepth(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        After start: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
         ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
         -> 1: {'depth': -1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
         -> 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
@@ -1442,8 +1868,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 2, 3)}}
 
         >>> traversal = nog.TraversalTopologicalSort(f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
@@ -1465,8 +1892,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
           (0, 1)}}
         -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
           (0,)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0: (0,),
+          1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
         >>> search = nog.BSearchBreadthFirst(f.next_vertices_bi)
         >>> l, p = search.start_from(f.start_bi, build_path=True)
@@ -1481,6 +1909,7 @@ class NormalGraphTraversalsWithOrWithoutLabels:
     def unattributed_edges_and_int_id_gear() -> None:
         """
         >>> f = FDiamond()
+        >>> fdfs = FDiamondDFS()
         >>> gear = nog.GearForIntVertexIDsAndCFloats()
 
         >>> traversal = nog.TraversalBreadthFirstFlex(
@@ -1495,39 +1924,153 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
         ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 1, 3)}}
 
         >>> traversal = nog.TraversalDepthFirstFlex(
-        ...     nog.vertex_as_id, gear, f.next_vertices)
-        >>> traversal = traversal.start_from(f.start, build_paths=True,
+        ...     nog.vertex_as_id, gear, fdfs.next_vertices)
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': -1, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+          {0: (0,)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2,
+          3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
+
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True,
         ...                                  compute_depth=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+          {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: (0, 2, 3)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: (0, 1)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
-        >>> traversal = nog.TraversalDepthFirstFlex(
-        ...     nog.vertex_as_id, gear, f.next_vertices)
-        >>> traversal = traversal.start_from(f.start, build_paths=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': -1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': -1, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        -> 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True,
+        ...                                  report=nog.DFSEvent.ALL)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': -1, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0],
+          'on_trace': {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'on_trace': {0, 2, 3}, 'index': {0: 1}, 'visited': {0, 2, 3}, 'paths': {0:
+          (0,)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 2: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2, 3}, 'paths': {2: (0,
+          2)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 3],
+          'on_trace': {0, 1}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 1: {'depth': -1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': -1, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 3],
+          'on_trace': {0}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2,
+          3)}}
+        -> 0: {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'index': {0: 1, 1: 4, 2: 2, 3:
+          3}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0,
+          2, 3)}}
+
+        >>> traversal = traversal.start_from(
+        ...     fdfs.start, build_paths=True,
+        ...     compute_depth=True, report=nog.DFSEvent.ALL)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 0: {'depth': 2, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'on_trace': {0, 2, 3}, 'index': {0: 1}, 'visited': {0, 2, 3}, 'paths': {0:
+          (0,)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2, 3}, 'paths': {2: (0,
+          2)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': 1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 3],
+          'on_trace': {0, 1}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0,
+          2, 3)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2, 3}, 'paths': {1: (0,
+          1)}}
+        -> 3: {'depth': 0, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 3],
+          'on_trace': {0}, 'index': {3: 3}, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2,
+          3)}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'index': {0: 1, 1: 4, 2: 2, 3:
+          3}, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0,
+          2, 3)}}
 
         >>> traversal = nog.TraversalNeighborsThenDepthFlex(
         ...     nog.vertex_as_id, gear, f.next_vertices)
@@ -1542,14 +2085,15 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 2, 3)}}
 
         >>> traversal = nog.TraversalNeighborsThenDepthFlex(
         ...     nog.vertex_as_id, gear, f.next_vertices)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
+        After start: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
         ? 0: {'depth': -1, 'visited': {0}, 'paths': {0: (0,)}}
         -> 1: {'depth': -1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
         -> 2: {'depth': -1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
@@ -1557,8 +2101,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 1: {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': -1, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 2),
+          3: (0, 2, 3)}}
 
         >>> traversal = nog.TraversalTopologicalSortFlex(
         ...     nog.vertex_as_id, gear, f.next_vertices)
@@ -1581,8 +2126,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
           (0, 1)}}
         -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
           (0,)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0: (0,),
+          1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
         >>> search = nog.BSearchBreadthFirstFlex(
         ...     nog.vertex_as_id, gear, f.next_vertices_bi)
@@ -1599,6 +2145,7 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         """
         1b. Unlabeled edges and already_visited
         >>> f = FDiamond()
+        >>> fdfs = FDiamondDFS()
 
         >>> traversal = nog.TraversalBreadthFirst(f.next_vertices)
         >>> already_visited={f.vertex_for_already_visited}
@@ -1611,8 +2158,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        All paths: [(0,), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 2: (0, 2), 3: (0, 2,
+          3)}}
         >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
@@ -1620,22 +2168,53 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         RuntimeError: Paths: No path for given vertex.
 
         >>> traversal = nog.TraversalDepthFirst(f.next_vertices)
-        >>> already_visited={f.vertex_for_already_visited}
+        >>> already_visited={fdfs.vertex_for_already_visited}
         >>> traversal = traversal.start_from(
-        ...     f.start, build_paths=True, compute_depth=True,
+        ...     fdfs.start, build_paths=True, compute_depth=True,
         ...     already_visited=already_visited)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0, 1}, 'paths': {0: (0,)}}
-        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        All paths: [(0,), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {1}, 'paths': {}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1},
+          'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+          'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+          'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {3: (0, 2, 3)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 2: (0, 2), 3: (0, 2, 3)}}
         >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
-        >>> traversal.paths[f.vertex_for_already_visited]
+        >>> traversal.paths[fdfs.vertex_for_already_visited]
+        Traceback (most recent call last):
+        RuntimeError: Paths: No path for given vertex.
+
+        >>> already_visited={fdfs.vertex_for_already_visited}
+        >>> traversal = traversal.start_from(
+        ...     fdfs.start, build_paths=True, compute_depth=True,
+        ...     compute_trace=True, already_visited=already_visited)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {1}, 'paths': {}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+          {0, 1}, 'paths': {0: (0,)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (0,), 2: (0, 2), 3: (0, 2, 3)}}
+        >>> print("Already visited:", StrRepr.from_set(already_visited))
+        Already visited: {0, 1, 2, 3}
+        >>> traversal.paths[fdfs.vertex_for_already_visited]
         Traceback (most recent call last):
         RuntimeError: Paths: No path for given vertex.
 
@@ -1651,8 +2230,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        All paths: [(0,), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 3, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 2: (0, 2), 3: (0, 2,
+          3)}}
         >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
@@ -1677,8 +2257,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
           (0, 2)}}
         -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
           (0,)}}
-        All paths: [(0,), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0: (0,),
+          2: (0, 2), 3: (0, 2, 3)}}
         >>> print("Already visited:", StrRepr.from_set(already_visited))
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
@@ -1704,8 +2285,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
         -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
         ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        All paths: [(0,), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (0,), 2: (0, 2), 3: (0, 2,
+          3)}}
         >>> print("Already visited:", already_visited)
         Already visited: {0, 1, 2, 3}
         >>> traversal.paths[f.vertex_for_already_visited]
@@ -1718,76 +2300,143 @@ class NormalGraphTraversalsWithOrWithoutLabels:
     def labeled_edges() -> None:
         """
         >>> f = FDiamond()
+        >>> fdfs = FDiamondDFS()
         >>> traversal = nog.TraversalBreadthFirst(
-        ...     next_edges=f.next_edges)
+        ...     next_labeled_edges=f.next_edges)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
-        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
-        ? 1: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {1: (0, 1)}}
-        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
-        ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: (0, 2)}}
-        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 1, 3)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 1, 3)]
-        All visited: [0, 1, 2, 3]
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: ()}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: ()}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: ((0, 1, 1),)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: ((0, 2, 2),)}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {1: ((0, 1, 1),)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: ((0, 1, 1), (1, 3,
+          3))}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {2: ((0, 2, 2),)}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: ((0, 1, 1), (1, 3, 3))}}
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (), 1: ((0, 1, 1),), 2: ((0,
+          2, 2),), 3: ((0, 1, 1), (1, 3, 3))}}
 
-        >>> traversal = nog.TraversalDepthFirst(
-        ...     next_edges=f.next_edges)
-        >>> traversal = traversal.start_from(f.start, build_paths=True,
+        >>> traversal = nog.TraversalDepthFirst(next_labeled_edges=fdfs.next_edges)
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True,
         ...                                  compute_depth=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': 1, 'visited': {0, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': 2, 'visited': {0, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        -> 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+          {0: ()}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: ((0, 2, 2),)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2},
+          'paths': {2: ((0, 2, 2),)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 2, 3},
+          'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: ((0, 1, 1),)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+          3}, 'paths': {1: ((0, 1, 1),)}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3},
+          'paths': {0: (), 1: ((0, 1, 1),), 2: ((0, 2, 2),), 3: ((0, 2, 2), (2, 3, 4))}}
+
+        >>> traversal = nog.TraversalDepthFirst(next_labeled_edges=fdfs.next_edges)
+        >>> traversal = traversal.start_from(fdfs.start, build_paths=True,
+        ...                                  compute_depth=True, compute_trace=True,
+        ...                                  report=nog.DFSEvent.ALL)
+        >>> results_with_visited(traversal, {fdfs.start})
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: ()}}
+        ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: ()}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'trace_labels': [2], 'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2},
+          'paths': {2: ((0, 2, 2),)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+          'trace_labels': [2], 'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2},
+          'paths': {2: ((0, 2, 2),)}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0,
+          2, 3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        ? 3: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+          'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0,
+          2, 3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        -> 0: {'depth': 2, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 2, 3, 0],
+          'trace_labels': [2, 4, 5], 'on_trace': {0, 2, 3}, 'index': {0: 1}, 'visited':
+          {0, 2, 3}, 'paths': {0: ()}}
+        -> 3: {'depth': 2, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2, 3],
+          'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'index': {3: 3}, 'visited': {0,
+          2, 3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 2],
+          'trace_labels': [2], 'on_trace': {0, 2}, 'index': {2: 2}, 'visited': {0, 2,
+          3}, 'paths': {2: ((0, 2, 2),)}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'trace_labels': [1], 'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2,
+          3}, 'paths': {1: ((0, 1, 1),)}}
+        ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+          'trace_labels': [1], 'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2,
+          3}, 'paths': {1: ((0, 1, 1),)}}
+        -> 3: {'depth': 1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 3],
+          'trace_labels': [1, 3], 'on_trace': {0, 1}, 'index': {3: 3}, 'visited': {0, 1,
+          2, 3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        -> 1: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+          'trace_labels': [1], 'on_trace': {0, 1}, 'index': {1: 4}, 'visited': {0, 1, 2,
+          3}, 'paths': {1: ((0, 1, 1),)}}
+        -> 3: {'depth': 0, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 3],
+          'trace_labels': [3], 'on_trace': {0}, 'index': {3: 3}, 'visited': {0, 1, 2,
+          3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        -> 0: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+          {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3}, 'paths': {0: ()}}
+        Final state for the visited vertices:
+        {'depth': -1, 'event': 'DFSEvent.LEAVING_START', 'index': {0: 1, 1: 4, 2: 2, 3:
+          3}, 'visited': {0, 1, 2, 3}, 'paths': {0: (), 1: ((0, 1, 1),), 2: ((0, 2,
+          2),), 3: ((0, 2, 2), (2, 3, 4))}}
+
 
         >>> traversal = nog.TraversalNeighborsThenDepth(
-        ...     next_edges=f.next_edges)
+        ...     next_labeled_edges=f.next_edges)
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
         >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: (0,)}}
-        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
-        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
-        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: (0, 2)}}
-        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: (0, 2, 3)}}
-        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: (0, 1)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+        After start: {'depth': 0, 'visited': {0}, 'paths': {0: ()}}
+        ? 0: {'depth': 0, 'visited': {0}, 'paths': {0: ()}}
+        -> 1: {'depth': 1, 'visited': {0, 1}, 'paths': {1: ((0, 1, 1),)}}
+        -> 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: ((0, 2, 2),)}}
+        ? 2: {'depth': 1, 'visited': {0, 1, 2}, 'paths': {2: ((0, 2, 2),)}}
+        -> 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: ((0, 2, 2), (2, 3,
+          4))}}
+        ? 3: {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {3: ((0, 2, 2), (2, 3, 4))}}
+        ? 1: {'depth': 1, 'visited': {0, 1, 2, 3}, 'paths': {1: ((0, 1, 1),)}}
+        Final state for the visited vertices:
+        {'depth': 2, 'visited': {0, 1, 2, 3}, 'paths': {0: (), 1: ((0, 1, 1),), 2: ((0,
+          2, 2),), 3: ((0, 2, 2), (2, 3, 4))}}
 
         >>> traversal = nog.TraversalTopologicalSort(
-        ...     next_edges=f.next_edges)
+        ...     next_labeled_edges=f.next_edges)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
         >>> results_with_visited(traversal, {f.start})
         After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0:
-          (0,)}}
-        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0: (0,)}}
-        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2}, 'paths': {2: (0,
-          2)}}
-        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3: (0,
-          2, 3)}}
+          ()}}
+        ? 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0}, 'paths': {0: ()}}
+        ? 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2}, 'paths': {2: ((0,
+          2, 2),)}}
+        ? 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3:
+          ((0, 2, 2), (2, 3, 4))}}
         -> 3: {'depth': 2, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {3:
-          (0, 2, 3)}}
+          ((0, 2, 2), (2, 3, 4))}}
         -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 2, 3}, 'paths': {2:
-          (0, 2)}}
+          ((0, 2, 2),)}}
         ? 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
-          (0, 1)}}
+          ((0, 1, 1),)}}
         -> 1: {'depth': 1, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {1:
-          (0, 1)}}
+          ((0, 1, 1),)}}
         -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0:
-          (0,)}}
-        All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-        All visited: [0, 1, 2, 3]
+          ()}}
+        Final state for the visited vertices:
+        {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3}, 'paths': {0: (),
+          1: ((0, 1, 1),), 2: ((0, 2, 2),), 3: ((0, 2, 2), (2, 3, 4))}}
 
         >>> search = nog.BSearchBreadthFirst(next_edges=f.next_edges_bi)
         >>> l, p = search.start_from(f.start_bi, build_path=True)
@@ -1804,7 +2453,7 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         >>> f = FSmallBinaryTree()
         >>> traversal = nog.TraversalBreadthFirst(f.next_vertices,is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
-        >>> results_with_visited(traversal, {f.start})
+        >>> results_with_visited(traversal, {f.start}, use_reported=True)
         After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
         ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
         -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
@@ -1819,34 +2468,85 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
         ? 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
         ? 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
-        All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
-        All visited: []
+        Final state for the reported and the start vertices:
+        {'depth': 2, 'visited': {}, 'paths': {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2,
+          4), 5: (1, 2, 5), 6: (1, 3, 6), 7: (1, 3, 7)}}
 
         >>> traversal = nog.TraversalDepthFirst(f.next_vertices, is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
-        >>> results_with_visited(traversal, {f.start})
-        After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
-        ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
-        -> 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
-        ? 3: {'depth': 1, 'visited': {}, 'paths': {3: (1, 3)}}
-        -> 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
-        ? 7: {'depth': 2, 'visited': {}, 'paths': {7: (1, 3, 7)}}
-        -> 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
-        ? 6: {'depth': 2, 'visited': {}, 'paths': {6: (1, 3, 6)}}
-        -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
-        ? 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
-        -> 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
-        ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
-        -> 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
-        ? 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
-        All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
-        All visited: []
+        >>> results_with_visited(traversal, {f.start}, use_reported=True)
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        ? 1: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {}, 'paths':
+          {1: (1,)}}
+        -> 3: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {3: (1, 3)}}
+        ? 3: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {3: (1, 3)}}
+        -> 7: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {7: (1, 3, 7)}}
+        ? 7: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {7: (1, 3, 7)}}
+        -> 6: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {6: (1, 3, 6)}}
+        ? 6: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {6: (1, 3, 6)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {2: (1, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {2: (1, 2)}}
+        -> 5: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {5: (1, 2, 5)}}
+        ? 5: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {5: (1, 2, 5)}}
+        -> 4: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {4: (1, 2, 4)}}
+        ? 4: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {},
+          'paths': {4: (1, 2, 4)}}
+        Final state for the reported and the start vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {}, 'paths':
+          {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2, 4), 5: (1, 2, 5), 6: (1, 3, 6), 7:
+          (1, 3, 7)}}
+
+        >>> traversal = traversal.start_from(f.start, build_paths=True,
+        ...                                  compute_trace=True, compute_depth=True)
+        >>> results_with_visited(traversal, {f.start}, use_reported=True)
+        After start: {'depth': 0, 'visited': {}, 'paths': {}}
+        ? 1: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [1], 'visited':
+          {}, 'paths': {1: (1,)}}
+        -> 3: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3],
+          'visited': {}, 'paths': {3: (1, 3)}}
+        ? 3: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3],
+          'visited': {}, 'paths': {3: (1, 3)}}
+        -> 7: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3, 7],
+          'visited': {}, 'paths': {7: (1, 3, 7)}}
+        ? 7: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3, 7],
+          'visited': {}, 'paths': {7: (1, 3, 7)}}
+        -> 6: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3, 6],
+          'visited': {}, 'paths': {6: (1, 3, 6)}}
+        ? 6: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 3, 6],
+          'visited': {}, 'paths': {6: (1, 3, 6)}}
+        -> 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2],
+          'visited': {}, 'paths': {2: (1, 2)}}
+        ? 2: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2],
+          'visited': {}, 'paths': {2: (1, 2)}}
+        -> 5: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2, 5],
+          'visited': {}, 'paths': {5: (1, 2, 5)}}
+        ? 5: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2, 5],
+          'visited': {}, 'paths': {5: (1, 2, 5)}}
+        -> 4: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2, 4],
+          'visited': {}, 'paths': {4: (1, 2, 4)}}
+        ? 4: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [1, 2, 4],
+          'visited': {}, 'paths': {4: (1, 2, 4)}}
+        Final state for the reported and the start vertices:
+        {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {}, 'paths':
+          {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2, 4), 5: (1, 2, 5), 6: (1, 3, 6), 7:
+          (1, 3, 7)}}
 
         >>> traversal = nog.TraversalNeighborsThenDepth(f.next_vertices, is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True,
         ...                                  compute_depth=True)
-        >>> results_with_visited(traversal, {f.start})
+        >>> results_with_visited(traversal, {f.start}, use_reported=True)
         After start: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
         ? 1: {'depth': 0, 'visited': {}, 'paths': {1: (1,)}}
         -> 2: {'depth': 1, 'visited': {}, 'paths': {2: (1, 2)}}
@@ -1861,12 +2561,13 @@ class NormalGraphTraversalsWithOrWithoutLabels:
         -> 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
         ? 5: {'depth': 2, 'visited': {}, 'paths': {5: (1, 2, 5)}}
         ? 4: {'depth': 2, 'visited': {}, 'paths': {4: (1, 2, 4)}}
-        All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
-        All visited: []
+        Final state for the reported and the start vertices:
+        {'depth': 3, 'visited': {}, 'paths': {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2,
+          4), 5: (1, 2, 5), 6: (1, 3, 6), 7: (1, 3, 7)}}
 
         >>> traversal = nog.TraversalTopologicalSort(f.next_vertices, is_tree=True)
         >>> traversal = traversal.start_from(f.start, build_paths=True)
-        >>> results_with_visited(traversal, {f.start})
+        >>> results_with_visited(traversal, {f.start}, use_reported=True)
         After start: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1:
           (1,)}}
         ? 1: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1: (1,)}}
@@ -1891,8 +2592,9 @@ class NormalGraphTraversalsWithOrWithoutLabels:
           4)}}
         -> 2: {'depth': 1, 'cycle_from_start': [], 'visited': {}, 'paths': {2: (1, 2)}}
         -> 1: {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1: (1,)}}
-        All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
-        All visited: []
+        Final state for the reported and the start vertices:
+        {'depth': 0, 'cycle_from_start': [], 'visited': {}, 'paths': {1: (1,), 2: (1,
+          2), 3: (1, 3), 4: (1, 2, 4), 5: (1, 2, 5), 6: (1, 3, 6), 7: (1, 3, 7)}}
         """
         pass
 
@@ -1918,9 +2620,9 @@ class NormalGraphTraversalsWithWeights:
     ? 1: {'distance': 2, 'depth': 1, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
     -> 3: {'distance': 3, 'depth': 2, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
     ? 3: {'distance': 3, 'depth': 2, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-    All distances: {0: 0, 1: 2, 2: 1, 3: 3}
-
+    Final state for the reported and the start vertices:
+    {'distance': 3, 'depth': 2, 'distances': {0: 0, 1: 2, 2: 1, 3: 3}, 'paths': {0:
+      (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
     Now we test with known_distances, but without option keep_distances.
     Start vertex starts with distance 2, and we pretend to have a path to 1 with
@@ -1940,8 +2642,9 @@ class NormalGraphTraversalsWithWeights:
     ? 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
     -> 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
     ? 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 2), (0, 2, 3)]
-    All distances: {0: 0, 1: 0, 2: 0, 3: 0}
+    Final state for the reported and the start vertices:
+    {'distance': 5, 'depth': 2, 'distances': {0: 0, 2: 0, 3: 0}, 'paths': {0: (0,),
+      2: (0, 2), 3: (0, 2, 3)}}
     >>> traversal.distances is known_distances
     True
 
@@ -1959,8 +2662,9 @@ class NormalGraphTraversalsWithWeights:
     ? 2: {'distance': 3, 'depth': 1, 'distances': {2: 0}, 'paths': {2: (0, 2)}}
     -> 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
     ? 3: {'distance': 5, 'depth': 2, 'distances': {3: 0}, 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 2), (0, 2, 3)]
-    All distances: {0: 0, 1: 0, 2: 0, 3: 0}
+    Final state for the reported and the start vertices:
+    {'distance': 5, 'depth': 2, 'distances': {0: 0, 2: 0, 3: 0}, 'paths': {0: (0,),
+      2: (0, 2), 3: (0, 2, 3)}}
     >>> traversal.distances is known_distances
     True
 
@@ -1984,8 +2688,9 @@ class NormalGraphTraversalsWithWeights:
     ? 1: {'distance': 2, 'distances': {1: 2}, 'paths': {1: (0, 1)}}
     -> 3: {'distance': 3, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
     ? 3: {'distance': 3, 'distances': {3: 3}, 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-    All distances: {0: 0, 2: 1, 1: 2, 3: 3}
+    Final state for the reported and the start vertices:
+    {'distance': 3, 'distances': {0: 0, 1: 2, 2: 1, 3: 3}, 'paths': {0: (0,), 1: (0,
+      1), 2: (0, 2), 3: (0, 2, 3)}}
 
     Now we test without option store_distances.
     >>> f = FDiamondSorted()
@@ -2000,12 +2705,13 @@ class NormalGraphTraversalsWithWeights:
     ? 1: {'distance': 2, 'distances': {1: inf}, 'paths': {1: (0, 1)}}
     -> 3: {'distance': 3, 'distances': {3: inf}, 'paths': {3: (0, 2, 3)}}
     ? 3: {'distance': 3, 'distances': {3: inf}, 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
-    All distances: {0: inf, 2: inf, 1: inf, 3: inf}
+    Final state for the reported and the start vertices:
+    {'distance': 3, 'distances': {0: inf, 1: inf, 2: inf, 3: inf}, 'paths': {0:
+      (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
 
     -- TraversalMinimumSpanningTree --
-    >>> fmst = FDiamond2()
+    >>> fmst = FDiamondMST()
     >>> traversal = nog.TraversalMinimumSpanningTree(next_edges=fmst.next_edges)
     >>> traversal = traversal.start_from(fmst.start, build_paths=True)
     >>> results_standard(traversal, {fmst.start})
@@ -2017,7 +2723,8 @@ class NormalGraphTraversalsWithWeights:
     ? 1: {'edge': (0, 1, 2), 'paths': {1: (0, 1)}}
     -> 3: {'edge': (2, 3, 3), 'paths': {3: (0, 2, 3)}}
     ? 3: {'edge': (2, 3, 3), 'paths': {3: (0, 2, 3)}}
-    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3)]
+    Final state for the reported and the start vertices:
+    {'edge': (2, 3, 3), 'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3)}}
 
 
     -- TraversaAStar --
@@ -2040,7 +2747,9 @@ class NormalGraphTraversalsWithWeights:
       3)}}
     -> 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (0, 4)}}
     ? 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (0, 4)}}
-    All paths: [(0,), (0, 1), (0, 2), (0, 2, 3), (0, 4)]
+    Final state for the reported and the start vertices:
+    {'path_length': 1, 'depth': 1, 'distances': {0: 0, 1: 3, 2: 3, 3: 5, 4: 1},
+      'paths': {0: (0,), 1: (0, 1), 2: (0, 2), 3: (0, 2, 3), 4: (0, 4)}}
 
 
     Variant of the test with option known_distances.
@@ -2065,7 +2774,9 @@ class NormalGraphTraversalsWithWeights:
       3)}}
     -> 4: {'path_length': 3, 'depth': 1, 'distances': {4: 3}, 'paths': {4: (0, 4)}}
     ? 4: {'path_length': 3, 'depth': 1, 'distances': {4: 3}, 'paths': {4: (0, 4)}}
-    All paths: [(0,), (0, 2), (0, 2, 3), (0, 4)]
+    Final state for the reported and the start vertices:
+    {'path_length': 3, 'depth': 1, 'distances': {0: 2, 2: 5, 3: 7, 4: 3}, 'paths':
+      {0: (0,), 2: (0, 2), 3: (0, 2, 3), 4: (0, 4)}}
     >>> print("Distance at goal:", known_distances[fa.goal])
     Distance at goal: 7
     >>> print("Best distances found so far:", dict(known_distances))
@@ -2123,8 +2834,10 @@ class NormalGraphTraversalsWithWeights:
       7)}}
     ? 7: {'distance': 10, 'depth': 2, 'distances': {7: inf}, 'paths': {7: (1, 3,
       7)}}
-    All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
-    All distances: {1: 0, 2: inf, 3: inf, 4: inf, 5: inf, 6: inf, 7: inf}
+    Final state for the reported and the start vertices:
+    {'distance': 10, 'depth': 2, 'distances': {1: 0, 2: inf, 3: inf, 4: inf, 5: inf,
+      6: inf, 7: inf}, 'paths': {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2, 4), 5: (1,
+      2, 5), 6: (1, 3, 6), 7: (1, 3, 7)}}
 
     Test TraversaAStar. Typically, one would use go_to(6) for our goal vertex 6, but for
     the test purposes we continue to iterate the rest of the graph.
@@ -2154,7 +2867,10 @@ class NormalGraphTraversalsWithWeights:
       7)}}
     ? 7: {'path_length': 10, 'depth': 2, 'distances': {7: 10}, 'paths': {7: (1, 3,
       7)}}
-    All paths: [(1,), (1, 2), (1, 3), (1, 2, 4), (1, 2, 5), (1, 3, 6), (1, 3, 7)]
+    Final state for the reported and the start vertices:
+    {'path_length': 10, 'depth': 2, 'distances': {1: 0, 2: 2, 3: 3, 4: 6, 5: 7, 6:
+      9, 7: 10}, 'paths': {1: (1,), 2: (1, 2), 3: (1, 3), 4: (1, 2, 4), 5: (1, 2,
+      5), 6: (1, 3, 6), 7: (1, 3, 7)}}
     """
 
 
@@ -2162,8 +2878,8 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     """-- Traversal with none or multiple start vertices, first 3 traversal strategies
     Checks: Correct traversal of TraversalBreadthFirst, TraversalDepthFirst,
     TraversalNeighborsThenDepth, and TraversalTopologicalSort in case of multiple
-    start vertices. No traversal in case of no start vertex resp. no goal vertex
-    (this is checked only for unlabeled edges).
+    start vertices, with iterator as start_vertices. No traversal in case of no
+    start vertex resp. no goal vertex (this is checked only for unlabeled edges).
     Uses implementation descisions:
     - All strategies travers start vertices in given order
     - TraversalBreadthFirst traverses edges in given order, while TraversalDepthFirst
@@ -2171,10 +2887,11 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
 
     1. Unlabeled edges
     >>> f = FMultiStart()
+    >>> fdfs = FMultiStartDFS()
     >>> fb = FMultiStartB()
 
     >>> t = nog.TraversalBreadthFirst(f.next_vertices).start_from(
-    ...      start_vertices=f.start_vertices, build_paths=True)
+    ...      start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_with_visited(t, f.start_vertices)
     After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
     ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
@@ -2189,60 +2906,241 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     -> 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
     ? 3: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {3: (5, 6, 3)}}
     ? 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {0: (0,), 1: (0, 1), 2:
+      (0, 1, 2), 3: (5, 6, 3), 4: (0, 1, 2, 4), 5: (5,), 6: (5, 6)}}
     >>> list(t.start_from(start_vertices=(), build_paths=True))
     []
     >>> list(t.start_from(start_vertices=f.start_vertices, build_paths=True
     ...     ).go_for_vertices_in([]))
     []
 
-    For TraversalDepthFirst, we need to specify compute_depth to get depth.
-    And we need to check the extra execution path for the case without depth and paths.
-    >>> t = nog.TraversalDepthFirst(f.next_vertices).start_from(
-    ...      start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
-    >>> results_with_visited(t, f.start_vertices)
-    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
-    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
-    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
-    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
-    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
-    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
-    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
-    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
-    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
-    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
-    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
-    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
-    >>> _ = t.start_from(start_vertices=f.start_vertices)
-    >>> results_with_visited(t, f.start_vertices)
-    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
-    ? 5: {'depth': -1, 'visited': {0, 5}, 'paths': {}}
-    -> 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
-    ? 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
-    -> 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
-    ? 3: {'depth': -1, 'visited': {0, 3, 5, 6}, 'paths': {}}
-    -> 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
-    ? 4: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
-    ? 0: {'depth': -1, 'visited': {0, 3, 4, 5, 6}, 'paths': {}}
-    -> 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
-    ? 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
-    -> 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
-    ? 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
-    All visited: [0, 1, 2, 3, 4, 5, 6]
-    >>> list(t.start_from(start_vertices=(), build_paths=True))
+    For TraversalDepthFirst, we need to check for several execution paths:
+    >>> t = nog.TraversalDepthFirst(fdfs.next_vertices)
+
+    a) Without trace
+    No start vertices or for_vertices_in with empty vertices
+    >>> list(t.start_from(start_vertices=()))
     []
-    >>> list(t.start_from(start_vertices=f.start_vertices, build_paths=True
-    ...     ).go_for_vertices_in([]))
+    >>> list(t.start_from(start_vertices=fdfs.start_vertices).go_for_vertices_in([]))
     []
+
+    a1) Without depth and paths.
+    >>> _ = t.start_from(start_vertices=iter(fdfs.start_vertices))
+    >>> results_with_visited(t, [])
+    After start: {'depth': -1, 'visited': {}, 'paths': {}}
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {}}
+    -> 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {}}
+    -> 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1,
+      2}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {}}
+    -> 4: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {}}
+    ? 4: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {}}
+    -> 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {}}
+    ? 5: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3,
+      4, 5}, 'paths': {}}
+    -> 6: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {}}
+    ? 6: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {}}
+
+    a2) With depth and paths and reporting of all entered vertices (start and non-start)
+    >>> t = t.start_from(
+    ...     start_vertices=iter(fdfs.start_vertices), build_paths=True,
+    ...     compute_depth=True,
+    ...     report=nog.DFSEvent.ENTERING_START | nog.DFSEvent.ENTERING_SUCCESSOR)
+    >>> results_with_visited(t, fdfs.start_vertices)
+    After start: {'depth': 0, 'visited': {}, 'paths': {}}
+    -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {0: (0,)}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {0: (0,)}}
+    -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {2: (0, 1, 2)}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {4: (0, 1, 2, 4)}}
+    ? 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {4: (0, 1, 2, 4)}}
+    -> 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {3: (0, 1, 2, 3)}}
+    ? 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {3: (0, 1, 2, 3)}}
+    -> 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3,
+      4, 5}, 'paths': {5: (5,)}}
+    ? 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3, 4,
+      5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (0, 1, 2, 3), 4: (0, 1,
+      2, 4), 5: (5,), 6: (5, 6)}}
+
+
+    a3) With depth and paths and reporting of entered start vertices, but only entering
+    of start vertices.
+    >>> t = t.start_from(start_vertices=iter(fdfs.start_vertices), build_paths=True,
+    ...                  compute_depth=True, report=nog.DFSEvent.ENTERING_START)
+    >>> results_with_visited(t, fdfs.start_vertices)
+    After start: {'depth': 0, 'visited': {}, 'paths': {}}
+    -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {0: (0,)}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {0: (0,)}}
+    ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {1: (0, 1)}}
+    ? 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {2: (0, 1, 2)}}
+    ? 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {4: (0, 1, 2, 4)}}
+    ? 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {3: (0, 1, 2, 3)}}
+    -> 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3,
+      4, 5}, 'paths': {5: (5,)}}
+    ? 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3, 4,
+      5}, 'paths': {5: (5,)}}
+    ? 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (0, 1, 2, 3), 4: (0, 1,
+      2, 4), 5: (5,), 6: (5, 6)}}
+
+    b) With trace
+    No start vertices or for_vertices_in with empty vertices
+    >>> list(t.start_from(start_vertices=()))
+    []
+    >>> list(t.start_from(start_vertices=fdfs.start_vertices).go_for_vertices_in([]))
+    []
+
+    b1) Without times, paths, and reporting.
+    >>> _ = t.start_from(start_vertices=iter(fdfs.start_vertices), compute_trace=True,
+    ...                  report=nog.DFSEvent.NONE)
+    >>> results_with_visited(t, fdfs.start_vertices)
+    After start: {'depth': -1, 'visited': {}, 'paths': {}}
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+      {0}, 'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'visited': {0, 1}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2],
+      'visited': {0, 1, 2}, 'paths': {}}
+    ? 4: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      4], 'visited': {0, 1, 2, 4}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      3], 'visited': {0, 1, 2, 3, 4}, 'paths': {}}
+    ? 5: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [5], 'visited':
+      {0, 1, 2, 3, 4, 5}, 'paths': {}}
+    ? 6: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [5, 6],
+      'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {}}
+
+    b2) With times, paths. depth, and reporting everything
+    >>> t = t.start_from(start_vertices=iter(fdfs.start_vertices),
+    ...                  report=nog.DFSEvent.ALL, build_paths=True, compute_depth=True)
+    >>> results_with_visited(t, [])
+    After start: {'depth': 0, 'visited': {}, 'paths': {}}
+    -> 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0}, 'paths': {0: (0,)}}
+    -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1}, 'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2],
+      'on_trace': {0, 1, 2}, 'index': {2: 3}, 'visited': {0, 1, 2}, 'paths': {2: (0,
+      1, 2)}}
+    ? 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2],
+      'on_trace': {0, 1, 2}, 'index': {2: 3}, 'visited': {0, 1, 2}, 'paths': {2: (0,
+      1, 2)}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      4], 'on_trace': {0, 1, 2, 4}, 'index': {4: 4}, 'visited': {0, 1, 2, 4},
+      'paths': {4: (0, 1, 2, 4)}}
+    ? 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2, 4],
+      'on_trace': {0, 1, 2, 4}, 'index': {4: 4}, 'visited': {0, 1, 2, 4}, 'paths':
+      {4: (0, 1, 2, 4)}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1, 2, 4],
+      'on_trace': {0, 1, 2, 4}, 'index': {4: 4}, 'visited': {0, 1, 2, 4}, 'paths':
+      {4: (0, 1, 2, 4)}}
+    -> 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      3], 'on_trace': {0, 1, 2, 3}, 'index': {3: 5}, 'visited': {0, 1, 2, 3, 4},
+      'paths': {3: (0, 1, 2, 3)}}
+    ? 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2, 3],
+      'on_trace': {0, 1, 2, 3}, 'index': {3: 5}, 'visited': {0, 1, 2, 3, 4},
+      'paths': {3: (0, 1, 2, 3)}}
+    -> 1: {'depth': 3, 'event': 'DFSEvent.BACK_EDGE', 'trace': [0, 1, 2, 3, 1],
+      'on_trace': {0, 1, 2, 3}, 'index': {1: 2}, 'visited': {0, 1, 2, 3, 4},
+      'paths': {1: (0, 1)}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [0, 1, 2, 3, 4],
+      'on_trace': {0, 1, 2, 3}, 'index': {4: 4}, 'visited': {0, 1, 2, 3, 4},
+      'paths': {4: (0, 1, 2, 4)}}
+    -> 3: {'depth': 3, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1, 2, 3],
+      'on_trace': {0, 1, 2, 3}, 'index': {3: 5}, 'visited': {0, 1, 2, 3, 4},
+      'paths': {3: (0, 1, 2, 3)}}
+    -> 2: {'depth': 2, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1, 2],
+      'on_trace': {0, 1, 2}, 'index': {2: 3}, 'visited': {0, 1, 2, 3, 4}, 'paths':
+      {2: (0, 1, 2)}}
+    -> 3: {'depth': 1, 'event': 'DFSEvent.FORWARD_EDGE', 'trace': [0, 1, 3],
+      'on_trace': {0, 1}, 'index': {3: 5}, 'visited': {0, 1, 2, 3, 4}, 'paths': {3:
+      (0, 1, 2, 3)}}
+    -> 1: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [0, 1],
+      'on_trace': {0, 1}, 'index': {1: 2}, 'visited': {0, 1, 2, 3, 4}, 'paths': {1:
+      (0, 1)}}
+    -> 0: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [0], 'on_trace':
+      {0}, 'index': {0: 1}, 'visited': {0, 1, 2, 3, 4}, 'paths': {0: (0,)}}
+    -> 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [5], 'on_trace':
+      {5}, 'index': {5: 6}, 'visited': {0, 1, 2, 3, 4, 5}, 'paths': {5: (5,)}}
+    ? 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [5], 'on_trace':
+      {5}, 'index': {5: 6}, 'visited': {0, 1, 2, 3, 4, 5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [5, 6],
+      'on_trace': {5, 6}, 'index': {6: 7}, 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [5, 6],
+      'on_trace': {5, 6}, 'index': {6: 7}, 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {6: (5, 6)}}
+    -> 3: {'depth': 1, 'event': 'DFSEvent.CROSS_EDGE', 'trace': [5, 6, 3],
+      'on_trace': {5, 6}, 'index': {3: 5}, 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {3: (0, 1, 2, 3)}}
+    -> 6: {'depth': 1, 'event': 'DFSEvent.LEAVING_SUCCESSOR', 'trace': [5, 6],
+      'on_trace': {5, 6}, 'index': {6: 7}, 'visited': {0, 1, 2, 3, 4, 5, 6},
+      'paths': {6: (5, 6)}}
+    -> 5: {'depth': 0, 'event': 'DFSEvent.LEAVING_START', 'trace': [5], 'on_trace':
+      {5}, 'index': {5: 6}, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {5: (5,)}}
+    -> 6: {'depth': -1, 'event': 'DFSEvent.SKIPPING_START', 'trace': [6], 'index':
+      {6: 7}, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.SKIPPING_START', 'index': {0: 1, 1: 2, 2: 3, 3:
+      5, 4: 4, 5: 6, 6: 7}, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {0: (0,), 1:
+      (0, 1), 2: (0, 1, 2), 3: (0, 1, 2, 3), 4: (0, 1, 2, 4), 5: (5,), 6: (5, 6)}}
 
     For TraversalNeighborsThenDepth, we need to specify compute_depth to get depth.
     And we need to check the extra execution path for the case without depth and paths.
     >>> t = nog.TraversalNeighborsThenDepth(f.next_vertices).start_from(
-    ...      start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
+    ...     start_vertices=iter(f.start_vertices), build_paths=True,
+    ...     compute_depth=True)
     >>> results_with_visited(t, f.start_vertices)
     After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
     ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
@@ -2257,11 +3155,12 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
     -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {0: (0,), 1: (0, 1), 2:
+      (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3, 4), 5: (5,), 6: (5, 6)}}
     >>> _ = t.start_from(start_vertices=f.start_vertices)
     >>> results_with_visited(t, f.start_vertices)
-    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {}}
+    After start: {'depth': -1, 'visited': {0, 5}, 'paths': {}}
     ? 5: {'depth': -1, 'visited': {0, 5}, 'paths': {}}
     -> 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
     ? 6: {'depth': -1, 'visited': {0, 5, 6}, 'paths': {}}
@@ -2274,7 +3173,8 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ? 1: {'depth': -1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {}}
     -> 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
     ? 2: {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': -1, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {}}
     >>> list(t.start_from(start_vertices=(), build_paths=True))
     []
     >>> list(t.start_from(start_vertices=f.start_vertices, build_paths=True
@@ -2282,7 +3182,7 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     []
 
     >>> t = nog.TraversalTopologicalSort(f.next_vertices).start_from(
-    ...      start_vertices=f.start_vertices, build_paths=True)
+    ...      start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_with_visited(t, f.start_vertices)
     After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths':
       {0: (0,), 5: (5,)}}
@@ -2313,8 +3213,10 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
       'paths': {1: (0, 1)}}
     -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
       'paths': {0: (0,)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths':
+      {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3, 4), 5: (5,), 6:
+      (5, 6)}}
     >>> list(t.start_from(start_vertices=(), build_paths=True))
     []
     >>> list(t.start_from(start_vertices=f.start_vertices, build_paths=True
@@ -2330,7 +3232,8 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> print(l, f.goal not in p)
     3 True
     >>> l, p = nog.BSearchBreadthFirst(fb.next_vertices_bi
-    ...     ).start_from(start_and_goal_vertices=fb.start_vertices_bi, build_path=True)
+    ...     ).start_from(start_and_goal_vertices=[
+    ...                      iter(s) for s in fb.start_vertices_bi], build_path=True)
     ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
     ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
     ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
@@ -2383,29 +3286,88 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     -> 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
     ? 3: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {3: (5, 6, 3)}}
     ? 4: {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {4: (0, 1, 2, 4)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {0: (0,), 1: (0, 1), 2:
+      (0, 1, 2), 3: (5, 6, 3), 4: (0, 1, 2, 4), 5: (5,), 6: (5, 6)}}
 
-    >>> traversal = nog.TraversalDepthFirst(
-    ...     next_edges=f.next_edges
-    ... ).start_from(
-    ...     start_vertices=f.start_vertices, build_paths=True, compute_depth=True)
-    >>> results_with_visited(traversal, f.start_vertices)
-    After start: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,), 5: (5,)}}
-    ? 5: {'depth': 0, 'visited': {0, 5}, 'paths': {5: (5,)}}
-    -> 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
-    ? 6: {'depth': 1, 'visited': {0, 5, 6}, 'paths': {6: (5, 6)}}
-    -> 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
-    ? 3: {'depth': 2, 'visited': {0, 3, 5, 6}, 'paths': {3: (5, 6, 3)}}
-    -> 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
-    ? 4: {'depth': 3, 'visited': {0, 3, 4, 5, 6}, 'paths': {4: (5, 6, 3, 4)}}
-    ? 0: {'depth': 0, 'visited': {0, 3, 4, 5, 6}, 'paths': {0: (0,)}}
-    -> 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
-    ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
-    -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    >>> traversal = nog.TraversalDepthFirst(next_edges=fdfs.next_edges)
+    >>> _ = traversal.start_from(
+    ...     start_vertices=iter(fdfs.start_vertices), build_paths=True,
+    ...     compute_depth=True)
+    >>> results_with_visited(traversal, fdfs.start_vertices)
+    After start: {'depth': 0, 'visited': {}, 'paths': {}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0}, 'paths':
+      {0: (0,)}}
+    -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {1: (0, 1)}}
+    ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1},
+      'paths': {1: (0, 1)}}
+    -> 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {2: (0, 1, 2)}}
+    ? 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2},
+      'paths': {2: (0, 1, 2)}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {4: (0, 1, 2, 4)}}
+    ? 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      4}, 'paths': {4: (0, 1, 2, 4)}}
+    -> 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {3: (0, 1, 2, 3)}}
+    ? 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4}, 'paths': {3: (0, 1, 2, 3)}}
+    ? 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'visited': {0, 1, 2, 3, 4,
+      5}, 'paths': {5: (5,)}}
+    -> 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    ? 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2,
+      3, 4, 5, 6}, 'paths': {6: (5, 6)}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (0, 1, 2, 3), 4: (0, 1,
+      2, 4), 5: (5,), 6: (5, 6)}}
+
+    >>> traversal = nog.TraversalDepthFirst(next_labeled_edges=fdfs.next_edges)
+    >>> _ = traversal.start_from(
+    ...         start_vertices=iter(f.start_vertices), build_paths=True,
+    ...         compute_trace=True, compute_depth=True)
+    >>> results_with_visited(traversal, fdfs.start_vertices)
+    After start: {'depth': 0, 'visited': {}, 'paths': {}}
+    ? 0: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'visited':
+      {0}, 'paths': {0: ()}}
+    -> 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'trace_labels': [1], 'visited': {0, 1}, 'paths': {1: ((0, 1, 1),)}}
+    ? 1: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'trace_labels': [1], 'visited': {0, 1}, 'paths': {1: ((0, 1, 1),)}}
+    -> 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2],
+      'trace_labels': [1, 3], 'visited': {0, 1, 2}, 'paths': {2: ((0, 1, 1), (1, 2,
+      3))}}
+    ? 2: {'depth': 2, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2],
+      'trace_labels': [1, 3], 'visited': {0, 1, 2}, 'paths': {2: ((0, 1, 1), (1, 2,
+      3))}}
+    -> 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      4], 'trace_labels': [1, 3, 7], 'visited': {0, 1, 2, 4}, 'paths': {4: ((0, 1,
+      1), (1, 2, 3), (2, 4, 7))}}
+    ? 4: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2, 4],
+      'trace_labels': [1, 3, 7], 'visited': {0, 1, 2, 4}, 'paths': {4: ((0, 1, 1),
+      (1, 2, 3), (2, 4, 7))}}
+    -> 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2,
+      3], 'trace_labels': [1, 3, 6], 'visited': {0, 1, 2, 3, 4}, 'paths': {3: ((0,
+      1, 1), (1, 2, 3), (2, 3, 6))}}
+    ? 3: {'depth': 3, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 2, 3],
+      'trace_labels': [1, 3, 6], 'visited': {0, 1, 2, 3, 4}, 'paths': {3: ((0, 1,
+      1), (1, 2, 3), (2, 3, 6))}}
+    ? 5: {'depth': 0, 'event': 'DFSEvent.ENTERING_START', 'trace': [5], 'visited':
+      {0, 1, 2, 3, 4, 5}, 'paths': {5: ()}}
+    -> 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [5, 6],
+      'trace_labels': [4], 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {6: ((5, 6,
+      4),)}}
+    ? 6: {'depth': 1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [5, 6],
+      'trace_labels': [4], 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {6: ((5, 6,
+      4),)}}
+    Final state for the visited vertices:
+    {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'visited': {0, 1, 2, 3, 4,
+      5, 6}, 'paths': {0: (), 1: ((0, 1, 1),), 2: ((0, 1, 1), (1, 2, 3)), 3: ((0, 1,
+      1), (1, 2, 3), (2, 3, 6)), 4: ((0, 1, 1), (1, 2, 3), (2, 4, 7)), 5: (), 6:
+      ((5, 6, 4),)}}
 
     >>> traversal = nog.TraversalNeighborsThenDepth(
     ...     next_edges=f.next_edges
@@ -2425,12 +3387,13 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     ? 1: {'depth': 1, 'visited': {0, 1, 3, 4, 5, 6}, 'paths': {1: (0, 1)}}
     -> 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
     ? 2: {'depth': 2, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {2: (0, 1, 2)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 3, 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths': {0: (0,), 1: (0, 1), 2:
+      (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3, 4), 5: (5,), 6: (5, 6)}}
 
     >>> traversal = nog.TraversalTopologicalSort(
     ...     next_edges=f.next_edges
-    ... ).start_from(start_vertices=f.start_vertices, build_paths=True)
+    ... ).start_from(start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_with_visited(traversal, f.start_vertices)
     After start: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 5}, 'paths':
       {0: (0,), 5: (5,)}}
@@ -2461,8 +3424,10 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
       'paths': {1: (0, 1)}}
     -> 0: {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6},
       'paths': {0: (0,)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All visited: [0, 1, 2, 3, 4, 5, 6]
+    Final state for the visited vertices:
+    {'depth': 0, 'cycle_from_start': [], 'visited': {0, 1, 2, 3, 4, 5, 6}, 'paths':
+      {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3, 4), 5: (5,), 6:
+      (5, 6)}}
 
     >>> search =  nog.BSearchBreadthFirst(next_edges=fb.next_edges_bi)
     >>> l, p = search.start_from(start_and_goal_vertices=((), fb.goal_vertices))
@@ -2525,7 +3490,7 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> traversal = nog.TraversalShortestPaths(
     ...     next_edges=f.next_edges)
     >>> traversal = traversal.start_from(
-    ...     start_vertices=f.start_vertices, build_paths=True)
+    ...     start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_with_distances(traversal, f.start_vertices)
     After start: {'distance': inf, 'depth': 0, 'distances': {0: 0, 5: 0}, 'paths':
       {0: (0,), 5: (5,)}}
@@ -2543,8 +3508,10 @@ class MultipleStartVerticesTraversalsWithWeights:
       4)}}
     ? 4: {'distance': 3, 'depth': 3, 'distances': {4: 0}, 'paths': {4: (5, 6, 3,
       4)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All distances: {0: 0, 5: 0, 6: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+    Final state for the reported and the start vertices:
+    {'distance': 3, 'depth': 3, 'distances': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6:
+      0}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3, 4),
+      5: (5,), 6: (5, 6)}}
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
     >>> list(traversal)
     []
@@ -2552,7 +3519,7 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> traversal = nog.TraversalShortestPathsInfBranchingSorted(
     ...     next_edges=f.next_edges)
     >>> traversal = traversal.start_from(
-    ...     start_vertices=f.start_vertices, build_paths=True)
+    ...     start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_with_distances(traversal, f.start_vertices)
     After start: {'distance': inf, 'distances': {0: inf, 5: inf}, 'paths': {0: (0,),
       5: (5,)}}
@@ -2568,8 +3535,10 @@ class MultipleStartVerticesTraversalsWithWeights:
     ? 2: {'distance': 2, 'distances': {2: inf}, 'paths': {2: (0, 1, 2)}}
     -> 4: {'distance': 3, 'distances': {4: inf}, 'paths': {4: (5, 6, 3, 4)}}
     ? 4: {'distance': 3, 'distances': {4: inf}, 'paths': {4: (5, 6, 3, 4)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (5, 6, 3, 4), (5,), (5, 6)]
-    All distances: {0: inf, 5: inf, 1: inf, 6: inf, 3: inf, 2: inf, 4: inf}
+    Final state for the reported and the start vertices:
+    {'distance': 3, 'distances': {0: inf, 1: inf, 2: inf, 3: inf, 4: inf, 5: inf, 6:
+      inf}, 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (5, 6, 3), 4: (5, 6, 3,
+      4), 5: (5,), 6: (5, 6)}}
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
     >>> list(traversal)
     []
@@ -2577,7 +3546,7 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> traversal = nog.TraversalMinimumSpanningTree(
     ...     next_edges=f.next_edges)
     >>> traversal = traversal.start_from(
-    ...     start_vertices=f.start_vertices, build_paths=True)
+    ...     start_vertices=iter(f.start_vertices), build_paths=True)
     >>> results_standard(traversal, f.start_vertices)
     After start: {'edge': None, 'paths': {0: (0,), 5: (5,)}}
     ? 0: {'edge': None, 'paths': {0: (0,)}}
@@ -2592,7 +3561,9 @@ class MultipleStartVerticesTraversalsWithWeights:
     ? 3: {'edge': (6, 3, 1), 'paths': {3: (5, 6, 3)}}
     -> 4: {'edge': (2, 4, 1), 'paths': {4: (0, 1, 2, 4)}}
     ? 4: {'edge': (2, 4, 1), 'paths': {4: (0, 1, 2, 4)}}
-    All paths: [(0,), (0, 1), (0, 1, 2), (5, 6, 3), (0, 1, 2, 4), (5,), (5, 6)]
+    Final state for the reported and the start vertices:
+    {'edge': (2, 4, 1), 'paths': {0: (0,), 1: (0, 1), 2: (0, 1, 2), 3: (5, 6, 3), 4:
+      (0, 1, 2, 4), 5: (5,), 6: (5, 6)}}
     >>> traversal = traversal.start_from(start_vertices=(), build_paths=True)
     >>> list(traversal)
     []
@@ -2601,7 +3572,7 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> fa = FMultiStartAStar()
     >>> traversal = nog.TraversalAStar(next_edges=fa.next_edges)
     >>> traversal = traversal.start_from(
-    ...     fa.heuristic, start_vertices=fa.start_vertices, build_paths=True)
+    ...     fa.heuristic, start_vertices=iter(fa.start_vertices), build_paths=True)
     >>> results_standard(traversal, fa.start_vertices)
     After start: {'path_length': inf, 'depth': 0, 'distances': {0: 0, 1: 0},
       'paths': {0: (0,), 1: (1,)}}
@@ -2617,7 +3588,10 @@ class MultipleStartVerticesTraversalsWithWeights:
     ? 2: {'path_length': 1, 'depth': 1, 'distances': {2: 1}, 'paths': {2: (0, 2)}}
     -> 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (1, 4)}}
     ? 4: {'path_length': 1, 'depth': 1, 'distances': {4: 1}, 'paths': {4: (1, 4)}}
-    All paths: [(0,), (1,), (0, 2), (1, 3), (1, 4), (1, 3, 5)]
+    Final state for the reported and the start vertices:
+    {'path_length': 1, 'depth': 1, 'distances': {0: 0, 1: 0, 2: 1, 3: 1, 4: 1, 5:
+      2}, 'paths': {0: (0,), 1: (1,), 2: (0, 2), 3: (1, 3), 4: (1, 4), 5: (1, 3,
+      5)}}
     >>> traversal = traversal.start_from(
     ...     fa.heuristic, start_vertices=(), build_paths=True)
     >>> list(traversal)
@@ -2650,7 +3624,8 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> print(l, fb.goal not in p)
     4 True
     >>> l, p = search.start_from(
-    ...     start_and_goal_vertices = fb.start_vertices_bi, build_path=True)
+    ...     start_and_goal_vertices = [iter(s) for s in fb.start_vertices_bi],
+    ...     build_path=True)
     ? 5: {}
     ?<4: {}
     ? 0: {}
@@ -2676,6 +3651,157 @@ class MultipleStartVerticesTraversalsWithWeights:
     ? 1: {}
     >>> print(l, list(p))
     4 [4, 3, 6, 5]
+    """
+
+
+class IllegalParameters:
+    """Check if the library detects illegal parameter combinations.
+
+    >>> f = FNoEdgesGoalIsStart()
+
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.SOME_NON_TREE_EDGE | nog.DFSEvent.FORWARD_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Reporting of non-tree edges as a group and as individual edge
+    type cannot be combined.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.SOME_NON_TREE_EDGE | nog.DFSEvent.BACK_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Reporting of non-tree edges as a group and as individual edge
+    type cannot be combined.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.SOME_NON_TREE_EDGE | nog.DFSEvent.CROSS_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Reporting of non-tree edges as a group and as individual edge
+    type cannot be combined.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_OR_CROSS_EDGE | nog.DFSEvent.FORWARD_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Reporting of forward or cross edges as a group and as individual edge
+    type cannot be combined.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_OR_CROSS_EDGE | nog.DFSEvent.CROSS_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Reporting of forward or cross edges as a group and as individual edge
+    type cannot be combined.
+
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     report=nog.DFSEvent.BACK_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.BACK_EDGE, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_EDGE, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     report=nog.DFSEvent.CROSS_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.CROSS_EDGE, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     report=nog.DFSEvent.SOME_NON_TREE_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.SOME_NON_TREE_EDGE, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_OR_CROSS_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     report=nog.DFSEvent.FORWARD_OR_CROSS_EDGE, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events BACK_EDGE, FORWARD_EDGE, and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for trees and for traversals in mode *ALL_WALKS*.
+
+    >>> nog.TraversalDepthFirst(f.next_vertices, is_tree=True).start_from(f.start,
+    ...     compute_on_trace=True
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Computation of the on-trace is not allowed for trees and for
+    traversals in mode *ALL_WALKS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     compute_on_trace=True, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Computation of the on-trace is not allowed for trees and for
+    traversals in mode *ALL_WALKS*.
+
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     mode=nog.DFSMode.ALL_PATHS, report=nog.DFSEvent.FORWARD_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events FORWARD_EDGE and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for traversals in mode *ALL_PATHS*.
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     mode=nog.DFSMode.ALL_PATHS, report=nog.DFSEvent.CROSS_EDGE
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: The events FORWARD_EDGE and CROSS_EDGE,
+    and groups containing them,
+    cannot be computed for traversals in mode *ALL_PATHS*.
+
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     build_paths=True, mode=nog.DFSMode.ALL_WALKS
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Paths cannot be computed in mode *ALL_WALKS*, because
+    walks can be cyclic.
+
+    >>> nog.TraversalDepthFirst(f.next_vertices).start_from(f.start,
+    ...     compute_index=True, already_visited=set()
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+    RuntimeError: Parameter *already_visited* not allowed when vertex indexes
+    are demanded.
     """
 
 
@@ -3002,17 +4128,18 @@ class GearTestsTraversalsWithOrWithoutLabels:
     additionally.
 
     >>> f = FOvertaking()
+    >>> f2 = FOvertakingDFSWithBackEdges()
     >>> test_gears = [nog.GearForHashableVertexIDsAndIntsMaybeFloats(),
     ...               nog.GearForIntVertexIDsAndCFloats(),
     ...               nog.GearForIntVerticesAndIDsAndCFloats(),
     ...               nog.GearForIntVerticesAndIDsAndCFloats(no_bit_packing=True),
     ...              ]
-    >>> def gear_test_traversals(traversal_class, next_labeled_edges, *args, **nargs):
+    >>> def gear_test_traversals(traversal_class, next_labeled_edges, *args, **kwargs):
     ...     for gear in test_gears:
     ...         yield traversal_class(
     ...             nog.vertex_as_id, gear,
     ...             next_labeled_edges=next_labeled_edges,
-    ...             *args, **nargs)
+    ...             *args, **kwargs)
 
     >>> for t in gear_test_traversals(nog.TraversalBreadthFirstFlex, f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
@@ -3038,13 +4165,74 @@ class GearTestsTraversalsWithOrWithoutLabels:
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
 
-    For DFS, we also test without paths, because this changes the process
+    For DFS without trace and events, we also test without paths, because this
+    changes the process
     >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=False))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+
+    For DFS, we also test with computation or vertex indexes and on_trace,
+    because both cases change the execution process. We do not change the
+    default setting for events in order to get the same vertex reports as for
+    the run above.
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
+    ...    print_partial_results(t.start_from(
+    ...        f.start, build_paths=True, compute_on_trace=True),
+    ...        paths_to=f.goal)
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
+    ...    print_partial_results(t.start_from(
+    ...        f.start, build_paths=True, compute_index=True),
+    ...        paths_to=f.goal)
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+
+    Now, we also report NON_TREE_EDGESs, since this enables and uses the
+    functionality of options index and on_trace
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
+    ...    print_partial_results(t.start_from(
+    ...        f.start, build_paths=True,
+    ...        report=nog.DFSEvent.ENTERING_SUCCESSOR | nog.DFSEvent.NON_TREE_EDGES),
+    ...        paths_to=f.goal)
+    [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f2.next_edges):
+    ...    print_partial_results(t.start_from(
+    ...        f2.start, build_paths=True,
+    ...        report=nog.DFSEvent.ENTERING_SUCCESSOR | nog.DFSEvent.BACK_EDGE),
+    ...        paths_to=f2.goal)
+    [3, 4, 7, 8, 11] [2, 5, 3, 3, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [2, 5, 3, 3, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [2, 5, 3, 3, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [3, 4, 7, 8, 11] [2, 5, 3, 3, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+
 
     >>> for t in gear_test_traversals(nog.TraversalNeighborsThenDepthFlex,
     ...                               f.next_edges):
@@ -3159,6 +4347,71 @@ class GearTestsTraversalsWithOrWithoutLabels:
     Traceback (most recent call last):
     OverflowError: Distance 255 is equal or larger than the infinity value 255 used by
     the chosen gear and its configuration
+
+
+    Tests for BFS with mode ALL_PATHS.
+    We test the traversal behaviour with different gears.
+    >>> f_diamond = FDiamondDFS()
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex,
+    ...                               f_diamond.next_edges):
+    ...    print_partial_results(t.start_from(
+    ...        f_diamond.start, mode=nog.DFSMode.ALL_PATHS))
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+      {0}, 'visited': {}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+      'trace_labels': [2], 'on_trace': {0, 2}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+      'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'visited': {}, 'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'trace_labels': [1], 'on_trace': {0, 1}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 3],
+      'trace_labels': [1, 3], 'on_trace': {0, 1, 3}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 3],
+      'trace_labels': [5], 'on_trace': {0, 3}, 'visited': {}, 'paths': {}}
+    [2, 3, 1, 3, 3] [2, 3, 1, 3, 3]
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': [0], 'on_trace':
+      {0}, 'visited': {}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2],
+      'trace_labels': [2], 'on_trace': {0, 2}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 2, 3],
+      'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'visited': {}, 'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1],
+      'trace_labels': [1], 'on_trace': {0, 1}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 1, 3],
+      'trace_labels': [1, 3], 'on_trace': {0, 1, 3}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': [0, 3],
+      'trace_labels': [5], 'on_trace': {0, 3}, 'visited': {}, 'paths': {}}
+    [2, 3, 1, 3, 3] [2, 3, 1, 3, 3]
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': array('L', [0]),
+      'on_trace': {0}, 'visited': {}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 2]), 'trace_labels': [2], 'on_trace': {0, 2}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 2, 3]), 'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'visited': {},
+      'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 1]), 'trace_labels': [1], 'on_trace': {0, 1}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 1, 3]), 'trace_labels': [1, 3], 'on_trace': {0, 1, 3}, 'visited': {},
+      'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 3]), 'trace_labels': [5], 'on_trace': {0, 3}, 'visited': {}, 'paths': {}}
+    [2, 3, 1, 3, 3] [2, 3, 1, 3, 3]
+    ? 0: {'depth': -1, 'event': 'DFSEvent.ENTERING_START', 'trace': array('L', [0]),
+      'on_trace': {0}, 'visited': {}, 'paths': {}}
+    ? 2: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 2]), 'trace_labels': [2], 'on_trace': {0, 2}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 2, 3]), 'trace_labels': [2, 4], 'on_trace': {0, 2, 3}, 'visited': {},
+      'paths': {}}
+    ? 1: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 1]), 'trace_labels': [1], 'on_trace': {0, 1}, 'visited': {}, 'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 1, 3]), 'trace_labels': [1, 3], 'on_trace': {0, 1, 3}, 'visited': {},
+      'paths': {}}
+    ? 3: {'depth': -1, 'event': 'DFSEvent.ENTERING_SUCCESSOR', 'trace': array('L',
+      [0, 3]), 'trace_labels': [5], 'on_trace': {0, 3}, 'visited': {}, 'paths': {}}
+    [2, 3, 1, 3, 3] [2, 3, 1, 3, 3]
 
 
     Tests for BSearchBreadthFirst and BSearchShortestPaths:
@@ -3330,6 +4583,17 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...                               is_tree=True):
     ...     print_partial_results(
     ...         t.start_from(f.start, build_paths=False))
+    [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
+    [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
+    [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
+    [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
+
+    For DFS, we also test with traces, because this changes the process
+    >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex,
+    ...                               f.next_edges,
+    ...                               is_tree=True):
+    ...     print_partial_results(
+    ...         t.start_from(f.start, build_paths=True, compute_trace=True))
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]
     [3, 7, 15, 31, 63] [4097, 8195, 8194, 4096, 8193, 8192]

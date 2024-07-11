@@ -34,9 +34,16 @@ When we use NoGraphs in the above computation part 2, we can try to
 - In part 3, we might **fetch results from part 2** only when, and
   **as far as, they are needed** to construct the final results.
 
-This can help to reduce the needed runtime and memory. And it can be used to create
-a kind of graph analysis that is even more "lazy" than that of NoGraphs alone.
+This can help to keep runtime and memory low. And it can be used to create
+a kind of graph analysis that is
+`even more "lazy" than that of NoGraphs alone <infinite_branching>`.
 Both is demonstrated in the following sections.
+
+.. note::
+
+    In these sections, no new functionality of NoGraphs is shown,
+    but only examples of how they can be used.
+    Thus, you can safely skip one or several of them if you like.
 
 
 .. _traveling_salesman_example:
@@ -199,9 +206,7 @@ explicit graphs as used by typical graph libraries cannot provide them.
 
 **The TSP-solving function in the extras section of NoGraphs**
 
-.. versionchanged:: 3.3
-
-   traveling_salesman added.
+.. versionadded:: 3.3
 
 NoGraphs contains a function *traveling_salesman(vertices, weights)*,
 a more general version of the above algorithm
@@ -227,8 +232,8 @@ In the following, we apply it to the `above problem <traveling_salesman_example>
 
 .. code-block:: python
 
-   >>> length, path_iterator = nog.traveling_salesman(range(len(graph)), graph)
-   >>> print(length, list(path_iterator))
+   >>> length, path_iterator = nog.traveling_salesman(range(len(graph)), graph)  #doctest:+SLOW_TEST
+   >>> print(length, list(path_iterator))  #doctest:+SLOW_TEST
    39 [0, 5, 6, 14, 15, 3, 4, 16, 8, 7, 12, 10, 9, 1, 13, 2, 11, 0]
 
 Of cause, it computes the same optimal TSP path length. But it returns another path of
@@ -250,7 +255,7 @@ Example: Shortest paths in infinitely branching graphs with sorted edges
 
 **The Problem**
 
-We have the following graph, defined on the positive integers as
+We have a  graph, defined on the positive integers as
 vertices. We like to start at vertex 1, iterate the shortest
 paths from there in ascending order, and report vertices with a distance that equals
 the vertex itself. We will explain the purpose later on.
@@ -271,8 +276,10 @@ For vertices larger than 1, the graph has
 This is called an *infinitely branching graph*.
 NoGraphs itself cannot analyze such graphs.
 
-But still, we can analyze the graph using NoGraphs - in combination with problem
-reduction:
+**The algorithm**
+
+Although NoGraphs cannot analyze such graphs, we can still analyze the graph
+using NoGraphs - in combination with problem reduction:
 
 We search in a search graph, not directly in the given graph. The idea of the
 search graph is, that **instead of having infinitely many edges** starting
@@ -349,6 +356,8 @@ The details of the code are not needed.
    ...     return ((v, traversal.distance) for v, edge_no in traversal if edge_no == 0)
 
 
+**Applying the algorithm**
+
 Based on this implementation of the problem reduction, we can now solve our given problem:
 
 .. code-block:: python
@@ -411,13 +420,12 @@ Please see there, if you like to know how it works.
       computation steps to produce the next shortest path (resp. its end vertex
       and distance from the start).
 
+
 .. _infinite_branching_in_nographs:
 
 **Functionality for infinitely branching graphs in the extras section of NoGraphs**
 
-.. versionchanged:: 3.3
-
-   TraversalShortestPathsInfBranchingSorted added.
+.. versionadded:: 3.3
 
 NoGraphs contains a class *TraversalShortestPathsInfBranchingSorted*,
 a more general version of the above algorithm
@@ -473,3 +481,480 @@ No, we also ask for paths, and report the predecessor of each non-prime number a
    16 4
    18 3
    20 4
+
+
+.. _longest_path_two_vertices:
+
+Example: Longest simple path between two vertices - based on DFS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.4
+
+Our goal is to compute the longest (simple) path from a given vertex *v* to another
+given vertex *w*.
+
+**Problem 1: Search for longest path w.r.t. the sum of edge weights**
+
+First, we use a weighted graph, and we define the length of a path by the
+sum of the weights of its edges.
+
+We re-use the graph and the function *neighbors_in_grid* from example
+`shortest paths in a maze with weights <example-shortest-paths-in-maze>`.
+This time, our edge weights are the energy needed for walking
+uphill (here: just the height difference) or
+downhill (here: half the height difference).
+
+..
+   >>> def neighbors_in_grid(position):
+   ...     pos_x, pos_y = position
+   ...     for move_x, move_y in (-1, 0), (1, 0), (0, -1), (0, 1):
+   ...         new_x, new_y = pos_x + move_x, pos_y + move_y
+   ...         if new_x in range(5) and new_y in range(5):
+   ...             yield new_x, new_y
+
+.. code-block:: python
+
+   >>> data = '''
+   ... 02819
+   ... 37211
+   ... 21290
+   ... 91888
+   ... 55990
+   ... '''.strip().splitlines()
+   >>> def next_edges(position, _):
+   ...     x, y = position
+   ...     position_height = int(data[y][x])
+   ...     for x, y in neighbors_in_grid(position):
+   ...         successor_height = int(data[y][x])
+   ...         slope = successor_height - position_height
+   ...         energy = slope if slope >= 0 else -slope/2
+   ...         yield (x, y), energy
+
+
+**The algorithm**
+
+We traverse all possible paths from the start vertex using
+*depth first search*. We maintain the length of the path: When we enter
+a vertex, we add the length of the edge we used to the length of the path,
+and when we leave a vertex, we subtract the length of the edge that we use
+for backtracking.
+When we reach the destination node, we prevent the path from being extended
+any further. And we maintain the longest path found so far, and its length.
+
+.. code-block:: python
+
+    >>> def longest_weighted_path(next_edges, start_vertex, goal_vertex):
+    ...     traversal = nog.TraversalDepthFirst(next_labeled_edges=next_edges)
+    ...     _ = traversal.start_from(
+    ...         start_vertex=start_vertex, mode=nog.DFSMode.ALL_PATHS,
+    ...         compute_trace=True, report=nog.DFSEvent.IN_OUT_SUCCESSOR,
+    ...     )
+    ...     # Load loop-invariant objects
+    ...     trace = traversal.trace
+    ...     trace_labels = traversal.trace_labels
+    ...     generator = traversal.__iter__()
+    ...     dfs_event_entering_successor = nog.DFSEvent.ENTERING_SUCCESSOR
+    ...     stop_iteration = StopIteration()
+    ...     # Bookkeeping
+    ...     trace_length = 0
+    ...     longest, length_of_longest = (), -1
+    ...     # Traversal of all possible paths from the start vertex,
+    ...     # pruned when we reach the goal vertex
+    ...     for v in generator:
+    ...         if traversal.event == dfs_event_entering_successor:
+    ...             trace_length += trace_labels[-1]
+    ...             if v == goal_vertex:
+    ...                 generator.throw(stop_iteration)
+    ...                 if trace_length > length_of_longest:
+    ...                     length_of_longest = trace_length
+    ...                     longest = tuple(trace)
+    ...         else:  # nog.DFSEvent.LEAVING_SUCCESSOR
+    ...             trace_length -= trace_labels[-1]
+    ...     return length_of_longest, longest
+
+**Applying the algorithm**
+
+.. code-block:: python
+
+    >>> longest_weighted_path(next_edges, (0, 0), (4, 2))  # doctest: +NORMALIZE_WHITESPACE
+    (85.5,
+    ((0, 0), (0, 1), (0, 2), (1, 2), (1, 1), (1, 0), (2, 0), (3, 0), (4, 0),
+    (4, 1), (3, 1), (3, 2), (2, 2), (2, 3), (1, 3), (0, 3), (0, 4), (1, 4),
+    (2, 4), (3, 4), (4, 4), (4, 3), (4, 2)))
+
+**Problem 2: Search for longest path w.r.t. the number of edges**
+
+Next, we define the length of a path by the number of its edges.
+
+For this, we just assign weight *1* to each edge that we generate in our
+`NextEdges` function.
+
+**Applying the algorithm**
+
+.. code-block:: python
+
+   >>> def next_edges_weight_1(position, _):
+   ...     for x, y in neighbors_in_grid(position):
+   ...         yield (x, y), 1
+   >>> longest_weighted_path(next_edges_weight_1, (0, 0), (4, 2))  # doctest: +NORMALIZE_WHITESPACE
+    (24, ((0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 4), (1, 3), (1, 2),
+    (1, 1), (1, 0), (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (3, 4), (4, 4),
+    (4, 3), (3, 3), (3, 2), (3, 1), (3, 0), (4, 0), (4, 1), (4, 2)))
+
+
+.. _strongly_connected_components:
+
+Example: Strongly connected components - based on DFS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.4
+
+**The Problem**
+
+Our goal is to compute the
+`strongly connected components <https://en.wikipedia.org/wiki/Strongly_connected_component>`_
+of a graph.
+A *directed graphs is said to be strongly connected* if every vertex is reachable from
+every other vertex. The *strongly connected components of a directed graph* form a
+partition into subgraphs that are themselves strongly connected.
+
+Here is our graph:
+
+.. code-block:: python
+
+    >>> edges = {0: (1, 2), 1: (0, 3), 2: (0, 3), 3: (5,), 4: (2, 5, 7), 5: (3, 8),
+    ...          6: (4,), 7: (5, 6), 8: (), 9: (8,)}
+    >>> vertices = edges.keys()
+    >>> def next_vertices(v, _):
+    ...     return edges[v]
+
+
+**The algorithm**
+
+We want to **implement a non-recursive version of the**
+`algorithm of Tarjan
+<https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm>`_.
+
+We **use the non-recursive implementation of DFS in NoGraphs as basis** for this.
+We turn on exactly the functionalities of this implementation that we need.
+
+According to the algorithm, we need to do the following:
+
+- We number the vertices in the so-called pre-oder, i.e., vertices get their
+  number when they are visited.
+
+  NoGraphs can compute this pre-preorder index for us.
+  We turn on this feature of the DFS implementation: *compute_index=True*.
+
+- We maintain a stack and place nodes on the stack in the order in which they are
+  visited. And we maintain the so-called *low_link*, the smallest index of any node
+  on the stack known to be reachable from *v* through *v*'s DFS subtree, including *v*
+  itself. We implement both the stack and the *low_link*-mapping in a single *dict*.
+
+  When we backtrack from a vertex *v*, and its *low_link* equals its index, we
+  pop all vertices from the stack till we reach *v* and report these vertices
+  as component. *v* is the root of the component.
+
+  For these steps, we can also use NoGraphs:
+
+  - We need to know when one of the following events occurs during the
+    traversal: A vertex (a start vertex or a successor) is entered, an edge of the
+    DFS-tree is followed, a vertex is left (backtracking), or some non-tree edge
+    is seen.
+
+    We turn on the respective reporting:
+    *report=nog.DFSEvent.IN_OUT | nog.DFSEvent.SOME_NON_TREE_EDGE*.
+
+  - And we need access to the predecessor of a vertex when an edge is followed or
+    when the traversal backtracks.
+
+    For this, we switch on the computation of
+    the trace (current path from a start vertex to the current vertex):
+    *compute_trace=True*.
+
+Now, we can directly implement the steps that need to happen when the different
+events occur:
+
+.. code-block:: python
+
+    >>> def tarjan_strongly_connected_components(next_vertices, start_vertices):
+    ...     traversal = nog.TraversalDepthFirst(next_vertices)
+    ...     _ = traversal.start_from(
+    ...         start_vertices=start_vertices, compute_trace=True, compute_index=True,
+    ...         report=nog.DFSEvent.IN_OUT | nog.DFSEvent.SOME_NON_TREE_EDGE)
+    ...     trace, index = traversal.trace, traversal.index
+    ...
+    ...     # Stack of vertices, and the *low_link* values computed for them
+    ...     low_link = dict()
+    ...     # Iterate the occurring events and the respective vertices:
+    ...     for v in traversal:
+    ...         event = traversal.event
+    ...         if event in nog.DFSEvent.ENTERING:
+    ...             # Entering a new vertex via an edge of the DFS-tree:
+    ...             # Push v on the stack, store index as low_link
+    ...             low_link[v] = index[v]
+    ...             continue
+    ...         if event == nog.DFSEvent.SOME_NON_TREE_EDGE and v in low_link:
+    ...             # A non-tree edge (predecessor, v), and v is on the stack:
+    ...             # Update low_link of predecessor w.r.t. the index of v
+    ...             if (v_index:=index[v]) < low_link[predecessor:=trace[-2]]:
+    ...                   low_link[predecessor] = v_index
+    ...             continue
+    ...         if event == nog.DFSEvent.LEAVING_SUCCESSOR:
+    ...             # Backtracking from an edge (predecessor, v) of the DFS-tree:
+    ...             # Update low_link of predecessor w.r.t. low_link of v
+    ...             if (v_low_link:=low_link[v]) < low_link[predecessor:=trace[-2]]:
+    ...                 low_link[predecessor] = v_low_link
+    ...         if event in nog.DFSEvent.LEAVING and low_link[v] == index[v]:
+    ...             # Leaving a vertex of the DFS-tree that is root of a component
+    ...             # (the lowest link reachable from it is itself):
+    ...             # Pop from the stack and report till the component root is reached
+    ...             component = []
+    ...             while True:
+    ...                w, l = low_link.popitem()
+    ...                component.append(w)
+    ...                del index[w]  # We do not need the index number of w anymore
+    ...                if v == w: break
+    ...             yield component
+
+
+**Applying the algorithm**
+
+And here are the strongly connected components of the graph:
+
+.. code-block:: python
+
+    >>> list(tarjan_strongly_connected_components(next_vertices, vertices))
+    [[8], [5, 3], [1, 2, 0], [6, 7, 4], [9]]
+
+Like this, the **TraversalDepthFirst of NoGraphs simplifies**
+**the implementation of non-recursive DFS-based algorithms**.
+
+Note that the implementation reports components immediately when it identifies them.
+And it only traverses the part of the diagram that is necessary to identify them. The
+**lazy evaluation style of TraversalDepthFirst thus carries over** to the calculation
+of the components. For example, it is possible to calculate components only until a
+component with certain properties has been found.
+
+
+
+.. _biconnected_components:
+
+Example: Biconnected components of a connected undirected graph - based on DFS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.4
+
+**The problem**
+
+Our goal is to compute the
+`biconnected components <https://en.wikipedia.org/wiki/Biconnected_component>`_
+(sometimes also called *2-connected component*) of a graph
+.
+
+The *undirected graph* is represented as a symmetric directed graph,
+i.e., for each edge *(v, w)* in the graph, *(w, v)* also is an edge in the graph.
+The graph is *connected*, i.e., every vertex is reachable from every other vertex.
+
+.. code-block:: python
+
+    >>> from collections import defaultdict
+    >>> successors = defaultdict(list)
+    >>> for v, w in (
+    ...     ("MY", "GYB"), ("GYB", "GS"), ("GS", "S"),
+    ...     ("MY", "TM"), ("GYB", "B"), ("GYB", "G0"), ("GS", "G1"),
+    ...     ("TM", "RT"), ("G0", "G2"), ("G1", "G2"), ("G1", "G3"),
+    ...     ("RT", "R0"), ("G2", "G3"),
+    ...     ("RT", "R1"), ("R0", "R2"),
+    ...     ("R1", "R2"),
+    ... ):
+    ...     successors[v].append(w)
+    ...     successors[w].append(v)
+
+(The names of the vertices are chosen to represent the first letters of the colors
+red, turquoise, yellow, blue, green, and stone grey of the example graph in the
+above mentioned Wikipedia article. This makes it
+easy the match the graph and the results that we will get to the example
+- at least as long as the article uses the example...)
+
+A connected undirected graph is said to be *biconnected*
+if it has more than 2 vertices and remains connected when a vertex is removed.
+A *biconnected component* is a maximal biconnected subgraph.
+
+
+**The algorithm**
+
+We want to implement a
+**non-recursive version of the algorithm of Hopcroft and Tarjan**
+(https://en.wikipedia.org/wiki/Biconnected_component).
+
+**We use the non-recursive implementation of DFS in NoGraphs as basis** for this.
+We turn on exactly the functionalities of this implementation that we need.
+
+The algorithm is based on the following elements:
+
+- We need to store the parent of each visited vertex
+
+  NoGraphs can do this for us - we could just use option *compute_paths*, and the
+  path container stores the predecessors for us.
+
+  But although the algorithm maintains all these parents, it only uses the
+  parent of the current vertex or the parent of the parent. These vertices
+  are part of the trace (current path from a start vertex to the current vertex).
+
+  A single trace is less data than the whole predecessor relation for all paths,
+  so we choose to switch on the computation of the trace:
+  *compute_trace=True*.
+
+- We need to maintain the search depths of all visited vertices
+
+  When the DFS traversal enters a vertex, we store the DFS search depth of
+  the vertex in a dict.
+
+  NoGraphs can compute the search depth of the current vertex. But we do not use
+  this feature, because when a vertex is entered, we already know its
+  search depth: it equals *len(trace) - 1*.
+
+- We need to compute and store the so-called *lowpoint* of a vertex *v*, when the
+  traversal leaves the vertex:
+
+  This lowpoint is the minimum of the depth of v, the depth of all neighbors
+  of v (other than the parent of v in the depth-first-search tree) and the lowpoint of
+  all children of v in the depth-first-search tree.
+
+  And if condition
+  *low_point(y) ≥ depth(v)*
+  holds, *v* is an articulation point.
+
+  - For these steps of the algorithm,
+    we need to know when one of the following events occurs during the
+    traverse: A vertex (a start vertex or a successor) is entered, an edge of the
+    DFS-tree is followed, a vertex is left (backtracking along an edge of the
+    DFS-tree), or some non-tree edge
+    is seen.
+
+    We turn on the respective reporting:
+    *report=nog.DFSEvent.IN_OUT | nog.DFSEvent.SOME_NON_TREE_EDGE*.
+
+Now, we can directly implement the steps that need to happen when the different
+events occur:
+
+.. code-block:: python
+
+    >>> def hopcroft_tarjan_articulation_points(next_vertices, any_vertex, lowpoint_dict=None):
+    ...     """ Reports articulation points. The undirected and connected graph needs
+    ...     to be given in form of directed edges in both directions. An articulation
+    ...     point is reported each time a biconnected component is found. So, the
+    ...     same vertex could be reported several times.
+    ...
+    ...     If you also need the biconnected components, then provide an empty
+    ...     dictionary *lowpoint_dict* from the vertices to the integers
+    ...     (see function *hopcroft_tarjan_biconnected_components*).
+    ...     """
+    ...     traversal = nog.TraversalDepthFirst(next_vertices)
+    ...     _ = traversal.start_from(
+    ...         start_vertex=any_vertex, compute_trace=True,
+    ...         report=nog.DFSEvent.IN_OUT | nog.DFSEvent.SOME_NON_TREE_EDGE)
+    ...     trace = traversal.trace
+    ...     depths = dict()
+    ...     low_point = dict() if lowpoint_dict is None else lowpoint_dict
+    ...     dfs_children_of_start = 0
+    ...     # Iterate the occurring events and the respective vertices:
+    ...     for v in traversal:
+    ...         event = traversal.event
+    ...         if event in nog.DFSEvent.ENTERING:
+    ...             # Entering a new vertex via an edge of the DFS-tree or as start
+    ...             # vertex: Store its search depth as depth and lowpoint
+    ...             low_point[v] = depths[v] = depth = len(trace) - 1
+    ...             if depth == 1:
+    ...                 # The predecesor is the start vertex: Count v as DFS-child of it
+    ...                 dfs_children_of_start += 1
+    ...         elif event == nog.DFSEvent.LEAVING_SUCCESSOR:
+    ...             # Backtracking from an edge (predecessor, v) of the DFS-tree:
+    ...             # Update low_point of predecessor w.r.t. the low_point of v
+    ...             if (v_low_point:=low_point[v]) < low_point[predecessor:=trace[-2]]:
+    ...                   low_point[predecessor] = v_low_point
+    ...             # If predecessor is a non-start vertex, check the respective
+    ...             # condition for such articulations points w.r.t DFS-child v
+    ...             if 0 < (predecessor_depth:=len(trace)-2) <= v_low_point:
+    ...                 yield predecessor
+    ...         elif event in nog.DFSEvent.SOME_NON_TREE_EDGE and (
+    ...                  len(trace) < 3 or v != trace[-3]):
+    ...             # A non-tree edge (predecessor, v), and v is not the
+    ...             # DFS-predecessor of the predecessor (e.g., the edge, that we are
+    ...             # seeing, is not the edge, that we just followed, in backwards
+    ...             # direction):
+    ...             # Update low_link of predecessor w.r.t. depth of v
+    ...             if (v_depth := depths[v]) < low_point[predecessor:=trace[-2]]:
+    ...                 low_point[predecessor] = v_depth
+    ...         elif event == nog.DFSEvent.LEAVING_START:
+    ...             # Check condition whether start vertex is articulation point.
+    ...             if dfs_children_of_start > 1:
+    ...                 yield v
+
+The steps, that are needed to compute the found biconnected component
+when an articulation point is reported, do not need any graph traversal. So, we
+implement them without using NoGraphs. It's a simple loop that extracts data
+from a *dict*.
+
+.. code-block:: python
+
+    >>> def hopcroft_tarjan_biconnected_components(articulation_point, lowpoint_dict):
+    ...     """ Report the biconnected component from *data_dict*,
+    ...     the mapping from a vertex to its *lowpoint* value, in insertion order.
+    ...     The function can only be used
+    ...     when *hopcroft_tarjan_articulation_points* just reported an
+    ...     articulation point, and then only once. """
+    ...     component = []
+    ...     while True:
+    ...         # Get all vertices of the DFS tree (in its current state) that starts
+    ...         # at the articulation point. Use the lowpoint dictionary, and
+    ...         # remove all vertices except for the articulation point itself, as
+    ...         # it will be part of other components that we report later on.
+    ...         vertex, low_point_value = lowpoint_dict.popitem()
+    ...         component.append(vertex)
+    ...         if vertex == articulation_point:
+    ...             lowpoint_dict[vertex] = low_point_value
+    ...             return component
+
+
+**Applying the algorithm**
+
+Now, we can compute the articulation points of the graph:
+
+.. code-block:: python
+
+    >>> def next_vertices(v, _):
+    ...     return successors[v]
+    >>> start_vertex = next(iter(successors.keys()))
+
+    >>> articulation_points = set(
+    ...     hopcroft_tarjan_articulation_points(next_vertices, start_vertex))
+    >>> list(sorted(articulation_points))
+    ['GS', 'GYB', 'MY', 'RT', 'TM']
+
+
+Next, we repeat the computation, but this time we ask for the biconnected components
+(we could also get both parts of the result in a single run by storing the
+articulation points in a set):
+
+.. code-block:: python
+
+    >>> lowpoint_dict = dict()
+    >>> for articulation_point in (
+    ...     hopcroft_tarjan_articulation_points(next_vertices, start_vertex, lowpoint_dict)
+    ... ):
+    ...     print(hopcroft_tarjan_biconnected_components(articulation_point, lowpoint_dict))
+    ['R0', 'R2', 'R1', 'RT']
+    ['RT', 'TM']
+    ['S', 'GS']
+    ['GS', 'G1', 'G3', 'G2', 'G0', 'GYB']
+    ['B', 'GYB']
+    ['GYB', 'TM', 'MY']
+
+Note that, like in the previous section, the implementation reports results
+immediately when it identifies them, and it only traverses the part of the diagram
+that is necessary to identify them. The lazy evaluation style of TraversalDepthFirst
+thus carries over to the calculation of the articulation points and the components.
+For example, it is possible to calculate components only until a component with
+certain properties has been found.

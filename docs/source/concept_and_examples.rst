@@ -164,7 +164,7 @@ number of edges.
 
 We use the *TraversalBreadthFirst* strategy of NoGraphs (see
 `Traversal algorithms <traversals>`).
-It implements the *Breadth First Search* graph algorithm in the NoGraphs style.
+It implements the graph algorithm **breadth-first search** in the NoGraphs style.
 
 .. code-block:: python
 
@@ -205,7 +205,7 @@ Breadth First Search for the Towers of Hanoi
 ............................................
 
 We play *Towers of Hanoi*
-(see https://en.wikipedia.org/wiki/Tower_of_Hanoi).
+(see `Wikipedia <https://en.wikipedia.org/wiki/Tower_of_Hanoi>`_).
 We model a tower as a tuple of the sizes of its "disks", sorted in ascending order.
 We decide that a vertex (state in the game) is a tuple of such towers. During the
 game, from one state to the other, we choose a tower, take its smallest disk,
@@ -286,7 +286,7 @@ We choose the integers as our vertices. The (only) successor of a vertex *i* is 
    >>> def next_vertices(i, _):
    ...     return i+2,
 
-We check that 20000000 (20 million) can be reached from 0. This means, that the number
+We check that 20,000,000 **can be reached** from 0. This means, that the number
 is even. There might be easier ways to find that out... :-)
 
 We use the *TraversalDepthFirst* strategy of NoGraphs (see
@@ -296,33 +296,33 @@ We use the *TraversalDepthFirst* strategy of NoGraphs (see
 .. code-block:: python
 
    >>> traversal = nog.TraversalDepthFirst(next_vertices, is_tree=True)
-   >>> traversal.start_from(0).go_to(20000000)
+   >>> traversal.start_from(0).go_to(20_000_000)  #doctest:+SLOW_TEST
    20000000
 
 Now, we choose some odd number and try to
 **check that it cannot be reached**.
 Here are two examples for techniques we can use to to that:
 
-In the first case, we use a *sentinel vertex*, here 20000002, together with
+In the first case, we use a *sentinel vertex*, here 20,000,002, together with
 our goal vertex. When the sentinel vertex is reached, we know by the structure
-or our graph, that our goal vertex 20000001 - a lower number - will not be
+or our graph, that our goal vertex 20,000,001 - a lower number - will not be
 reached anymore.
 
 .. code-block:: python
 
-   >>> next(traversal.start_from(0).go_for_vertices_in( (20000001, 20000002) ))  #doctest:+SKIP
+   >>> next(traversal.start_from(0).go_for_vertices_in( (20_000_001, 20_000_002) ))  #doctest:+SLOW_TEST
    20000002
 
 In the second case, we define an
 *upper limit for the number of allowed calculation steps*,
 i.e., a maximal number of vertices to be read in from the graph.
-We choose a limit, here 10000001, that is surely high enough to reach the goal
+We choose a limit, here 10,000,001, that is surely high enough to reach the goal
 vertex, if it is reachable, but prevents an unnecessarily high run time
 or, like in our case, even an infinite run time, if it is not reachable.
 
 .. code-block:: python
 
-   >>> traversal.start_from(0, calculation_limit=10000001).go_to(20000001)  #doctest:+SKIP
+   >>> traversal.start_from(0, calculation_limit=10_000_001).go_to(20_000_001)  #doctest:+SKIP
    Traceback (most recent call last):
    RuntimeError: Number of visited vertices reached limit
 
@@ -336,8 +336,316 @@ Typically, it is faster than TraversalDepthFirst and needs less memory.
 .. code-block:: python
 
    >>> traversal = nog.TraversalNeighborsThenDepth(next_vertices, is_tree=True)
-   >>> traversal.start_from(0).go_to(20000000)  #doctest:+SKIP
+   >>> traversal.start_from(0).go_to(20_000_000)  #doctest:+SKIP
    20000000
+
+
+.. _dfs_forest_edges:
+
+DFS forest: edges, predecessor relation, and paths
+..................................................
+
+.. versionadded:: 3.4
+
+In this example, we choose the integers 1...9 as vertices of our finite graph.
+The successors *w* of a vertex *i* are *i-2* and *i+4*, if they are valid
+vertices.
+
+.. code-block:: python
+
+    >>> vertices = range(1, 10)
+    >>> def next_vertices(v, _):
+    ...     for w in [v - 2, v + 4]:
+    ...         if w in vertices:
+    ...              yield w
+
+The edges of this graph are the following:
+
+.. code-block:: python
+
+    >>> [(v, w) for v in vertices for w in next_vertices(v, None)]  # doctest: +NORMALIZE_WHITESPACE
+    [(1, 5), (2, 6), (3, 1), (3, 7), (4, 2), (4, 8), (5, 3), (5, 9), (6, 4),
+    (7, 5), (8, 6), (9, 7)]
+
+We want to compute a *DFS forest* (set of depth-first search trees) covering all
+vertices, store the forest in form of its predecessor relation, and
+list the edges of the forest.
+
+We use the *TraversalDepthFirst* strategy of NoGraphs (see
+`Traversal algorithms <traversals>`) to traverse the edges of a DFS-tree of the graph.
+We tell the traversal to generate paths leading from start vertices to the traversed
+vertices, following the edges of the DFS-tree: Then, the
+**paths container permanently stores the generated predecessor relation**
+**of the DFS-forest** for us.
+
+.. code-block:: python
+
+    >>> traversal = nog.TraversalDepthFirst(next_vertices)
+    >>> reported_vertices = list(
+    ...    traversal.start_from(start_vertices=vertices, build_paths=True))
+
+Now, for all vertices that has been reported as end vertex of an edge of the
+DFS forest, we list the edge consisting of the predecessor and the vertex.
+
+.. code-block:: python
+
+    >>> list((traversal.paths.predecessor(v), v) for v in reported_vertices)
+    [(1, 5), (5, 9), (9, 7), (5, 3), (2, 6), (6, 4), (4, 8)]
+
+1 and 2 have no predecessors,
+because they have not occurred as end vertex of an edge of the DFS forest, as
+they are the root vertices of the two DFS-trees of the DFS forest.
+
+.. code-block:: python
+
+    >>> list((traversal.paths.predecessor(v), v) for v in [1, 2])
+    [(None, 1), (None, 2)]
+
+The edges listed above really form a DFS-forest: Starting from one of the roots,
+we can reach all other vertices of the graph by following the computed edges, and
+there are no two edges ending at the same vertex.
+
+.. tip::
+
+   While the start vertices are iterated in the order in which they were
+   indicated (1 before 2 - this is guaranted),
+   currently,
+   the edges computed by *next_vertices* are processed in reversed order
+   (e.g., from vertex 5, first the *v+4* edge to 9 is traversed, and later the
+   *v-2* edge to 3), as it is typical for non-recursive depth-first traversal
+   algorithms.
+
+   The **order of processing the successors of a vertex is an implementation**
+   **detail that can change anytime without prior notice**,
+   as it is not part of the specification of the search strategies.
+
+As the predecessor relation of the DFS-trees is kept in the paths object, we can also
+ask later on for the predecessor of a vertex. And we can ask for a
+path that leads from a start vertex to a given vertex using the edges of the DFS-trees:
+
+.. code-block:: python
+
+    >>> traversal.paths.predecessor(3)
+    5
+    >>> traversal.paths[3]
+    (1, 5, 3)
+
+
+.. _dfs_forest:
+
+DFS forest: events, edge types, and successor relation
+......................................................
+
+.. versionadded:: 3.4
+
+We use the same graph as in the example before.
+
+This time, we store the DFS-forest in form of a dictionary of the
+**successor relation**
+of the trees. For this, we demand that the traversal generates / updates
+the *trace*, i.e., the path that leads from a start vertex to the current vertex
+following the edges of the DFS forest.
+We use the current trace to determine the predecessor of the current vertex.
+
+.. code-block:: python
+
+    >>> from collections import defaultdict
+    >>> _ = traversal.start_from(start_vertices=vertices, compute_trace=True)
+    >>> successors = defaultdict(list)
+    >>> for v in traversal:
+    ...     predecessor = traversal.trace[-2]
+    ...     successors[predecessor].append(v)
+    >>> print(successors)
+    defaultdict(<class 'list'>, {1: [5], 5: [9, 3], 9: [7], 2: [6], 6: [4], 4: [8]})
+
+Next, we like to **see each step of the traversal of the DFS-forest in detail**.
+The following cases (*events*, see `here <DFSEvent>`) may occur:
+
+- ENTERING SUCCESSOR:
+  An edge of the DFS-forest is followed, from a vertex to a successor, and the
+  successor is entered.
+- LEAVING_SUCCESSOR:
+  The successor, that an edge of the DFS-forest leads to, is left and the edge is
+  traversed in the opposite direction in the sense of a backtracking.
+- BACK_EDGE, CROSS_EDGE, or FORWARD_EDGE:
+  An edge has been found, that does not belong to the DFS-forest. The traversal
+  does not follow such edges and does not enter the vertex it leads to.
+  There are different kinds of such edges. The example shows two of them.
+- ENTERING_START, LEAVING_START, SKIPPING_START:
+  A start vertex is entered or left. Or it is skipped, because it has already been
+  visited as successor of some other vertex.
+
+We tell TraversalDepthFirst, that we like to be informed about all these
+kinds of events. When an event is reported, we print it together with up to the
+last two vertices of the trace.
+
+.. code-block:: python
+
+    >>> traversal = nog.TraversalDepthFirst(next_vertices)
+    >>> _ = traversal.start_from(start_vertices=vertices, compute_trace=True,
+    ...                          report=nog.DFSEvent.ALL)
+    >>> for v in traversal:
+    ...     print(traversal.event, traversal.trace[-2:])
+    DFSEvent.ENTERING_START [1]
+    DFSEvent.ENTERING_SUCCESSOR [1, 5]
+    DFSEvent.ENTERING_SUCCESSOR [5, 9]
+    DFSEvent.ENTERING_SUCCESSOR [9, 7]
+    DFSEvent.BACK_EDGE [7, 5]
+    DFSEvent.LEAVING_SUCCESSOR [9, 7]
+    DFSEvent.LEAVING_SUCCESSOR [5, 9]
+    DFSEvent.ENTERING_SUCCESSOR [5, 3]
+    DFSEvent.CROSS_EDGE [3, 7]
+    DFSEvent.BACK_EDGE [3, 1]
+    DFSEvent.LEAVING_SUCCESSOR [5, 3]
+    DFSEvent.LEAVING_SUCCESSOR [1, 5]
+    DFSEvent.LEAVING_START [1]
+    DFSEvent.ENTERING_START [2]
+    DFSEvent.ENTERING_SUCCESSOR [2, 6]
+    DFSEvent.ENTERING_SUCCESSOR [6, 4]
+    DFSEvent.ENTERING_SUCCESSOR [4, 8]
+    DFSEvent.BACK_EDGE [8, 6]
+    DFSEvent.LEAVING_SUCCESSOR [4, 8]
+    DFSEvent.BACK_EDGE [4, 2]
+    DFSEvent.LEAVING_SUCCESSOR [6, 4]
+    DFSEvent.LEAVING_SUCCESSOR [2, 6]
+    DFSEvent.LEAVING_START [2]
+    DFSEvent.SKIPPING_START [3]
+    DFSEvent.SKIPPING_START [4]
+    DFSEvent.SKIPPING_START [5]
+    DFSEvent.SKIPPING_START [6]
+    DFSEvent.SKIPPING_START [7]
+    DFSEvent.SKIPPING_START [8]
+    DFSEvent.SKIPPING_START [9]
+
+Note, that the event *ENTERING_START* gives us the *roots of the DFS-trees* in our
+DFS-forest.
+
+The section `problem reduction <reduction_of_other_problems>`
+of this tutorial shows how *TraversalDepthFirst*
+and the reporting of events can
+be used to implement algorithms that are based on depth first search.
+Examples shown are the computation of the
+`strongly connected components <strongly_connected_components>`
+of a graph and the computation of the
+`biconnectec components of a connected undirected graph <biconnected_components>`.
+
+
+.. _dfs_all_paths_and_walks:
+
+DFS: all paths and walks
+........................
+
+.. versionadded:: 3.4
+
+We compute paths and walks.
+
+- A *directed walk* is a finite or infinite sequence of edges directed in the same
+  direction which joins a sequence of vertices.
+
+- A *directed path* is a directed walk in which all vertices are distinct.
+
+In the following, we always mean *directed* walks resp. *directed* paths and thus
+leave out *directed*.
+
+.. tip::
+
+  Note, that in the sections before, we always focussed on paths along the edges of
+  the DFS forest, while now, we want to regard all possible paths, or even all walks.
+
+We choose the strings as vertices of the following cyclic graph. It contains
+a diamond-shaped sub-graph *A*, *B1*, *B2*, *C*. And additionally, there
+is a vertex *B* in the middle, that is successor of *C* and is connected
+with "B1" and "B2" in both directions.
+
+.. code-block:: python
+
+    >>> successors = {
+    ...    "A": ["B1", "B2"],
+    ...    "B1": ["C", "B"],
+    ...    "B2": ["C", "B"],
+    ...    "B": ["B1", "B2"],
+    ...    "C": ["B"],
+    ... }
+    >>> def next_vertices(v, _):
+    ...     return successors.get(v, ())
+
+First, we want to compute **all paths starting at vertex** *B*.
+A vertex can occur in several paths, unlike the situation in a normal
+DFS-tree traversal, where each vertex is visited only once.
+
+We use the *TraversalDepthFirst* strategy of NoGraphs (see
+`Traversal algorithms <traversals>`) to traverse the graph in DFS-order,
+starting at *B*. And we generate all paths from the start vertex by using
+option *mode = DFSMode.ALL_PATHS*.
+We tell the traversal to maintain the trace, i.e., the path leading from the
+start vertex to the traversed vertex.
+
+
+.. code-block:: python
+
+    >>> traversal = nog.TraversalDepthFirst(next_vertices)
+    >>> _ = traversal.start_from(start_vertices="B",
+    ...                          mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
+    >>> for v in traversal:
+    ...     print(traversal.trace)
+    ['B', 'B2']
+    ['B', 'B2', 'C']
+    ['B', 'B1']
+    ['B', 'B1', 'C']
+
+Next, we want to compute **all paths from vertex** *A* **to vertex** *C*.
+We print the current trace when *C* is reached. And we prevent the search from further
+extending such a path beyond *C*.
+
+.. code-block:: python
+
+    >>> def next_vertices_prune_at_c(v, _):
+    ...     return next_vertices(v, ()) if v != "C" else []
+    >>> traversal = nog.TraversalDepthFirst(next_vertices_prune_at_c)
+    >>> _ = traversal.start_from(start_vertices="A",
+    ...                          mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
+    >>> for v in traversal:
+    ...     if v == "C":
+    ...         print(traversal.trace)
+    ['A', 'B2', 'B', 'B1', 'C']
+    ['A', 'B2', 'C']
+    ['A', 'B1', 'B', 'B2', 'C']
+    ['A', 'B1', 'C']
+
+
+Now, we want to compute **all walks from from the start vertex** *A*
+**to the goal vertex** *C* with a length of at most 4 edges.
+The function *next_vertices* only returns the successors of a node if the search depth
+has not already reached *4*. This technique is explained in more detail the
+tutorial section about `search-aware graphs <search_aware_graphs>`.
+
+.. code-block:: python
+
+    >>> def next_vertices(v, traversal):
+    ...     if traversal.depth == 4:
+    ...         return []
+    ...     return successors.get(v, ())
+
+    >>> traversal = nog.TraversalDepthFirst(next_vertices)
+    >>> _ = traversal.start_from(start_vertices="A", compute_depth=True,
+    ...                          mode=nog.DFSMode.ALL_WALKS, compute_trace=True)
+
+    >>> for v in traversal:
+    ...     if v == "C":
+    ...         print(traversal.trace)
+    ['A', 'B2', 'B', 'B2', 'C']
+    ['A', 'B2', 'B', 'B1', 'C']
+    ['A', 'B2', 'C']
+    ['A', 'B1', 'B', 'B2', 'C']
+    ['A', 'B1', 'B', 'B1', 'C']
+    ['A', 'B1', 'C']
+
+The section `problem reduction <reduction_of_other_problems>`
+of this tutorial shows how *TraversalDepthFirst*
+with mode *ALL_PATHS* can
+be used to compute the
+`Longest path <longest_path_two_vertices>`
+between two vertices in a weighted graph or in an unweighted graph.
 
 
 .. _example-topological_sorting_processes:
@@ -518,6 +826,15 @@ neighbor with the maximal distance to the goal under all neighbors:
     >>> path
     [(1, 0), (2, 0), (2, 1), (2, 2), (3, 2), (4, 2), (4, 3), (4, 4)]
 
+.. tip::
+
+    Since *TraversalTopologicalSort* does the work for us, but we defined on our
+    own how to compute the optimal *goal_distance*, we can vary this to solve
+    similar problems.
+    For example, to search for the longest path with an even number of edges,
+    we could simply fill two separate containers for optimal goal distances with
+    an even and with an odd number of edges.
+
 
 .. _example-shortest-paths-in-maze:
 
@@ -548,7 +865,7 @@ per place...
 
 We use the traversal strategy *TraversalShortestPaths* of NoGraphs
 (see `Traversal algorithms <traversals>`). As already said, it implements the
-*Dijkstra* algorithm in the style of NoGraphs.
+**Dijkstra** algorithm in the style of NoGraphs.
 
 .. code-block:: python
 
@@ -558,13 +875,20 @@ We use the traversal strategy *TraversalShortestPaths* of NoGraphs
    (12, ((0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (2, 1), (3, 1), (4, 1),
    (4, 2)))
 
+Later in this tutorial we will see how other types of problems,
+e.g., `the traveling salesman <traveling_salesman_example>` problem and
+the problem of finding
+`shortest paths in infinitely branching graphs with sorted edges <infinite_branching>`,
+can be solved using *TraversalShortestPaths* as part of a so-called
+`problem reduction <reduction_of_other_problems>`.
+
 
 .. _example-shortest-paths-with-heuristic:
 
-Shortest path search with distance heuristic
-............................................
+Shortest path search with distance heuristic (*A\* search*)
+...........................................................
 
-Again, vertices are tuples of x and y coordinates ("position vector"), and a
+Again, vertices are tuples of *x* and *y* coordinates ("position vector"), and a
 coordinate is an integer. This time, we use no coordinate limits, valid moves include
 the diagonal moves, and all edge weights are 1. We define an obstacle represented by
 a set of positions, that build an "L"-form out of two "walls" in the "region" of
@@ -592,7 +916,7 @@ Based on that, NoGraphs calculates a path from start to end position that
 avoids the obstacle.
 
 We use the traversal strategy *TraversalAStar* of NoGraphs
-(see `Traversal algorithms <traversals>`). It implements the *A\* search*
+(see `Traversal algorithms <traversals>`). It implements the **A\* search**
 algorithm in the style of NoGraphs.
 
     >>> traversal =nog.TraversalAStar(next_edges)
