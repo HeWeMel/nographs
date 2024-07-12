@@ -37,7 +37,7 @@ class documentation in the API reference for details.
       first time. Start vertices are not reported.
 
     - The traversal state provides **vertex depth** / **search depth**,
-      **paths** (optionally), and set of **visited vertices**.
+      **paths** (all optionally), and set of **visited vertices**.
 
     - Examples: See `example-traversal-breadth-first-in-maze` and
       `example-traversal-breadth-first-towers-hanoi`.
@@ -55,10 +55,10 @@ class documentation in the API reference for details.
       the vertex is also reported at this moment, except for the start
       vertices - they are not reported.
 
-    - The traversal state provides **search depth**,
-      **paths**, **event**, **trace**, **trace_labels**,
-      **on_trace**, **index** (all optionally),
-      and set of **visited vertices**.
+    - The traversal state provides **search depth**, **paths**,
+      **trace**, **trace_labels**, **on_trace**, **index**,
+      and set of **visited vertices** (all optionally),
+      and **event** (when a vertex is reported).
 
     - Example: See `example-traversal-depth-first-integers`.
 
@@ -85,7 +85,7 @@ class documentation in the API reference for details.
       (read from the graph) for the first time. Start vertices
       are considered visited, but they are not reported.
 
-    - The traversal state provides **search depth**, **paths** (optionally),
+    - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
     - Example: See `example-traversal-depth-first-integers`.
@@ -103,7 +103,7 @@ class documentation in the API reference for details.
       (indirect) predecessors of each other. If there is such a cycle in the
       graph, this is detected.
 
-    - The traversal state provides **search depth**, **paths** (optionally),
+    - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
     - Example: See `example-topological_sorting_processes`.

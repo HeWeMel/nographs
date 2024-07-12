@@ -235,6 +235,7 @@ class TraversalDepthFirstFlex(
         self.index = self._gear.vertex_id_to_number_mapping([])
         """ Mapping that numbers vertices in pre-order, i.e., the vertex gets its
         number when it is entered. The vertices are numbered starting with *1*.
+        See option *compute_index*.
         """
 
     def start_from(

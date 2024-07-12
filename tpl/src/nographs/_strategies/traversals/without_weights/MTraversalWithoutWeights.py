@@ -71,7 +71,7 @@ class MStrategyWithoutWeights:
         if depth_computation_optional:
             insert(
                 """\
-            If depth computation has been demanded:
+            If depth computation has been demanded (see option *compute_depth*):
 """
             )
         insert(

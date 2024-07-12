@@ -117,7 +117,7 @@ class TraversalNeighborsThenDepthFlex(
         super().__init__(edges_with_data, labeled_edges, is_tree, vertex_to_id, gear)
         self.depth: int = -1  # value not used, initialized during traversal
         """
-        If depth computation has been demanded:
+        If depth computation has been demanded (see option *compute_depth*):
         At this *search depth*, the reported (resp. the expanded) vertex has been
         found. It equals the length (number of edges) of the created path to the
         vertex, if path creation is demanded.
