@@ -60,7 +60,18 @@ class documentation in the API reference for details.
       and set of **visited vertices** (all optionally),
       and **event** (when a vertex is reported).
 
-    - Example: See `example-traversal-depth-first-integers`.
+    - Examples: See
+      `depth-first search in the integers <example-traversal-depth-first-integers>`;
+      `depth-limited depth-first search <graph_pruning_by_search_depth>`;
+      `iterative deepening depth-first search <iterative_deepening_dfs>`;
+      `longest path <example-longest-path-acyclic-graph>`
+      between two vertices in a weighted, acyclic graph;
+      `longest path <longest_path_two_vertices>`
+      between two vertices in a weighted graph or in an unweighted graph;
+      `strongly connected components <strongly_connected_components>`
+      of a graph, and
+      `biconnected components of a connected undirected graph
+      <biconnected_components>`.
 
     - Note: This class supports to
       `skip the expansion of individual vertices <dfs_expansion_skipping>`.
