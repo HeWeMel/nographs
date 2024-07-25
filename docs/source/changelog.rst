@@ -1,7 +1,7 @@
 ChangeLog
 ---------
 
-**v3.4.0** (2024-07-10)
+**v3.4.0** (2024-07-25)
 
 - Method TraversalDepthsFirst.start_from: New parameters:
 
