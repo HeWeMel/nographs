@@ -520,14 +520,22 @@ last two vertices of the trace.
 Note, that the event *ENTERING_START* gives us the *roots of the DFS-trees* in our
 DFS-forest.
 
-The section `problem reduction <reduction_of_other_problems>`
-of this tutorial shows how *TraversalDepthFirst*
-and the reporting of events can
-be used to implement algorithms that are based on depth first search.
-Examples shown are the computation of the
-`strongly connected components <strongly_connected_components>`
-of a graph and the computation of the
-`biconnectec components of a connected undirected graph <biconnected_components>`.
+.. tip::
+
+    *TraversalDepthFirst* and **its event-reporting feature**
+    **can be leveraged to implement additional DFS-based algorithms**:
+    *TraversalDepthFirst* deals for us with the non-recursive
+    implementation of the graph-traversal and the handling of some basic
+    bookkeeping. And our application code can
+    choose which events are relevant and handle these events in a
+    problem-specific way.
+
+    Examples for this approach can be found in the section
+    `problem reduction <reduction_of_other_problems>` of this tutorial.
+    They include computing the
+    `strongly connected components <strongly_connected_components>`
+    of a graph and the
+    `biconnectec components of a connected undirected graph <biconnected_components>`.
 
 
 .. _dfs_all_paths_and_walks:
@@ -555,7 +563,7 @@ leave out *directed*.
 We choose the strings as vertices of the following cyclic graph. It contains
 a diamond-shaped sub-graph *A*, *B1*, *B2*, *C*. And additionally, there
 is a vertex *B* in the middle, that is successor of *C* and is connected
-with "B1" and "B2" in both directions.
+with *B1* and *B2* in both directions.
 
 .. code-block:: python
 
@@ -584,8 +592,7 @@ start vertex to the traversed vertex.
 .. code-block:: python
 
     >>> traversal = nog.TraversalDepthFirst(next_vertices)
-    >>> _ = traversal.start_from(start_vertices="B",
-    ...                          mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
+    >>> _ = traversal.start_from(start_vertices="B", mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
     >>> for v in traversal:
     ...     print(traversal.trace)
     ['B', 'B2']
@@ -602,8 +609,7 @@ extending such a path beyond *C*.
     >>> def next_vertices_prune_at_c(v, _):
     ...     return next_vertices(v, ()) if v != "C" else []
     >>> traversal = nog.TraversalDepthFirst(next_vertices_prune_at_c)
-    >>> _ = traversal.start_from(start_vertices="A",
-    ...                          mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
+    >>> _ = traversal.start_from(start_vertices="A", mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
     >>> for v in traversal:
     ...     if v == "C":
     ...         print(traversal.trace)
@@ -615,7 +621,8 @@ extending such a path beyond *C*.
 
 Now, we want to compute **all walks from from the start vertex** *A*
 **to the goal vertex** *C* with a length of at most 4 edges.
-The function *next_vertices* only returns the successors of a node if the search depth
+The function *next_vertices* shown below only returns the successors of a
+node if the search depth
 has not already reached *4*. This technique is explained in more detail the
 tutorial section about `search-aware graphs <search_aware_graphs>`.
 
@@ -627,8 +634,9 @@ tutorial section about `search-aware graphs <search_aware_graphs>`.
     ...     return successors.get(v, ())
 
     >>> traversal = nog.TraversalDepthFirst(next_vertices)
-    >>> _ = traversal.start_from(start_vertices="A", compute_depth=True,
-    ...                          mode=nog.DFSMode.ALL_WALKS, compute_trace=True)
+    >>> _ = traversal.start_from(
+    ...     start_vertices="A", compute_depth=True, mode=nog.DFSMode.ALL_WALKS, compute_trace=True
+    ... )
 
     >>> for v in traversal:
     ...     if v == "C":
@@ -640,12 +648,19 @@ tutorial section about `search-aware graphs <search_aware_graphs>`.
     ['A', 'B1', 'B', 'B1', 'C']
     ['A', 'B1', 'C']
 
-The section `problem reduction <reduction_of_other_problems>`
-of this tutorial shows how *TraversalDepthFirst*
-with mode *ALL_PATHS* can
-be used to compute the
-`Longest path <longest_path_two_vertices>`
-between two vertices in a weighted graph or in an unweighted graph.
+
+.. tip::
+
+    *TraversalDepthFirst* and **its traversal modes**
+    **can be leveraged to implement DFS-based algorithms**
+    **that need to regard all possible paths, or even all walks**.
+
+    Example: Section
+    `problem reduction <reduction_of_other_problems>`
+    of this tutorial shows how *TraversalDepthFirst*
+    with mode *ALL_PATHS* can be used to compute the
+    `longest path <longest_path_two_vertices>`
+    between two vertices in a weighted graph or in an unweighted graph.
 
 
 .. _example-topological_sorting_processes:
@@ -686,9 +701,11 @@ graph algorithm in the NoGraphs style.
     ('stand up', 'get coffee', 'get filter', 'fill filter', 'get water', 'heat water',
     'make coffee', 'drink coffee')
 
-When calculations for a vertex depend on results of (positively) connected
-other vertices, we can use the topological sorting of the vertices for ordering
-the calculations in the graph.
+.. tip::
+
+    When calculations for a vertex depend on results of (positively) connected
+    other vertices, we can use the topological sorting of the vertices for ordering
+    the calculations in the graph.
 
 Example: We assign (local) runtimes to the tasks. For each task, the minimal global
 runtime till it is completed (runtime of the **critical path**) is the sum of the
