@@ -701,13 +701,50 @@ graph algorithm in the NoGraphs style.
     ('stand up', 'get coffee', 'get filter', 'fill filter', 'get water', 'heat water',
     'make coffee', 'drink coffee')
 
+Next, we try out what happens when there is a **cyclic dependency** between the tasks:
+We add an artificial dependency that states that *get water* also depends on
+*make coffee* and ask NoGraphs again to traverse the graph in topological order:
+
+.. code-block:: python
+
+   >>> depends_on["get water"].append("make coffee")
+   >>> tuple(traversal.start_from("drink coffee"))
+   Traceback (most recent call last):
+   RuntimeError: Graph contains cycle
+
+As you can see, we get a *RuntimeError*, because the tasks cannot be sorted
+in a topological order. NoGraphs can **demonstrate the problem** to us by
+reporting a path of dependencies from a start vertex (here: our goal to drink
+coffee), that leads back to a previous vertex of the same path (here:
+we need to *make coffee* before we can *make coffee*):
+
+.. code-block:: python
+
+   >>> traversal.cycle_from_start
+   ['drink coffee', 'make coffee', 'heat water', 'get water', 'make coffee']
+
+Finally, we remove the additional dependency again, in order to be able
+to re-use the graph in the following section:
+
+.. code-block:: python
+
+   >>> _ = depends_on["get water"].pop()
+
+
 .. tip::
 
     When calculations for a vertex depend on results of (positively) connected
     other vertices, we can use the topological sorting of the vertices for ordering
-    the calculations in the graph.
+    the calculations in the graph. This is shown in the following two section.
 
-Example: We assign (local) runtimes to the tasks. For each task, the minimal global
+
+.. _example-critical-path:
+
+Critical path in a weighted, acyclic graph (using topological search)
+.....................................................................
+
+We assign (local) runtimes to the tasks shown in the previous section.
+For each task, the minimal global
 runtime till it is completed (runtime of the **critical path**) is the sum of the
 local runtime and the maximum of the total runtimes of the tasks the task depends on.
 We order the computations by using the topological sort we got from NoGraphs, so that
@@ -732,28 +769,6 @@ completed.
    ...        runtime_till_end_of[task] for task in next_vertices(task, None)])
    >>> runtime_till_end_of["drink coffee"]
    15
-
-Next, we try out what happens when there is a **cyclic dependency** between the tasks:
-We add an artificial dependency that states that *get water* also depends on
-*make coffee* and ask NoGraphs again to traverse the graph in topological order:
-
-.. code-block:: python
-
-   >>> depends_on["get water"].append("make coffee")
-   >>> tuple(traversal.start_from("drink coffee"))
-   Traceback (most recent call last):
-   RuntimeError: Graph contains cycle
-
-As you can see, we get a *RuntimeError*, because the tasks cannot be sorted
-in a topological order. NoGraphs can **demonstrate the problem** to us by
-reporting a path of dependencies from a start vertex (here: our goal to drink
-coffee), that leads back to a previous vertex of the same path (here:
-we need to *make coffee* before we can *make coffee*):
-
-.. code-block:: python
-
-   >>> traversal.cycle_from_start
-   ['drink coffee', 'make coffee', 'heat water', 'get water', 'make coffee']
 
 
 .. _example-longest-path-acyclic-graph:
