@@ -123,13 +123,15 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 - `Depth-limited search <graph_pruning_by_search_depth>`
 - `Iterative deepening depth-first search <iterative_deepening_dfs>`
+- `Critical path <example-critical-path>`
+  in a weighted, acyclic graph
 - `Longest path <example-longest-path-acyclic-graph>`
-  between two vertices in a weighted, acyclic graph.
+  between two vertices in a weighted, acyclic graph
 - `Longest path <longest_path_two_vertices>`
-  between two vertices in a weighted graph or in an unweighted graph.
+  between two vertices in a weighted graph or in an unweighted graph
 - `Strongly connected components <strongly_connected_components>`
-  of a graph.
-- `Biconnected components of a connected undirected graph <biconnected_components>`.
+  of a graph
+- `Biconnected components of a connected undirected graph <biconnected_components>`
 
 
 .. _overview_example:

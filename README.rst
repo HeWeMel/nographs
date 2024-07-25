@@ -132,12 +132,14 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 
 - Depth-limited search
 - Iterative deepening depth-first search
+- Critical path
+  in a weighted, acyclic graph
 - Longest path
-  between two vertices in a weighted, acyclic graph.
+  between two vertices in a weighted, acyclic graph
 - Longest path
-  between two vertices in a weighted graph or in an unweighted graph.
+  between two vertices in a weighted graph or in an unweighted graph
 - Strongly connected components
-  of a graph.
+  of a graph
 - Biconnected components of a connected undirected graph
 
 
