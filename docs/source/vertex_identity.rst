@@ -38,6 +38,8 @@ Here are some cases, and examples for each case:
 
 - **Two vertex objects are the same vertex if and only if they are identical**
 
+  Example:
+
   You use instances of some vertex class of your application as vertices.
   They are mutable, and thus not hashable. Each vertex object is to be
   seen as a different vertex.
@@ -47,6 +49,8 @@ Here are some cases, and examples for each case:
 
 - **Mutable vertex objects, and their immutable counterparts identify them**
 
+  Example:
+
   You use lists as your vertices. You know that their content will not
   change during a traversal run. And the immutable tuple counterpart of a
   vertex is well suited for getting a hash value.
@@ -54,6 +58,8 @@ Here are some cases, and examples for each case:
   In this situation, you can use function *tuple* as *VertexToID* function.
 
 - **Traversal in equivalence classes of vertices**
+
+  Example:
 
   You have defined an abstraction function, that assigns an equivalence class to a
   vertex. And you know: Whenever there is a path of vertices, there is a
@@ -67,7 +73,7 @@ Here are some cases, and examples for each case:
 
 .. _equivalence_class_example:
 
-**Example:**
+**Example: Traversal of vertex equivalence classes, on the fly**
 
 We have a maze of the following form, where "S" denotes a start position
 of a player, "G" a goal position, "." additional positions that can be occupied,
@@ -201,7 +207,7 @@ Of cause, we get the same result: depth 5. But now, we get it
 after only 7,290 instead of 76,519 search steps.
 So, **vertex equivalences helped us to reduce the needed search effort**.
 
-And NoGraphs helped us:
+And NoGraphs assisted us:
 
 - We just define the `VertexToID` function, and NoGraphs **computes the graphs**
   **of vertex equivalence classes automatically**.
