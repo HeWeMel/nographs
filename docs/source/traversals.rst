@@ -542,8 +542,11 @@ vertex depths or distances. These are the following:
   iterator skips vertices as long as their depth is lower than *start*. From then on,
   it reports the found vertices. It stops when the reached depth is higher than *stop*.
 
-  Note: The first vertex with a depth higher than *stop* will be consumed from the
-  traversal, but will not be reported, so it is lost (compare *itertools.takewhile*).
+  .. note::
+
+      The first vertex with a depth higher than *stop* will be consumed from the
+      traversal, but will not be reported, so it is lost
+      (compare *itertools.takewhile*).
 
   .. _example_go_for_depth_range:
 
@@ -568,8 +571,11 @@ vertex depths or distances. These are the following:
   then on, is reports the found vertices. It stops when the reached distance is
   higher than *stop*.
 
-  Note: The first vertex with a distance higher than *stop* will be consumed from the
-  traversal, but will not be reported, so it is lost (compare *itertools.takewhile*).
+  .. note::
+
+      The first vertex with a distance higher than *stop* will be consumed from the
+      traversal, but will not be reported, so it is lost
+      (compare *itertools.takewhile*).
 
   .. _example_go_for_distance_range:
 
@@ -617,7 +623,7 @@ in a more dynamical way: The
 **the vertex that has just been entered should not be expanded**, i.e.,
 edges to successors should be ignored.
 
-There are two ways to do this:
+There are two equivalent ways to do this:
 
 - **Calling method** *skip_expanding_entered_vertex()* **of the traversal object**.
 
@@ -652,7 +658,7 @@ to get reports about events other than
 If such an event occurs, **no vertex has been entered, and**
 it is therefor
 **not allowed to signal to the traversal to skip the entered (!) vertex**.
-If you do this anyway, the traversal will not catch the
+If you do this anyway, the traversal intentionally won’t catch the
 *StopIteration* you throw, and a *RuntimeError* will be raised
 (according to `PEP 497 <//peps.python.org/pep-0479>`_).
 
