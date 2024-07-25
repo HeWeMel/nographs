@@ -12,13 +12,13 @@
 #
 import os
 import sys
+import time
 sys.path.insert(0, os.path.abspath('../../src'))
-# sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'NoGraphs'
-copyright = '2022 - 2024, Helmut Melcher'
+copyright = f'2022 - {time.strftime("%Y", time.gmtime())}, Helmut Melcher'
 author = 'Helmut Melcher'
 
 
@@ -77,7 +77,7 @@ aliases = ('NextVertices', 'NextEdges', 'VertexToID', 'Vector', 'Limits',
            'WeightedUnlabeledFullEdge', 'WeightedLabeledFullEdge',
            'WeightedOrLabeledFullEdge', 'AnyFullEdge', 'OutEdge',
            # 'VertexIdSet', 'VertexIdToDistanceMapping',
-           # 'VertexIdToVertexMapping', 'VertexIdToPathEdgeDataMapping',
+           # 'VertexIdToVertexMapping', 'VertexIdToEdgeLabelsMapping',
            )
 
 autodoc_type_aliases = {alias: alias for alias in aliases}  # | {

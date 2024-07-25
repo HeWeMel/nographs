@@ -5,9 +5,7 @@ Bidirectional search algorithms
    Import nographs for doctests of this document. Does not go into docs.
    >>> import nographs as nog
 
-.. versionchanged:: 3.1
-
-   Bidirectional search algorithms added.
+.. versionadded:: 3.1
 
 The analysis algorithms `presented so far <traversals>` traverse a graph
 in "forward" direction, i.e., they start from one or more start vertices, follow the

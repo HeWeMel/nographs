@@ -30,14 +30,14 @@ class documentation in the API reference for details.
 
     - Algorithm *Breadth First Search* ("BFS").
 
-    - Visits and reports vertices in *breadth first order*, i.e., **with ascending
-      depth** (the depth of a vertex is the edge count of the path with least edges
-      from a start vertex).
-      A vertex is reported before the first outgoing edge is taken.
-      Start vertices are not reported.
+    - Visits and reports vertices in *breadth first order*, i.e.,
+      **with ascending depth** (the depth of a vertex is the edge count of
+      the path with least edges from a start vertex).
+      A vertex is reported when it is "seen" (read from the graph) for the
+      first time. Start vertices are not reported.
 
-    - The traversal state provides **vertex depth** / **search depth**, **paths**
-      (optionally), and set of **visited vertices**.
+    - The traversal state provides **vertex depth** / **search depth**,
+      **paths** (all optionally), and set of **visited vertices**.
 
     - Examples: See `example-traversal-breadth-first-in-maze` and
       `example-traversal-breadth-first-towers-hanoi`.
@@ -47,35 +47,59 @@ class documentation in the API reference for details.
     - Algorithm *Depth First Search* ("DFS").
 
     - Follows just one outgoing edge per vertex as long as possible,
-      and **goes back a step to some already visited vertex and follows a
-      further edge starting there only when necessary** to come to new vertices.
-      **A vertex is reported before the first outgoing edge is taken**.
-      Start vertices are not reported.
+      and **goes back a step and follows a further edge starting there,**
+      **or then an edge starting at the next start vertex,**
+      **only when necessary** to come to new vertices.
+      A vertex is considered *visited* when its expansion starts (its
+      successors are about to be read from the graph). And, by default,
+      the vertex is also reported at this moment, except for the start
+      vertices - they are not reported.
 
-    - The traversal state provides **search depth** (optionally),
-      **paths** (optionally), and set of **visited vertices**.
+    - The traversal state provides **search depth**, **paths**,
+      **trace**, **trace_labels**, **on_trace**, **index**,
+      and set of **visited vertices** (all optionally),
+      and **event** (when a vertex is reported).
 
-    - Example: See `example-traversal-depth-first-integers`.
+    - Examples: See
+      `depth-first search in the integers <example-traversal-depth-first-integers>`,
+      `depth-limited depth-first search <graph_pruning_by_search_depth>`,
+      `iterative deepening depth-first search <iterative_deepening_dfs>`,
+      `longest path <longest_path_two_vertices>`
+      between two vertices in a weighted graph or in an unweighted graph,
+      `strongly connected components <strongly_connected_components>`
+      of a graph, and
+      `biconnected components of a connected undirected graph
+      <biconnected_components>`.
+
+    - Note: This class supports to
+      `skip the expansion of individual vertices <dfs_expansion_skipping>`.
+
+    .. versionchanged:: 3.4
+       Start vertices are now evaluated successively.
+       Attributes event, trace, trace_labels,
+       on_trace, and index added. Options to control them
+       added. Expansion of vertices can be skipped.
 
 - Class `nographs.TraversalNeighborsThenDepth`
 
-    - Algorithm similar to *Depth First Search* ("DFS"), but vertex order
-      is slightly changed.
+    - Algorithm similar to *Depth First Search* ("DFS"), but with changed
+      vertex order.
 
     - Follows just one outgoing edge per vertex as long as possible,
-      and **goes back a step to some already visited vertex and follows a
-      further edge starting there only when necessary** to come to new vertices.
-      **Vertices are reported when they are first "seen" as direct neighbors**
-      of a currently visited vertex.
+      and **goes back a step and follows a further edge starting there,**
+      **or then an edge starting at the next start vertex,**
+      **only when necessary** to come to new vertices.
 
-    - The traversal state provides **search depth**, **paths** (optionally),
+      A vertex is reported and marked as *visited* when it is "seen"
+      (read from the graph) for the first time. Start vertices
+      are considered visited, but they are not reported.
+
+    - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
-    - Example: See `example-traversal-depth-first-integers`.
+    - Examples: See `example-traversal-depth-first-integers`.
 
-    .. versionchanged:: 3.0
-
-       Strategy class `nographs.TraversalNeighborsThenDepth` introduced.
+    .. versionadded:: 3.0
 
 - Class `nographs.TraversalTopologicalSort`
 
@@ -88,10 +112,15 @@ class documentation in the API reference for details.
       (indirect) predecessors of each other. If there is such a cycle in the
       graph, this is detected.
 
-    - The traversal state provides **search depth**, **paths** (optionally),
+    - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
-    - Example: See `example-topological_sorting_processes`.
+    - Example: See `example-topological_sorting_processes`,
+      `critical path in a weighted, acyclic graph <example-critical-path>`,
+      and
+      `longest path between two vertices in a weighted, acyclic graph
+      <example-longest-path-acyclic-graph>`.
+
 
 .. _examples_all_graphs:
 
@@ -513,8 +542,11 @@ vertex depths or distances. These are the following:
   iterator skips vertices as long as their depth is lower than *start*. From then on,
   it reports the found vertices. It stops when the reached depth is higher than *stop*.
 
-  Note: The first vertex with a depth higher than *stop* will be consumed from the
-  traversal, but will not be reported, so it is lost (compare *itertools.takewhile*).
+  .. note::
+
+      The first vertex with a depth higher than *stop* will be consumed from the
+      traversal, but will not be reported, so it is lost
+      (compare *itertools.takewhile*).
 
   .. _example_go_for_depth_range:
 
@@ -539,8 +571,11 @@ vertex depths or distances. These are the following:
   then on, is reports the found vertices. It stops when the reached distance is
   higher than *stop*.
 
-  Note: The first vertex with a distance higher than *stop* will be consumed from the
-  traversal, but will not be reported, so it is lost (compare *itertools.takewhile*).
+  .. note::
+
+      The first vertex with a distance higher than *stop* will be consumed from the
+      traversal, but will not be reported, so it is lost
+      (compare *itertools.takewhile*).
 
   .. _example_go_for_distance_range:
 
@@ -557,6 +592,111 @@ vertex depths or distances. These are the following:
      >>> tuple(traversal.start_from(0).go_for_distance_range(20, 40))
      (10, 11, 12, 13, 14, 15, 16, 17, 18, 19)
 
+
+.. _dfs_expansion_skipping:
+
+Skipping vertex expansion in TraversalDepthFirst
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.4
+
+In section
+`DFS: all paths and walks <dfs_all_paths_and_walks>`,
+when we computed the possible paths from vertex *A* to vertex *C*
+in the following graph, we
+removed the successors of *C* from the graph before the search to
+prevent the search from further extending a path beyond *C*.
+
+    >>> successors = {
+    ...    "A": ["B1", "B2"],
+    ...    "B1": ["C", "B"],
+    ...    "B2": ["C", "B"],
+    ...    "B": ["B1", "B2"],
+    ...    "C": ["B"],
+    ... }
+    >>> def next_vertices(v, _):
+    ...     return successors.get(v, ())
+
+The class *TraversalDepthFirst* offers another method to achieve the same effect
+in a more dynamical way: The
+**application code can signal to the traversal that**
+**the vertex that has just been entered should not be expanded**, i.e.,
+edges to successors should be ignored.
+
+There are two equivalent ways to do this:
+
+- **Calling method** *skip_expanding_entered_vertex()* **of the traversal object**.
+
+- **Throwing a** *StopIteration()* **to the generator** provided by method
+  *__iter__* **of the traversal**. This is what the above method does.
+  *throw()* returns the vertex to confirm the success.
+
+**Example: Pruning paths at the required end vertex**
+
+The following code shows, how all paths starting at *A* and ending at *C*
+can be computed with skipping the expansion of *C* during the traversal
+instead of removing the edges from *C* to successors before the traversal.
+
+.. code-block:: python
+
+    >>> traversal = nog.TraversalDepthFirst(next_vertices)
+    >>> _ = traversal.start_from("A", mode=nog.DFSMode.ALL_PATHS, compute_trace=True)
+
+    >>> for v in traversal:
+    ...     if v == "C":
+    ...          print(traversal.trace)
+    ...          traversal.skip_expanding_entered_vertex()
+    ['A', 'B2', 'B', 'B1', 'C']
+    ['A', 'B2', 'C']
+    ['A', 'B1', 'B', 'B2', 'C']
+    ['A', 'B1', 'C']
+
+Caution is advised when using the
+*report* parameter of method *TraversalDepthFirst.start_from()*
+to get reports about events other than
+*DFSEvent.ENTERING* and *DFSEvent.ENTERING_START*:
+If such an event occurs, **no vertex has been entered, and**
+it is therefor
+**not allowed to signal to the traversal to skip the entered (!) vertex**.
+If you do this anyway, the traversal intentionally won’t catch the
+*StopIteration* you throw, and a *RuntimeError* will be raised
+(according to `PEP 497 <//peps.python.org/pep-0479>`_).
+
+This also means, that it is always save to ignore the return value of
+throwing the *StopIteration* into the generator: it can only be the entered
+vertex again (the success signal for skipping the expansion of
+the vertex). Otherwise, a *RuntimeError* would have been raised.
+
+**Example: Only the expansion of entered (!) vertices can be skipped**
+
+We visit the vertices of the DFS-tree of the above graph.
+As start vertices, we give two times (!) vertex *A*.
+And we demand that the traversal both reports when a start vertex is entered and
+when it is skipped because it has already been entered before.
+
+First, vertex *A* it reported with event *ENTERING_START*. Here,
+throwing *StopIteration* is accepted
+by the generator and the generator skips expanding the vertex.
+
+Then, vertex *A* is reported with event *SKIPPING_START*.
+This means, *A* it is not entered. Here, throwing *StopIteration* is not
+accepted and a *RuntimeError* is raised.
+
+.. code-block:: python
+
+    >>> _ = traversal.start_from(
+    ...     start_vertices="AA", mode=nog.DFSMode.DFS_TREE,
+    ...     report=nog.DFSEvent.ENTERING_START | nog.DFSEvent.SKIPPING_START)
+    >>> generator = iter(traversal)
+    >>> next(generator), str(traversal.event)
+    ('A', 'DFSEvent.ENTERING_START')
+    >>> generator.throw(StopIteration())
+    'A'
+    >>> next(generator), str(traversal.event)
+    ('A', 'DFSEvent.SKIPPING_START')
+    >>> generator.throw(StopIteration())
+    Traceback (most recent call last):
+    RuntimeError: generator raised StopIteration
 
 .. _is_tree:
 

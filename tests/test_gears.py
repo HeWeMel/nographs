@@ -25,11 +25,19 @@ class ProtocolAndABCNotImplementedErrors:
     Traceback (most recent call last):
     NotImplementedError
 
-    >>> nog.GearWithoutDistances.vertex_id_to_path_attributes_mapping(None, None)
+    >>> nog.GearWithoutDistances.vertex_id_to_edge_labels_mapping(None, None)
     Traceback (most recent call last):
     NotImplementedError
 
     >>> nog.GearWithoutDistances.sequence_of_vertices(None, None)
+    Traceback (most recent call last):
+    NotImplementedError
+
+    >>> nog.GearWithoutDistances.sequence_of_edge_labels(None, None)
+    Traceback (most recent call last):
+    NotImplementedError
+
+    >>> nog.GearWithoutDistances.vertex_id_to_number_mapping(None, None)
     Traceback (most recent call last):
     NotImplementedError
 

@@ -177,7 +177,7 @@ class Array:
         # inspection PyShadowingNames
         size = []
         area = self.content
-        for d in range(self.dimensions):
+        for _d in range(self.dimensions):
             size.append(len(area))
             area = area[0]
         return size

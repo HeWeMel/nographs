@@ -1,0 +1,7 @@
+:param already_visited: If provided, this set is used instead of an internal
+    one to keep vertices (resp. their hashable ids from vertex_to_id),
+    that have already been visited. This parameter can be used to get online
+    access to the internal bookkeeping of visited vertices, or to preload
+    vertices that should never be visited, or to provide your own way for
+    storing the information that a vertex has already been visited.
+

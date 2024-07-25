@@ -167,7 +167,7 @@ NoGraphs offers the following predefined gears. **The three main classes support
     ...     elif i % 1200000 > 5:
     ...         yield i - 6, 1
 
-We use the next_edges function defined in section `overview <index>`.
+We use the next_edges function defined in section :doc:`overview <index>`.
 
 Instead of the traversal class `TraversalShortestPaths` used there, now, we use
 the more flexible class `TraversalShortestPathsFlex`. We provide the
@@ -187,7 +187,7 @@ with *GearDefault*:
 
 .. code-block:: python
 
-   >>> gear_test(nog.GearDefault())
+   >>> gear_test(nog.GearDefault())  #doctest:+SLOW_TEST
    [816674, (0, 1, 2, 8, 14), (1199976, 1199982, 1199988, 1199994, 1200000)]
 
 2. We have not changed `vertex identity <vertex_identity>`, so our vertices are
@@ -198,7 +198,7 @@ with integer edge weights and float("infinity") for infinite distances
 
 .. code-block:: python
 
-   >>> gear_test(nog.GearForIntVertexIDsAndIntsMaybeFloats())
+   >>> gear_test(nog.GearForIntVertexIDsAndIntsMaybeFloats())  #doctest:+SLOW_TEST
    [816674, (0, 1, 2, 8, 14), (1199976, 1199982, 1199988, 1199994, 1200000)]
 
 3. Our vertices themselves, not only their vertex ids, are numbered from 0 on, and our
@@ -208,7 +208,7 @@ options here):
 
 .. code-block:: python
 
-   >>> gear_test(nog.GearForIntVerticesAndIDsAndCFloats())
+   >>> gear_test(nog.GearForIntVerticesAndIDsAndCFloats())  #doctest:+SLOW_TEST
    [816674.0, (0, 1, 2, 8, 14), (1199976, 1199982, 1199988, 1199994, 1200000)]
 
 
@@ -295,7 +295,7 @@ id set for given vertices, by an implementation that returns an *intbitset*.
    ...     nog.GearForIntVerticesAndIDsAndCFloats
    ... ):
    ...    def vertex_id_set(self, vertices):
-   ...       return intbitset(vertices)
+   ...       return intbitset(list(vertices))
 
 We can use the new gear just like the predefined ones:
 
@@ -304,9 +304,9 @@ We can use the new gear just like the predefined ones:
    >>> our_gear = GearBitsetAndArrayForIntVerticesAndCFloats()
    >>> traversal = nog.TraversalBreadthFirstFlex(
    ...     next_edges=next_edges, gear=our_gear, vertex_to_id=nog.vertex_as_id)
-   >>> traversal.start_from(0).go_to(1200000)
+   >>> traversal.start_from(0).go_to(1200000)  #doctest:+SLOW_TEST
    1200000
-   >>> traversal.depth
+   >>> traversal.depth  #doctest:+SLOW_TEST
    200000
 
 Section `Comparison of NoGraphs gears <performance_gears>` shows the

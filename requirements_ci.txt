@@ -2,7 +2,10 @@
 black
 coverage>=6.3
 flake8
+flake8-bugbear
 mypy
-# -- additional packaged used only for test with them --
+# -- source consistency checking --
+pymacros4py>=0.8.2 ; python_version >= "3.10"
+# -- additional packages for tests using them --
 mpmath
-intbitset ; python_version < "3.12" and implementation_name == "cpython"  # missing on PyPy and (so far) CPython 3.12
+intbitset ; python_version < "3.13" and implementation_name == "cpython"  # missing on PyPy and often on new CPython-versions

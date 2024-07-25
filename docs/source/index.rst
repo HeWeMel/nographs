@@ -10,6 +10,7 @@ NoGraphs: Graph analysis on the fly
    installation
    concept_and_examples
    graphs_and_adaptation
+   search_aware_graphs
    graph_operations
    traversals
    bidirectional_search
@@ -49,10 +50,14 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - `Unidirectional traversal algorithms <traversals>`: DFS, BFS, topological search,
   Dijkstra, A\* and MST.
 - `Bidirectional search algorithms <bidirectional_search>`: BFS and Dijkstra.
-- Results: `Reachability, depth, distance, paths and trees <traversals>`.
+- Results: `Reachability, depth, distance, and paths  <traversals>`.
   `Paths <paths_api>` can be
   `calculated with vertices, edges, or attributed edges <general-start_from>`,
   and can be iterated in both directions.
+  Additionally, for DFS:
+  `forest, all kinds of edge types, both entering and leaving events <dfs_forest>`,
+  and `DFS tree edges <dfs_forest>` or
+  `all paths or all walks <dfs_all_paths_and_walks>`.
 - Flexible graph notion:
 
   - Infinite directed multigraphs with loops and
@@ -102,20 +107,31 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
 - Source: Available `here <https://github.com/HeWeMel/nographs>`__.
 - Licence: `MIT <https://github.com/HeWeMel/nographs/blob/main/LICENSE>`__.
 
-**Extras** (outside of the core of NoGraphs)
+**Extras** (outside the core of NoGraphs)
 
 - Computation of exact solutions for (small)
   `traveling salesman problems <tsp_in_nographs>` (shortest / longest route,
   positive / zero / negative edge weights, graph does not need to be complete).
 - Dijkstra shortest paths algorithm for
   `infinitely branching graphs with locally sorted edges <infinite_branching>`.
-- Example for computing the
-  `longest path <example-longest-path-acyclic-graph>`
-  between two vertices in a weighted, acyclic graph.
 - `Gadget functions <gadgets>` for test purposes. They make the easy task of
   adapting existing explicit test graphs a no brainer, may they be
   stored in `edge indices or edge iterables <edge_gadgets>`
   or in `arrays <matrix_gadgets>`.
+
+**Examples with further algorithms**
+
+- `Depth-limited search <graph_pruning_by_search_depth>`
+- `Iterative deepening depth-first search <iterative_deepening_dfs>`
+- `Critical path <example-critical-path>`
+  in a weighted, acyclic graph
+- `Longest path <example-longest-path-acyclic-graph>`
+  between two vertices in a weighted, acyclic graph
+- `Longest path <longest_path_two_vertices>`
+  between two vertices in a weighted graph or in an unweighted graph
+- `Strongly connected components <strongly_connected_components>`
+  of a graph
+- `Biconnected components of a connected undirected graph <biconnected_components>`
 
 
 .. _overview_example:

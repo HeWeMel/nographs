@@ -1,6 +1,44 @@
 ChangeLog
 ---------
 
+**v3.4.0** (2024-07-25)
+
+- Method TraversalDepthsFirst.start_from: New parameters:
+
+  - report: Instead of just ENTERING_SUCCESSOR, many
+    different events can be chosen to be reported.
+  - mode: Two new traversal modes can be chosen, ALL_PATHS and ALL_WALKS.
+  - compute_trace: Maintains the list of the vertices on the trace,
+    the current path from a start vertex to the current vertex.
+  - compute_on_trace: Maintains the set of the vertices on the trace.
+  - compute_index: Numbers vertices in DFS pre-order.
+
+- Class TraversalDepthsFirst:
+
+  - Start vertices are evaluated successively. This enables a direct
+    computation of the DFS forest.
+  - Attribute __iter__ is now a generator instead of just an iterator,
+    and throwing a *StopIteration*
+    signals to the generator to skip the vertex that has just be entered
+    and reported.
+
+- Methods *start_from* of traversals: Argument for parameter *start_vertices*
+  is traversed at most once. Thus, it can be an Iterator or a Generator.
+
+- Tutorial: Further examples added:
+
+  - depth-limited search
+  - iterative deepening depth-first search (IDDFS)
+  - longest path between two vertices in a weighted graph or in an
+    unweighted graph
+  - strongly connected components of a graph
+  - biconnected components of a connected undirected graph (Tarjan).
+
+- Code quality improved: Code structure improved.
+  Source code macro system used to improve code consistency.
+
+- pyproject.toml instead of setup.py
+
 **v3.3.2** (2024-02-04)
 
 - Added method paths.predecessor
