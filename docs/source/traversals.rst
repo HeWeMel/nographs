@@ -61,13 +61,11 @@ class documentation in the API reference for details.
       and **event** (when a vertex is reported).
 
     - Examples: See
-      `depth-first search in the integers <example-traversal-depth-first-integers>`;
-      `depth-limited depth-first search <graph_pruning_by_search_depth>`;
-      `iterative deepening depth-first search <iterative_deepening_dfs>`;
-      `longest path <example-longest-path-acyclic-graph>`
-      between two vertices in a weighted, acyclic graph;
+      `depth-first search in the integers <example-traversal-depth-first-integers>`,
+      `depth-limited depth-first search <graph_pruning_by_search_depth>`,
+      `iterative deepening depth-first search <iterative_deepening_dfs>`,
       `longest path <longest_path_two_vertices>`
-      between two vertices in a weighted graph or in an unweighted graph;
+      between two vertices in a weighted graph or in an unweighted graph,
       `strongly connected components <strongly_connected_components>`
       of a graph, and
       `biconnected components of a connected undirected graph
@@ -99,7 +97,7 @@ class documentation in the API reference for details.
     - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
-    - Example: See `example-traversal-depth-first-integers`.
+    - Examples: See `example-traversal-depth-first-integers`.
 
     .. versionadded:: 3.0
 
@@ -117,7 +115,12 @@ class documentation in the API reference for details.
     - The traversal state provides **search depth**, **paths** (all optionally),
       and set of **visited vertices**.
 
-    - Example: See `example-topological_sorting_processes`.
+    - Example: See `example-topological_sorting_processes`,
+      `critical path in a weighted, acyclic graph <example-critical-path>`,
+      and
+      `longest path between two vertices in a weighted, acyclic graph
+      <example-longest-path-acyclic-graph>`.
+
 
 .. _examples_all_graphs:
 
