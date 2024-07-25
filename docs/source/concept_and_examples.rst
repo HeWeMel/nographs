@@ -405,7 +405,7 @@ The edges listed above really form a DFS-forest: Starting from one of the roots,
 we can reach all other vertices of the graph by following the computed edges, and
 there are no two edges ending at the same vertex.
 
-.. tip::
+.. note::
 
    While the start vertices are iterated in the order in which they were
    indicated (1 before 2 - this is guaranted),
@@ -555,10 +555,10 @@ We compute paths and walks.
 In the following, we always mean *directed* walks resp. *directed* paths and thus
 leave out *directed*.
 
-.. tip::
+.. note::
 
-  Note, that in the sections before, we always focussed on paths along the edges of
-  the DFS forest, while now, we want to regard all possible paths, or even all walks.
+  In the sections before, we always focussed on paths along the edges of the
+  DFS forest, while now, we want to regard all possible paths, or even all walks.
 
 We choose the strings as vertices of the following cyclic graph. It contains
 a diamond-shaped sub-graph *A*, *B1*, *B2*, *C*. And additionally, there
