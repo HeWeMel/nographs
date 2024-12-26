@@ -1,14 +1,14 @@
-from __future__ import annotations
-import collections
 from collections.abc import (
     Iterable,
     MutableSequence,
+    Callable,
 )
 from typing import (
     Protocol,
     Literal,
     Generic,
     Union,
+    Optional,
 )
 
 # Sphinx has an issue with documenting tuple[T] in HTML. Thus, for
@@ -128,17 +128,22 @@ MutableSequenceOfLabels = MutableSequence[T_labels]
 
 
 def max_value_for_integer_array_type_code(
-    c: Literal["b", "B", "h", "H", "i", "I", "l", "L", "q", "Q"]
+    c: Literal["b", "B", "h", "H", "i", "I", "l", "L", "q", "Q"],
 ) -> int:
     """Highest value than can be stores in an array of this type"""
     bytes_of_type_code = {"b": 1, "h": 2, "i": 2, "l": 4, "q": 8}[c.lower()]
     bits = bytes_of_type_code * 8
     if c.lower() == c:
         bits -= 1
-    return 2**bits - 1
+    res: int = 2**bits - 1
+    return res
 
 
 # -- Gear protocols --
+
+
+# Todo: Collection factories should be replaceable by attribute, not by subclassing.
+# Todo: Tutorial: Section "Defining your own gear" currently does not work!
 
 
 class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
@@ -155,7 +160,7 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
         :param initial_content: The collection is created with this initial content.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def vertex_id_to_vertex_mapping(
@@ -165,7 +170,7 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
         :param initial_content: The collection is created with this initial content.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def vertex_id_to_edge_labels_mapping(
@@ -175,21 +180,21 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
         :param initial_content: The collection is created with this initial content.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def sequence_of_vertices(
         self, initial_content: Iterable[T_vertex]
     ) -> MutableSequenceOfVertices[T_vertex]:
         """Factory for a sequence of vertices."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def sequence_of_edge_labels(
         self, initial_content: Iterable[T_labels]
     ) -> MutableSequenceOfLabels[T_labels]:
         """Factory for a sequence of edge attributes."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def vertex_id_to_number_mapping(
@@ -203,7 +208,7 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
 
         :param initial_content: The collection is created with this initial content.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
 class Gear(
@@ -246,13 +251,13 @@ class Gear(
     @abstractmethod
     def zero(self) -> T_weight:
         """Return the zero value of T_weight, e.g., 0.0 for float."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def infinity(self) -> T_weight:
         """Return the positive infinity value of T_weight for the gear, e.g.,
         float("infinity") for float."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def vertex_id_to_distance_mapping(
@@ -265,7 +270,7 @@ class Gear(
 
         :param initial_content: The collection is created with this initial content.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
     def raise_distance_infinity_overflow_error(self, value: T_weight) -> None:
         """Report that the computed value is equal or larger than the chosen
@@ -283,7 +288,29 @@ class Gear(
 # --- Hashable vertex IDs (hashable vertices or vertex_to_id returns hashable ---
 
 
-class DefaultdictWithNiceStr(collections.defaultdict[T_vertex_id, T_weight]):
+# # MyPyC: defaultdict cannot be subclassed as native class. See next class...
+# class DefaultdictWithNiceStr(collections.defaultdict[T_vertex_id, T_weight]):
+#     def __str__(self) -> str:
+#         return str(dict(self))
+
+
+class DefaultdictWithNiceStr(dict[T_vertex_id, T_weight]):
+    """Similar to a defaultdict, but prints itself like a dict. And the
+    default_factory is not allowed to return None.
+    """
+
+    # todo: Use this class only for MyPyC, and original above for source wheel
+    def __init__(
+        self,
+        default_factory: Callable[[], T_weight],
+        initial_content: Iterable[tuple[T_vertex_id, T_weight]],
+    ) -> None:
+        self._default_factory = default_factory
+        super().__init__(initial_content)
+
+    def __missing__(self, key: T_vertex_id) -> Optional[T_weight]:
+        return self._default_factory()
+
     def __str__(self) -> str:
         return str(dict(self))
 
@@ -513,11 +540,13 @@ class GearForIntVertexIDs(
         )
         extend_size = 1024 if self._no_bit_packing else 1024 // 8
         if self._no_arrays:
+            extend_by_template = False
 
             def sequence_factory() -> SequenceForGearProto[int, int, int]:
                 return [0] * pre_allocate
 
         else:
+            extend_by_template = True
 
             def sequence_factory() -> SequenceForGearProto[int, int, int]:
                 return array("B", repeat(0, pre_allocate))
@@ -527,20 +556,22 @@ class GearForIntVertexIDs(
             if self._no_bit_packing
             else VertexSetWrappingSequenceBitPacking
         )
-        return collection_class(sequence_factory, extend_size, initial_content)
+        return collection_class(
+            sequence_factory, extend_size, extend_by_template, initial_content
+        )
 
     def vertex_id_to_vertex_mapping(
         self, initial_content: Iterable[Tuple[IntVertexID, T_vertex]]
     ) -> VertexMapping[IntVertexID, T_vertex]:
         return VertexMappingWrappingSequenceWithNone[T_vertex](
-            lambda: [None] * self._pre_allocate, None, 1024, initial_content
+            lambda: [None] * self._pre_allocate, None, 1024, False, initial_content
         )
 
     def vertex_id_to_edge_labels_mapping(
         self, initial_content: Iterable[Tuple[IntVertexID, T_labels]]
     ) -> VertexMapping[IntVertexID, T_labels]:
         return VertexMappingWrappingSequenceWithNone[T_labels](
-            lambda: [None] * self._pre_allocate, None, 1024, initial_content
+            lambda: [None] * self._pre_allocate, None, 1024, False, initial_content
         )
 
     def sequence_of_vertices(
@@ -566,6 +597,7 @@ class GearForIntVertexIDs(
             lambda: [self._infinity_value] * self._pre_allocate,
             self._infinity_value,
             1024,
+            False,
             initial_content,
         )
 
@@ -581,6 +613,7 @@ class GearForIntVertexIDs(
             ),
             0,
             1024,
+            True,
             initial_content,
         )
 
@@ -676,6 +709,7 @@ class GearForIntVertexIDsAndCFloats(GearForIntVertexIDs[T_vertex, float, T_label
             ),
             self._infinity_value,
             1024,
+            True,
             initial_content,
         )
 
@@ -724,6 +758,7 @@ class GearForIntVertexIDsAndCInts(GearForIntVertexIDs[T_vertex, int, T_labels]):
             ),
             self._infinity_value,
             1024,
+            True,
             initial_content,
         )
 
@@ -790,6 +825,7 @@ class GearForIntVerticesAndIDs(GearForIntVertexIDs[IntVertexID, T_weight, T_labe
             ),
             max_vertex_type_value,
             1024,
+            True,
             initial_content,
         )
 
@@ -901,6 +937,7 @@ class GearForIntVerticesAndIDsAndCFloats(GearForIntVerticesAndIDs[float, T_label
             ),
             self._infinity_value,
             1024,
+            True,
             initial_content,
         )
 
@@ -956,5 +993,6 @@ class GearForIntVerticesAndIDsAndCInts(GearForIntVerticesAndIDs[int, T_labels]):
             ),
             self._infinity_value,
             1024,
+            True,
             initial_content,
         )

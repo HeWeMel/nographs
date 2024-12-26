@@ -1,6 +1,20 @@
 ChangeLog
 ---------
 
+**v3.4.1** (2024-12-26)
+
+  - Python 3.13 officially supported.
+
+  - The source code of this version is adapted so that it can be compiled
+    with MyPyC and with Cython if required. See also the notes in
+    requirements.dev, pyproject.toml, and setup.py.
+    This is not guaranteed for future versions.
+    (In the case of NoGraphs, however, compiling does not result in a
+    significant increase in speed: MyPyC can currently only store C-native
+    values boxed in collections, which requires frequent conversion.
+    And Cython only generates efficient C code here if the Python code is
+    specially adapted).
+
 **v3.4.0** (2024-07-25)
 
 - Method TraversalDepthsFirst.start_from: New parameters:

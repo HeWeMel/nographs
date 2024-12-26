@@ -57,7 +57,9 @@ correctly handles them.
    .. _nographs.Weight:
    .. code-block:: python
 
-      class Weight(Protocol[T]):
+      T = TypeVar("T")
+
+      class Weight(Protocol):
           @abstractmethod
           def __add__(self: T, value: T) -> T: ... # self + value
           @abstractmethod

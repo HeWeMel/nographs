@@ -2,57 +2,49 @@ from collections.abc import (
     Callable,
     Hashable,
 )
-from typing import TypeVar, Protocol, Union
+from typing import TypeVar, Union, Protocol
 from abc import abstractmethod
 
-"""
-Basic types used in NoGraphs.
-"""
 
+"""Basic types used in NoGraphs."""
 
 T = TypeVar("T")
 T_vertex = TypeVar("T_vertex")
 T_vertex_id = TypeVar("T_vertex_id", bound=Hashable)
-T_weight = TypeVar("T_weight", bound="Weight")
+T_labels = TypeVar("T_labels")
 
 
 # The following class is manually documented in api.rst, keep docs consistent.
-class Weight(Protocol[T_weight]):
+T_w = TypeVar("T_w", bound="Weight")
+
+
+# MyPyC: The protocol cannot be generic with parameter T_weight, because
+# MyPyC crashed then.
+class Weight(Protocol):
     @abstractmethod
-    def __add__(self: T_weight, value: T_weight) -> T_weight:
+    def __add__(self: T_w, value: T_w) -> T_w:
         """Return self+value."""
         raise NotImplementedError
 
     @abstractmethod
-    def __sub__(self: T_weight, value: T_weight) -> T_weight:
+    def __sub__(self: T_w, value: T_w) -> T_w:
         """Return self-value."""
         raise NotImplementedError
 
     @abstractmethod
-    def __lt__(self: T_weight, value: T_weight) -> bool:
+    def __lt__(self: T_w, value: T_w) -> bool:
         # inherited doc string
         raise NotImplementedError
 
     @abstractmethod
-    def __le__(self: T_weight, value: T_weight) -> bool:
+    def __le__(self: T_w, value: T_w) -> bool:
         # inherited doc string
         raise NotImplementedError
 
 
-# class IntZero(int):
-#     def __new__(cls) -> "IntZero":
-#         return super(IntZero, cls).__new__(cls, 0)
-#
-#
-# class FloatInf(float):
-#     def __new__(cls) -> "FloatInf":
-#         return super(FloatInf, cls).__new__(cls, "inf")
-#
-#
-# T_weight_zero_inf_or = Union[IntZero, FloatInf, T]
+# MyPyC: We use another TypeVar T_w above, because MyPyC crashed otherwise
+T_weight = TypeVar("T_weight", bound=Weight)
 
-
-T_labels = TypeVar("T_labels")
 
 """ Basic type aliases, part 1 """
 VertexToID = Callable[[T_vertex], T_vertex_id]

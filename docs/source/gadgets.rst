@@ -367,12 +367,19 @@ and calculate the manhattan distance of another vector to our position**:
       >>> # Position vector multiplied by an integer value, returns Position
       >>> nog.Position.at(2, 3, 4) * 3
       (6, 9, 12)
-      >>> # Attention: Since a Position is a tuple, i * Position repeats the coordinates
+      >>> # Attention: For i * Position, Position behaves like a tuple
+      >>> # and repeats the coordinates
       >>> 3 * nog.Position.at(2,3,4)
       (2, 3, 4, 2, 3, 4, 2, 3, 4)
       >>> # Manhattan distance of some vector
       >>> nog.Position.at(2, 3, 4).manhattan_distance( (1, 1, 1) )
       6
+      >>> # Compares equal to a tuple that contains the same coordinates
+      >>> nog.Position.at(2, 3, 4) == (2, 3, 4)
+      True
+      >>> # Hashable, and can be used as element in sets
+      >>> len(set(2 * [nog.Position.at(1,1)]))
+      1
 
 When we use vector addition or subtraction to "move" some increment away from a
 position, we could "leave" some coordinate ranges we would like to stay in.

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import itertools
 from heapq import heapify, heappop, heappush
-from typing import Optional, Any, Generic, Union
+from typing import Optional, Any, Generic, Union, ClassVar
 from collections.abc import Iterable, Generator
 
 from nographs._gears import VertexIdToDistanceMapping
@@ -70,6 +68,8 @@ class TraversalShortestPathsFlex(
     *distance*, *depth*, *paths*, and *distances*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithDistance._state_attrs + ["depth"]
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
@@ -77,7 +77,9 @@ class TraversalShortestPathsFlex(
         next_edges: Optional[
             NextWeightedEdges[
                 T_vertex,
-                TraversalShortestPathsFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                """TraversalShortestPathsFlex[
+                    T_vertex, T_vertex_id, T_weight, T_labels
+                ]""",
                 T_weight,
             ]
         ] = None,
@@ -85,7 +87,9 @@ class TraversalShortestPathsFlex(
         next_labeled_edges: Optional[
             NextWeightedLabeledEdges[
                 T_vertex,
-                TraversalShortestPathsFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                """TraversalShortestPathsFlex[
+                    T_vertex, T_vertex_id, T_weight, T_labels
+                ]""",
                 T_weight,
                 T_labels,
             ]
@@ -126,7 +130,7 @@ class TraversalShortestPathsFlex(
         known_distances: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None,
-    ) -> TraversalShortestPathsFlex[T_vertex, T_vertex_id, T_weight, T_labels]:
+    ) -> "TraversalShortestPathsFlex[T_vertex, T_vertex_id, T_weight, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 
@@ -394,6 +398,8 @@ class TraversalShortestPaths(
     - The used weights are defined by Union[T_weight, float], see `GearDefault`
     - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
+
+    _state_attrs: ClassVar = TraversalShortestPathsFlex._state_attrs
 
     def __init__(
         self,

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import itertools
 from heapq import heapify, heappop, heappush
-from typing import Generic, Optional, Union
+from typing import Generic, Optional, Union, ClassVar
 from collections.abc import Iterable, Collection
 
 from nographs._types import (
@@ -81,6 +79,8 @@ class BSearchShortestPathFlex(
     TraversalShortestPaths(<something>).start_at(v).go_to(v) fails.
     """
 
+    _state_attrs: ClassVar = Strategy._state_attrs
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
@@ -88,18 +88,18 @@ class BSearchShortestPathFlex(
         next_edges: Optional[
             BNextWeightedEdges[
                 T_vertex,
-                BSearchShortestPathFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                "BSearchShortestPathFlex[T_vertex, T_vertex_id, T_weight, T_labels]",
                 T_weight,
-            ],
+            ]
         ] = None,
         *,
         next_labeled_edges: Optional[
             BNextWeightedLabeledEdges[
                 T_vertex,
-                BSearchShortestPathFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                "BSearchShortestPathFlex[T_vertex, T_vertex_id, T_weight, T_labels]",
                 T_weight,
                 T_labels,
-            ],
+            ]
         ] = None,
     ) -> None:
         self._vertex_to_id = vertex_to_id
@@ -262,7 +262,7 @@ class BSearchShortestPathFlex(
         )
 
         # Get the right class for storing a path (labeled or not)
-        path_cls: type[Path]
+        path_cls: type[Path[T_vertex, T_vertex_id, T_labels]]
         if labeled_edges:
             path_cls = PathOfLabeledEdges[T_vertex, T_vertex_id, T_labels]
         else:
@@ -510,7 +510,9 @@ class BSearchShortestPathFlex(
 
     @staticmethod
     def _search_failed(
-        path_cls: type[Path], infinity: T_weight, fail_silently: bool
+        path_cls: type[Path[T_vertex, T_vertex_id, T_labels]],
+        infinity: T_weight,
+        fail_silently: bool,
     ) -> tuple[T_weight, Path[T_vertex, T_vertex_id, T_labels]]:
         """For a silent fail, return the value that marks that the search has failed:
         A tuple of the infinity value of the weights and an empty path. If no
@@ -558,7 +560,7 @@ class BSearchShortestPath(
                     T_vertex, T_vertex, Union[T_weight, float], T_labels
                 ],
                 T_weight,
-            ],
+            ]
         ] = None,
         *,
         next_labeled_edges: Optional[
@@ -569,7 +571,7 @@ class BSearchShortestPath(
                 ],
                 T_weight,
                 T_labels,
-            ],
+            ]
         ] = None,
     ) -> None:
         super().__init__(

@@ -37,7 +37,7 @@ class GettableProto(Protocol[T_key_contra, T_value_co]):
         If the Gettable does not contain *item*, a KeyError or an IndexError might
         be raised, or None is returned.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 # -- Support functions ---

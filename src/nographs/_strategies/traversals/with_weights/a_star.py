@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import itertools
 from heapq import heapify, heappop, heappush
-from numbers import Real
-from typing import Optional, Any, Generic, Union
+from typing import Optional, Any, Generic, Union, ClassVar
 from collections.abc import Callable, Iterable, Generator
 
 from nographs._types import (
@@ -84,6 +81,11 @@ class TraversalAStarFlex(
     *path_length*, *depth*, *paths*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithDistances._state_attrs + [
+        "path_length",
+        "depth",
+    ]
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
@@ -91,7 +93,9 @@ class TraversalAStarFlex(
         next_edges: Optional[
             NextWeightedEdges[
                 T_vertex,
-                TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                """TraversalAStarFlex[
+                    T_vertex, T_vertex_id, T_weight, T_labels
+                ]""",
                 T_weight,
             ]
         ] = None,
@@ -99,7 +103,9 @@ class TraversalAStarFlex(
         next_labeled_edges: Optional[
             NextWeightedLabeledEdges[
                 T_vertex,
-                TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels],
+                """TraversalAStarFlex[
+                    T_vertex, T_vertex_id, T_weight, T_labels
+                ]""",
                 T_weight,
                 T_labels,
             ]
@@ -126,7 +132,7 @@ class TraversalAStarFlex(
         """
         self._start_vertices_and_ids = tuple[tuple[T_vertex, T_vertex_id]]()
 
-        self._heuristic: Optional[Callable[[T_vertex], Real]] = None
+        self._heuristic: Optional[Callable[[T_vertex], T_weight]] = None
         self._known_distances: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None
@@ -139,7 +145,7 @@ class TraversalAStarFlex(
 
     def start_from(
         self,
-        heuristic: Callable[[T_vertex], Real],
+        heuristic: Callable[[T_vertex], T_weight],
         start_vertex: Optional[T_vertex] = None,
         *,
         start_vertices: Optional[Iterable[T_vertex]] = None,
@@ -151,7 +157,7 @@ class TraversalAStarFlex(
         known_path_length_guesses: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None,
-    ) -> TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels]:
+    ) -> "TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 
@@ -455,6 +461,8 @@ class TraversalAStar(
     - The used weights are defined by Union[T_weight, float], see `GearDefault`
     - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
+
+    _state_attrs: ClassVar = TraversalAStarFlex._state_attrs
 
     def __init__(
         self,

@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import itertools
 from heapq import heapify, heappop, heappush
-from numbers import Real
-from typing import Optional, Any, Generic, Union
+from typing import Optional, Any, Generic, Union, ClassVar
 from collections.abc import Callable, Iterable, Generator
 
 from nographs._types import (
@@ -74,6 +71,8 @@ class TraversalAStarFlex(
     *path_length*, *depth*, *paths*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithDistances._state_attrs + ["path_length", "depth"]
+
     def __init__(
         self,
         # $$ MStrategyWithWeights.init_signature('TraversalAStarFlex')
@@ -96,7 +95,7 @@ class TraversalAStarFlex(
         """
         self._start_vertices_and_ids = tuple[tuple[T_vertex, T_vertex_id]]()
 
-        self._heuristic: Optional[Callable[[T_vertex], Real]] = None
+        self._heuristic: Optional[Callable[[T_vertex], T_weight]] = None
         self._known_distances: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None
@@ -109,7 +108,7 @@ class TraversalAStarFlex(
 
     def start_from(
         self,
-        heuristic: Callable[[T_vertex], Real],
+        heuristic: Callable[[T_vertex], T_weight],
         # $$ insert_from('$$/method_start_from/signature_standard.py')
         known_distances: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
@@ -117,7 +116,7 @@ class TraversalAStarFlex(
         known_path_length_guesses: Optional[
             VertexIdToDistanceMapping[T_vertex_id, T_weight]
         ] = None,
-    ) -> TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels]:
+    ) -> "TraversalAStarFlex[T_vertex, T_vertex_id, T_weight, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 

@@ -1,6 +1,10 @@
-from .strategy import Strategy
+# In the following, we use absolute imports starting with
+# "nographs._strategies." instead of just "." because:
+# MyPyC: https://github.com/mypyc/mypyc/issues/996
 
-from .type_aliases import (
+from nographs._strategies.strategy import Strategy
+
+from nographs._strategies.type_aliases import (
     T_strategy,
     NextVertices,
     NextEdges,
@@ -14,46 +18,49 @@ from .type_aliases import (
     BNextWeightedLabeledEdges,
 )
 
-from .traversals.traversal import Traversal
+from nographs._strategies.traversals.traversal import Traversal
 
-from .traversals.without_weights.breadth_first import (
+from nographs._strategies.traversals.without_weights.breadth_first import (
     TraversalBreadthFirst,
     TraversalBreadthFirstFlex,
 )
-from .traversals.without_weights.depth_first import (
+from nographs._strategies.traversals.without_weights.depth_first import (
     TraversalDepthFirst,
     TraversalDepthFirstFlex,
     DFSEvent,
     DFSMode,
 )
-from .traversals.without_weights.neighbors_then_depth import (
+from nographs._strategies.traversals.without_weights.neighbors_then_depth import (
     TraversalNeighborsThenDepth,
     TraversalNeighborsThenDepthFlex,
 )
-from .traversals.without_weights.topological_sort import (
+from nographs._strategies.traversals.without_weights.topological_sort import (
     TraversalTopologicalSort,
     TraversalTopologicalSortFlex,
 )
 
-from .traversals.with_weights.shortest_paths import (
+from nographs._strategies.traversals.with_weights.shortest_paths import (
     TraversalShortestPaths,
     TraversalShortestPathsFlex,
 )
-from .traversals.with_weights.a_star import TraversalAStar, TraversalAStarFlex
-from .traversals.with_weights.minimum_spanning_tree import (
+from nographs._strategies.traversals.with_weights.a_star import (
+    TraversalAStar,
+    TraversalAStarFlex,
+)
+from nographs._strategies.traversals.with_weights.minimum_spanning_tree import (
     TraversalMinimumSpanningTree,
     TraversalMinimumSpanningTreeFlex,
 )
-from .traversals.with_weights.extra_infinite_branching import (
+from nographs._strategies.traversals.with_weights.extra_infinite_branching import (
     TraversalShortestPathsInfBranchingSortedFlex,
     TraversalShortestPathsInfBranchingSorted,
 )
 
-from .bidirectional_search.breadth_first import (
+from nographs._strategies.bidirectional_search.breadth_first import (
     BSearchBreadthFirst,
     BSearchBreadthFirstFlex,
 )
-from .bidirectional_search.shortest_path import (
+from nographs._strategies.bidirectional_search.shortest_path import (
     BSearchShortestPath,
     BSearchShortestPathFlex,
 )

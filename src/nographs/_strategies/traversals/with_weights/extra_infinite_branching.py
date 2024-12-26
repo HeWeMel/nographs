@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Union, Generic, Optional
 from collections.abc import Iterable, Iterator, Generator
 from abc import ABC
@@ -102,7 +100,7 @@ class TraversalShortestPathsInfBranchingSortedFlex(
         internal_gear: Gear[State[T_vertex_id], State[T_vertex_id], T_weight, Any],
         next_edges: NextWeightedEdges[
             T_vertex_id,
-            TraversalShortestPathsInfBranchingSortedFlex[T_vertex_id, T_weight],
+            "TraversalShortestPathsInfBranchingSortedFlex[T_vertex_id, T_weight]",
             T_weight,
         ],
     ) -> None:
@@ -129,7 +127,7 @@ class TraversalShortestPathsInfBranchingSortedFlex(
         build_paths: bool = False,
         combined_calculation_limit: Optional[int] = None,
         store_distances: bool = False,
-    ) -> TraversalShortestPathsInfBranchingSortedFlex[T_vertex_id, T_weight]:
+    ) -> "TraversalShortestPathsInfBranchingSortedFlex[T_vertex_id, T_weight]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 

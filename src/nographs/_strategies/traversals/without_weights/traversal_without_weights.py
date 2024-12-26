@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from abc import ABC
-from typing import Optional, Any
+from typing import Optional, Any, ClassVar
 from _collections_abc import Iterable, Collection
 
 from nographs._types import (
@@ -71,6 +69,8 @@ class _TraversalWithoutWeights(Traversal[T_vertex, T_vertex_id, T_labels], ABC):
     A traversal that needs no weight type. Edges can be given with or without data.
     """
 
+    _state_attrs: ClassVar = Traversal._state_attrs
+
     def __init__(
         self,
         edges_with_data: bool,
@@ -94,6 +94,8 @@ class _TraversalWithoutWeightsWithVisited(
     _TraversalWithoutWeights[T_vertex, T_vertex_id, T_labels], ABC
 ):
     """A _TraversalWithoutWeights with attribute visited."""
+
+    _state_attrs: ClassVar = _TraversalWithoutWeights._state_attrs + ["visited"]
 
     def __init__(
         self,
@@ -125,7 +127,9 @@ class _TraversalWithoutWeightsWithVisited(
         _start_vertices, _build_path, paths, _predecessors, _attributes,
         and visited.
         Empty paths for start vertices are only set if demanded (default: True).
-        Start vertices are only set as visited if demanded (default: True).
+        Start vertices are only set as visited if demanded (default: True), and
+        then, if they are not given as Collection, replaced by a Collection.
+        If not demanded, start_vertices remain untouched (not consumed).
         """
         _start_from_needs_traversal_object(self)
         self._start_from(

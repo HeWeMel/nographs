@@ -107,10 +107,10 @@ class PathsHandling:
     >>> gear = nog.GearForIntVertexIDsAndCFloats()
     >>> paths = _paths.PathsOfUnlabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
-    ...    None
+    ...    nog.vertex_as_id
     ... )
-    >>> paths.append_edge(0, 0, [0])
-    >>> paths.append_edge(0, 1, [1])
+    >>> paths.append_edge(0, 0, None)
+    >>> paths.append_edge(0, 1, None)
     >>> paths[1]
     (0, 1)
 
@@ -119,10 +119,10 @@ class PathsHandling:
     >>> paths = _paths.PathsOfLabeledEdges(
     ...    gear.vertex_id_to_vertex_mapping(()),
     ...    gear.vertex_id_to_edge_labels_mapping(()),
-    ...    None
+    ...    nog.vertex_as_id
     ... )
-    >>> paths.append_edge(0, 0, [0])
-    >>> paths.append_edge(0, 1, [1])
+    >>> paths.append_edge(0, 0, (0, 1))
+    >>> paths.append_edge(0, 1, (0, 1))
     >>> paths[1]
     ((0, 1, 1),)
 

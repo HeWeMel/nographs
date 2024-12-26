@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from abc import ABC
-from numbers import Real
-from typing import Generic, Any, Optional, Iterable, Iterator
+from typing import Generic, Any, Optional, Iterable, Iterator, ClassVar
 
 from nographs._types import (
     T_vertex,
@@ -60,6 +57,8 @@ class _TraversalWithWeights(
 ):
     """A Traversal that needs weighted edges and uses a gear suitable for this."""
 
+    _state_attrs: ClassVar = Traversal._state_attrs
+
     def __init__(
         self,
         labeled_edges: bool,
@@ -79,6 +78,8 @@ class _TraversalWithDistances(
     A _TraversalWithWeights that provides a distances collection as part of
     its state.
     """
+
+    _state_attrs: ClassVar = _TraversalWithWeights._state_attrs + ["distances"]
 
     def __init__(
         self,
@@ -126,6 +127,8 @@ class _TraversalWithDistance(
     If offers the go_for_distance_range method based on the distance.
     """
 
+    _state_attrs: ClassVar = _TraversalWithDistances._state_attrs + ["distance"]
+
     def __init__(
         self,
         labeled_edges: bool,
@@ -142,7 +145,9 @@ class _TraversalWithDistance(
         start vertex to the visited vertex
         """
 
-    def go_for_distance_range(self, start: Real, stop: Real) -> Iterator[T_vertex]:
+    def go_for_distance_range(
+        self, start: T_weight, stop: T_weight
+    ) -> Iterator[T_vertex]:
         """
         For a started traversal, return an iterator. During the traversal,
         the iterator skips vertices as long as their distance is lower than *start*.

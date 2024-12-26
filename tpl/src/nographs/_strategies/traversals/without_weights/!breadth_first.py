@@ -1,7 +1,4 @@
-from __future__ import annotations
-
-import copy
-from typing import Optional, Any, Generic
+from typing import Optional, Any, Generic, ClassVar
 from collections.abc import Iterable, Iterator, Generator
 
 
@@ -66,6 +63,8 @@ class TraversalBreadthFirstFlex(
     *depth*, *paths*, and *visited*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithoutWeightsWithVisited._state_attrs + ["depth"]
+
     def __init__(
         self,
         # $$ MStrategyWithoutWeights.init_signature('TraversalBreadthFirstFlex')
@@ -73,11 +72,43 @@ class TraversalBreadthFirstFlex(
         "$$ MStrategyWithoutWeights.init_code(search_depth_is_vertex_depth=True) $$"
         self._report_depth_increase = False
 
+    def _copy(
+        self,
+    ) -> "TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels]":
+        """Return a copy of the current traversal.
+
+        (We cannot use copy.copy() instead, because PyPyC has a (documented)
+        incompatibility in the semantics of this function.
+        """
+        t = TraversalBreadthFirstFlex(
+            self._vertex_to_id, self._gear, lambda v, t: [],
+            is_tree=self._is_tree
+        )
+        # Attributes of Traversal
+        # (except for _is_tree and _vertex_to_id that we have already set)
+        t._labeled_edges = self._labeled_edges
+        t._generator = self._generator
+        t._start_vertices = self._start_vertices
+        t._build_paths = self._build_paths
+        t._calculation_limit = self._calculation_limit
+        t.paths = self.paths
+        t._predecessors = self._predecessors
+        t._attributes = self._attributes
+        # Attributes of _TraversalWithoutWeights
+        # (except for _gear that we have already set)
+        t._edges_with_data = self._edges_with_data
+        # Attributes of _TraversalWithoutWeightsWIthVisited
+        t.visited = self.visited
+        # Attributes of TraversalBreadthFirstFlex
+        t.depth = self.depth
+        t._report_depth_increase = self._report_depth_increase
+        return t
+
     def start_from(
         self,
         # $$ insert_from('$$/method_start_from/signature.py')
         _report_depth_increase: bool = False,  # hidden parameter for internal use
-    ) -> TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels]:
+    ) -> "TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels]":
         """
         # $$ insert_from('$$/method_start_from/doc_start.rst')
         # $$ insert_from('$$/method_start_from/doc_already_visited_std.txt')
@@ -108,7 +139,7 @@ class TraversalBreadthFirstFlex(
         # one, while for the latter, it needs to be one higher. In order to avoid
         # a cascade of +1 and -1 on the depth, we just use a copy of the traversal,
         # that hangs by one in the depth, and give this to next_edge_or_vertices.
-        prev_traversal = copy.copy(self)  # copy of self, for keeping previous depth
+        prev_traversal = self._copy()  # copy of self, for keeping previous depth
         self.depth = 1  # used for reporting (prev_traversal starts at 0)
 
         # Get method references of specific bookkeeping (avoid attribute resolution)

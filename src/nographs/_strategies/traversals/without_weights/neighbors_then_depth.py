@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import array
-import copy
 import itertools
-from typing import Optional, Any, Generic
+from typing import Optional, Any, Generic, ClassVar
 from collections.abc import Iterable, Generator
 
 from nographs._types import (
@@ -83,6 +80,10 @@ class TraversalNeighborsThenDepthFlex(
     *depth*, *paths*, and *visited*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithoutWeightsWithVisited._state_attrs + [
+        "depth"
+    ]
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
@@ -90,20 +91,20 @@ class TraversalNeighborsThenDepthFlex(
         next_vertices: Optional[
             NextVertices[
                 T_vertex,
-                TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels],
+                "TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]",
             ]
         ] = None,
         *,
         next_edges: Optional[
             NextEdges[
                 T_vertex,
-                TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels],
+                "TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]",
             ]
         ] = None,
         next_labeled_edges: Optional[
             NextLabeledEdges[
                 T_vertex,
-                TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels],
+                "TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]",
                 T_labels,
             ]
         ] = None,
@@ -128,6 +129,37 @@ class TraversalNeighborsThenDepthFlex(
         """
         self._compute_depth = False  # value not used, initialized during traversal
 
+    def _copy(
+        self,
+    ) -> "TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]":
+        """Return a copy of the current traversal.
+
+        (We cannot use copy.copy() instead, because PyPyC has a (documented)
+        incompatibility in the semantics of this function.
+        """
+        t = TraversalNeighborsThenDepthFlex(
+            self._vertex_to_id, self._gear, lambda v, t: [], is_tree=self._is_tree
+        )
+        # Attributes of Traversal
+        # (except for _is_tree and _vertex_to_id that we have already set)
+        t._labeled_edges = self._labeled_edges
+        t._generator = self._generator
+        t._start_vertices = self._start_vertices
+        t._build_paths = self._build_paths
+        t._calculation_limit = self._calculation_limit
+        t.paths = self.paths
+        t._predecessors = self._predecessors
+        t._attributes = self._attributes
+        # Attributes of _TraversalWithoutWeights
+        # (except for _gear that we have already set)
+        t._edges_with_data = self._edges_with_data
+        # Attributes of _TraversalWithoutWeightsWIthVisited
+        t.visited = self.visited
+        # Attributes of TraversalNeighborsThenDepthFlex
+        t.depth = self.depth
+        t._compute_depth = self._compute_depth
+        return t
+
     def start_from(
         self,
         start_vertex: Optional[T_vertex] = None,
@@ -137,7 +169,7 @@ class TraversalNeighborsThenDepthFlex(
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
         compute_depth: bool = False,
-    ) -> TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]:
+    ) -> "TraversalNeighborsThenDepthFlex[T_vertex, T_vertex_id, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 
@@ -239,7 +271,7 @@ class TraversalNeighborsThenDepthFlex(
         depth = -1  # The inner loop starts with incrementing, so, we pre-decrement
         if not compute_depth:
             self.depth = depth  # In this case, we leave the -1 the whole time
-        prev_traversal = copy.copy(self)  # copy of self, for keeping previous depth
+        prev_traversal = self._copy()  # copy of self, for keeping previous depth
 
         # vertices to expand
         to_expand = self._gear.sequence_of_vertices(self._start_vertices)
@@ -371,6 +403,8 @@ class TraversalNeighborsThenDepth(
     - `GearDefault` is used, see there how it and its superclass work
     - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
+
+    _state_attrs: ClassVar = TraversalNeighborsThenDepthFlex._state_attrs
 
     def __init__(
         self,

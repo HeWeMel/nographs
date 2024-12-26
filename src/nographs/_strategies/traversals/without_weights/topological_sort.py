@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import array
 import itertools
-from typing import Optional, Any, Generic
+from typing import Optional, Any, Generic, ClassVar
 from collections.abc import Iterable, Generator
 
 from nographs._types import (
@@ -88,25 +86,32 @@ class TraversalTopologicalSortFlex(
     *depth*, *paths*, and *visited*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithoutWeightsWithVisited._state_attrs + [
+        "depth",
+        "cycle_from_start",
+    ]
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
         gear: GearWithoutDistances[T_vertex, T_vertex_id, T_labels],
         next_vertices: Optional[
             NextVertices[
-                T_vertex, TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]
+                T_vertex,
+                "TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]",
             ]
         ] = None,
         *,
         next_edges: Optional[
             NextEdges[
-                T_vertex, TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]
+                T_vertex,
+                "TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]",
             ]
         ] = None,
         next_labeled_edges: Optional[
             NextLabeledEdges[
                 T_vertex,
-                TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels],
+                "TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]",
                 T_labels,
             ]
         ] = None,
@@ -141,7 +146,7 @@ class TraversalTopologicalSortFlex(
         build_paths: bool = False,
         calculation_limit: Optional[int] = None,
         already_visited: Optional[VertexIdSet[T_vertex_id]] = None,
-    ) -> TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]:
+    ) -> "TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
 
@@ -426,15 +431,21 @@ class TraversalTopologicalSortFlex(
             and visited_uses_bits == trace_set_uses_bits
         ), ("Collection visited is incompatible " + "with collection trace_set")
         set_uses_sequence = visited_uses_sequence
-        del visited_uses_sequence, trace_set_uses_sequence
+        # MyPyC: Deleting local variables is not allowed. It has been deleted
+        #   to ensure that it is not used from here on.
+        # del visited_uses_sequence, trace_set_uses_sequence
         set_uses_bits = visited_uses_bits
-        del visited_uses_bits, trace_set_uses_bits
+        # MyPyC: Deleting local variables is not allowed. It has been deleted
+        #   to ensure that it is not used from here on.
+        # del visited_uses_bits, trace_set_uses_bits
         if set_uses_sequence and set_uses_bits:
             assert visited_index_and_bit_method is trace_set_index_and_bit_method, (
                 "Collection visited is incompatible " + "with collection trace_set"
             )
         set_index_and_bit_method = visited_index_and_bit_method
-        del visited_index_and_bit_method, trace_set_index_and_bit_method
+        # MyPyC: Deleting local variables is not allowed. It has been deleted
+        #   to ensure that it is not used from here on.
+        # del visited_index_and_bit_method, trace_set_index_and_bit_method
 
         # ----- Inner loop -----
 
@@ -673,6 +684,8 @@ class TraversalTopologicalSort(
     - `GearDefault` is used, see there how it and its superclass work
     - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
     """
+
+    _state_attrs: ClassVar = TraversalTopologicalSortFlex._state_attrs
 
     def __init__(
         self,

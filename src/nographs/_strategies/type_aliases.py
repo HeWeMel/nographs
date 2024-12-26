@@ -1,9 +1,7 @@
-""" Type aliases used for defining the signatures of methods of strategies
+"""Type aliases used for defining the signatures of methods of strategies
 
 Warning: The following types are manually documented in api.rst
 """
-
-from __future__ import annotations
 
 from typing import TypeVar, Callable, Iterable, Any, Union
 
@@ -20,7 +18,7 @@ from nographs._types import (
 from .strategy import Strategy
 
 
-T_strategy = TypeVar("T_strategy", bound=Strategy)
+T_strategy = TypeVar("T_strategy", bound=Strategy[Any, Any, Any])
 
 
 # next vertices and next edges functions for traversals

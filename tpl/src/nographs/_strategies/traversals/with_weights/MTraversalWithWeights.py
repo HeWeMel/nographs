@@ -10,13 +10,15 @@ class MStrategyWithWeights:
     @staticmethod
     def init_signature(traversal_type: str) -> None:
         insert(
-            f"""\
+            f'''\
             vertex_to_id: VertexToID[T_vertex, T_vertex_id],
             gear: Gear[T_vertex, T_vertex_id, T_weight, T_labels],
             next_edges: Optional[
                 NextWeightedEdges[
                     T_vertex,
-                    {traversal_type}[T_vertex, T_vertex_id, T_weight, T_labels],
+                    """{traversal_type}[
+                        T_vertex, T_vertex_id, T_weight, T_labels
+                    ]""",
                     T_weight,
                 ]
             ] = None,
@@ -24,12 +26,14 @@ class MStrategyWithWeights:
             next_labeled_edges: Optional[
                 NextWeightedLabeledEdges[
                     T_vertex,
-                    {traversal_type}[T_vertex, T_vertex_id, T_weight, T_labels],
+                    """{traversal_type}[
+                        T_vertex, T_vertex_id, T_weight, T_labels
+                    ]""",
                     T_weight,
                     T_labels,
                 ]
             ] = None,
-"""
+'''
         )
 
     @staticmethod
@@ -86,6 +90,8 @@ class MStrategyWithWeights:
                 - The used weights are defined by Union[T_weight, float], see `GearDefault`
                 - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
                 """
+
+                _state_attrs: ClassVar = {class_name}Flex._state_attrs
 
                 def __init__(
                     self,

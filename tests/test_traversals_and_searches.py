@@ -68,7 +68,8 @@ def _results_of_traversal(
     of __dict__ of traversal object so that the caller can perform further checks.
     """
     # get traversal attributes before iterator starts, for comparison
-    org_dict = dict(traversal.__dict__)
+    # noinspection PyProtectedMember
+    org_dict = {k: getattr(traversal, k) for k in traversal._state_attrs}
     vertices = set(additional_vertices)
     print_filled(f"After start: {traversal.state_to_str(vertices)}")
     for vertex in traversal:
@@ -169,7 +170,9 @@ def print_partial_results(
 
 def check_path(
     vertex_iterable: Iterable[T_vertex],
-    next_edges: Callable[[T_vertex, Any], Iterable[tuple]],
+    next_edges: Callable[
+        [T_vertex, Any], Iterable[nog.AnyFullEdge[T_vertex, Any, Any]]
+    ],
 ) -> None:
     """Check if each edge in the path described by the vertex_iterable is
     allowed according to the given next_edges function.
@@ -184,12 +187,13 @@ def check_path(
 
 
 def adj_funcs_bi_from_list(
-    edge_list: Iterable,
+    edge_list: Iterable[nog.AnyFullEdge[T_vertex, Any, Any]],
     edge_data: bool,
     report_steps: bool = True,
-    vertex_to_key: Callable = nog.vertex_as_id,
+    vertex_to_key: Callable[[Any], Any] = nog.vertex_as_id,
 ) -> tuple[
-    Callable[[T_vertex, Strategy], Iterable], Callable[[T_vertex, Strategy], Iterable]
+    Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[Any]],
+    Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[Any]],
 ]:
     """Create NextEdges function for forward and for backward direction, based
     on an Iterable of edges. When a vertex is expanded, this is printed to std out,
@@ -203,8 +207,8 @@ def adj_funcs_bi_from_list(
     vertex_to_key need to be a function that returns a hashable key for a vertex,
     where no two vertices have the same key.
     """
-    edge_dict_forwards = collections.defaultdict(list)
-    edge_dict_backwards = collections.defaultdict(list)
+    edge_dict_forwards = collections.defaultdict[T_vertex, list[Any]](list)
+    edge_dict_backwards = collections.defaultdict[T_vertex, list[Any]](list)
     if edge_data:
         for edge in edge_list:
             v, w, *others = edge
@@ -218,20 +222,28 @@ def adj_funcs_bi_from_list(
 
     if report_steps:
 
-        def next_edges_forwards(vertex: T_vertex, strategy: Strategy) -> Iterable:
+        def next_edges_forwards(
+            vertex: T_vertex, strategy: Strategy[Any, Any, Any]
+        ) -> Iterable[Any]:
             print_filled(f"? {vertex}: {strategy.state_to_str([vertex])}")
             return edge_dict_forwards.get(vertex_to_key(vertex), [])
 
-        def next_edges_backwards(vertex: T_vertex, strategy: Strategy) -> Iterable:
+        def next_edges_backwards(
+            vertex: T_vertex, strategy: Strategy[Any, Any, Any]
+        ) -> Iterable[Any]:
             print_filled(f"?<{vertex}: {strategy.state_to_str([vertex])}")
             return edge_dict_backwards.get(vertex_to_key(vertex), [])
 
     else:
 
-        def next_edges_forwards(vertex: T_vertex, strategy: Strategy) -> Iterable:
+        def next_edges_forwards(
+            vertex: T_vertex, strategy: Strategy[Any, Any, Any]
+        ) -> Iterable[Any]:
             return edge_dict_forwards.get(vertex_to_key(vertex), [])
 
-        def next_edges_backwards(vertex: T_vertex, strategy: Strategy) -> Iterable:
+        def next_edges_backwards(
+            vertex: T_vertex, strategy: Strategy[Any, Any, Any]
+        ) -> Iterable[Any]:
             return edge_dict_backwards.get(vertex_to_key(vertex), [])
 
     return next_edges_forwards, next_edges_backwards
@@ -250,10 +262,14 @@ def first_of(lst: list[T]) -> T:
 infinity = float("infinity")
 
 V = TypeVar("V")
-E = TypeVar("E", bound=tuple)
+W = TypeVar("W", bound=nog.Weight)
+L = TypeVar("L")
+E = nog.AnyFullEdge[V, W, L]
+# E = TypeVar("E", bound=Sequence[Any])
+# E = nog.AnyFullEdge[Any, Any, Any]
 
 
-class Fixture(ABC, Generic[V, E]):
+class Fixture(ABC, Generic[V, W, L]):
     """Basic test fixture. Provides adjacency function next_vertices and
     a start vertex.
     """
@@ -261,10 +277,10 @@ class Fixture(ABC, Generic[V, E]):
     def __init__(self, start: V):
         self.start = start
 
-    next_edges: Callable[[V, Strategy], Iterable[E]]
+    next_edges: Callable[[V, Strategy[Any, Any, Any]], Iterable[E[V, W, L]]]
 
 
-class FixtureFull(Fixture[V, E]):
+class FixtureFull(Fixture[V, W, L]):
     """Test fixture. Provides adjacency functions next_vertices,
     next_vertices_bi, next_edges, and next_edges_bi for some given edges.
     Optionally, these functions report their state. Optionally, a vertex_to_key
@@ -275,12 +291,12 @@ class FixtureFull(Fixture[V, E]):
 
     def __init__(
         self,
-        edges: Iterable[E],
+        edges: Iterable[E[V, W, L]],
         start: V,
         goal: V,
         heuristic: Callable[[V], Union[int, float]],
         report: bool = False,
-        vertex_to_key: Callable = nog.vertex_as_id,
+        vertex_to_key: Callable[[Any], Any] = nog.vertex_as_id,
     ):
         super().__init__(start)
         self.edges = edges
@@ -289,60 +305,66 @@ class FixtureFull(Fixture[V, E]):
 
         self.start_bi = (start, goal)
 
-        self.next_vertices_bi = adj_funcs_bi_from_list(
+        self.next_vertices_bi: tuple[
+            Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[E[V, W, L]]],
+            Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[E[V, W, L]]],
+        ] = adj_funcs_bi_from_list(
             edges, edge_data=False, report_steps=report, vertex_to_key=vertex_to_key
         )
         self.next_vertices = self.next_vertices_bi[0]
 
-        self.next_edges_bi = adj_funcs_bi_from_list(
+        self.next_edges_bi: tuple[
+            Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[E[V, W, L]]],
+            Callable[[T_vertex, Strategy[Any, Any, Any]], Iterable[E[V, W, L]]],
+        ] = adj_funcs_bi_from_list(
             edges, edge_data=True, report_steps=report, vertex_to_key=vertex_to_key
         )
         self.next_edges = self.next_edges_bi[0]
 
 
-class FNoEdgesGoalUnreachable(FixtureFull[int, tuple]):
+class FNoEdgesGoalUnreachable(FixtureFull[int, Any, Any]):
     """Zero edges graph, goal not reachable"""
 
     def __init__(self) -> None:
         super().__init__([], 0, 1, lambda v: 0, report=True)
 
 
-class FNoEdgesGoalIsStart(FixtureFull[int, tuple]):
+class FNoEdgesGoalIsStart(FixtureFull[int, Any, Any]):
     """Zero edges graph, start equals goal"""
 
     def __init__(self) -> None:
         super().__init__([], 0, 0, lambda v: 0, report=True)
 
 
-class FOneEdgeNoData(FixtureFull[int, tuple[int, int]]):
+class FOneEdgeNoData(FixtureFull[int, Any, Any]):
     """One-edge graph with edge from start to goal, no weights, no labels"""
 
     def __init__(self) -> None:
         super().__init__([(0, 1)], 0, 1, lambda v: 1 if v == 0 else 0)
 
 
-class FOneEdgeWeighted(FixtureFull[int, tuple[int, int, int]]):
+class FOneEdgeWeighted(FixtureFull[int, int, int]):
     """One-edge graph with edge from start to goal, weight 1, no labels"""
 
     def __init__(self) -> None:
         super().__init__([(0, 1, 1)], 0, 1, lambda v: 1 if v == 0 else 0)
 
 
-class FOneEdgeLabeled(FixtureFull[int, tuple[int, int, int]]):
+class FOneEdgeLabeled(FixtureFull[int, int, int]):
     """One-edge graph with edge from start to goal, no weights, label 2"""
 
     def __init__(self) -> None:
         super().__init__([(0, 1, 2)], 0, 1, lambda v: 1 if v == 0 else 0)
 
 
-class FOneEdgeWeightedLabeled(FixtureFull[int, tuple[int, int, int, int]]):
+class FOneEdgeWeightedLabeled(FixtureFull[int, int, int]):
     """One-edge graph with edge from start to goal, weight 1, label 2"""
 
     def __init__(self) -> None:
         super().__init__([(0, 1, 1, 2)], 0, 1, lambda v: 1 if v == 0 else 0)
 
 
-class FOneEdgeUnhashable(FixtureFull[list[int], tuple[list[int], list[int], int, int]]):
+class FOneEdgeUnhashable(FixtureFull[list[int], int, int]):
     """One-edge graph - vertices are list[int]"""
 
     def __init__(self) -> None:
@@ -355,9 +377,7 @@ class FOneEdgeUnhashable(FixtureFull[list[int], tuple[list[int], list[int], int,
         )
 
 
-class FSequenceUnhashable(
-    FixtureFull[list[int], tuple[list[int], list[int], int, int]]
-):
+class FSequenceUnhashable(FixtureFull[list[int], int, int]):
     """Linear graph of fixed size - vertices are list[int]"""
 
     def __init__(self) -> None:
@@ -374,7 +394,7 @@ class FSequenceUnhashable(
         self.start_impossible_bi = (self.start, self.goal_impossible)
 
 
-class FDiamond(FixtureFull[int, tuple[int, int, int, int]]):
+class FDiamond(FixtureFull[int, int, int]):
     """Diamond-shaped graph of fixed size. Variant with weight 2 from vertices 1 and
     2 to 3 (useful for TraversalShortestPaths). Additionally, a vertex for a test with
     this vertex as already visited vertex is given, and values for know distances for
@@ -393,7 +413,7 @@ class FDiamond(FixtureFull[int, tuple[int, int, int, int]]):
         self.values_for_known_distances = ((0, 2), (1, 0))
 
 
-class FDiamondSorted(FixtureFull[int, tuple[int, int, int]]):
+class FDiamondSorted(FixtureFull[int, int, int]):
     """Diamond-shaped graph of fixed size. Variant with sorted edges (as needed by
     TraversalShortestPathsInfBranchingSorted). No heuristic is given, since it is
     not used for this strategy.
@@ -405,7 +425,7 @@ class FDiamondSorted(FixtureFull[int, tuple[int, int, int]]):
         )
 
 
-class FDiamondDFS(FixtureFull[int, tuple[int, int, int, int]]):
+class FDiamondDFS(FixtureFull[int, int, int]):
     """Diamond-shaped graph of fixed size. Variant with two additional edges of kind
     forward and back edge. Additionally, a vertex for a test with
     this vertex as already visited vertex is given.
@@ -429,7 +449,7 @@ class FDiamondDFS(FixtureFull[int, tuple[int, int, int, int]]):
         self.vertex_for_already_visited = 1
 
 
-class FDiamondMST(FixtureFull[int, tuple[int, int, int]]):
+class FDiamondMST(FixtureFull[int, int, int]):
     """Diamond-shaped graph of fixed size. Variant with weight 3 from vertices 1 and
     2 to 3 (used for MST). No heuristic is given, since it is not used for A*.
     """
@@ -440,7 +460,7 @@ class FDiamondMST(FixtureFull[int, tuple[int, int, int]]):
         )
 
 
-class FAStar(FixtureFull[int, tuple[int, int, int]]):
+class FAStar(FixtureFull[int, int, int]):
     """A* test graph."""
 
     def __init__(self) -> None:
@@ -454,7 +474,7 @@ class FAStar(FixtureFull[int, tuple[int, int, int]]):
         self.values_for_known_distances = ((0, 2), (1, 0))
 
 
-class FBSearchShortestPath(FixtureFull[int, tuple[int, int, int]]):
+class FBSearchShortestPath(FixtureFull[int, int, int]):
     """Additional test graph for BSearchShortestPath"""
 
     def __init__(self) -> None:
@@ -467,7 +487,7 @@ class FBSearchShortestPath(FixtureFull[int, tuple[int, int, int]]):
         )
 
 
-class FSmallBinaryTree(FixtureFull[int, tuple[int, int, int]]):
+class FSmallBinaryTree(FixtureFull[int, int, int]):
     """Graphs forming a binary tree with just 6 vertices. Outgoing edges are sorted
     by ascending weight."""
 
@@ -481,7 +501,7 @@ class FSmallBinaryTree(FixtureFull[int, tuple[int, int, int]]):
         )
 
 
-class FMultiStart(FixtureFull[int, tuple[int, int, int]]):
+class FMultiStart(FixtureFull[int, int, int]):
     """Graph for testing multiple start vertices. Used for all strategies
     except of DFS, A* and the bidirectional search strategies. Outgoing edges
     are sorted by ascending weight, since all weights are equal."""
@@ -506,7 +526,7 @@ class FMultiStart(FixtureFull[int, tuple[int, int, int]]):
         self.goal_vertices = (4,)
 
 
-class FMultiStartDFS(FixtureFull[int, tuple[int, int, int]]):
+class FMultiStartDFS(FixtureFull[int, int, int]):
     """Graph for testing multiple start vertices. Used for DFS - and for this,
     it is equipped with forward, back, and cross edges and with already
     visited start vertices.
@@ -535,7 +555,7 @@ class FMultiStartDFS(FixtureFull[int, tuple[int, int, int]]):
         self.goal_vertices = (4,)
 
 
-class FMultiStartAStar(FixtureFull[int, tuple[int, int, int]]):
+class FMultiStartAStar(FixtureFull[int, int, int]):
     """Graph for testing multiple start vertices. Used for all strategies
     except of A* and the bidirectional search strategies."""
 
@@ -550,7 +570,7 @@ class FMultiStartAStar(FixtureFull[int, tuple[int, int, int]]):
         self.start_vertices = (0, 1)
 
 
-class FMultiStartB(FixtureFull[int, tuple[int, int, int]]):
+class FMultiStartB(FixtureFull[int, int, int]):
     """Graph for testing multiple start vertices. Used for bidirectional
     search strategies."""
 
@@ -575,7 +595,7 @@ class FMultiStartB(FixtureFull[int, tuple[int, int, int]]):
         self.start_vertices_bi = (self.start_vertices, self.goal_vertices)
 
 
-class FSpiral(Fixture[int, tuple[int, int, int]]):
+class FSpiral(Fixture[int, int, int]):
     """Graph for testing TraversalShortestPathsFlex with all gears.
     Outgoing edges are sorted by ascending weight.
     """
@@ -605,16 +625,17 @@ class FSpiralSorted(FSpiral):
         return out_edges
 
 
-class FOvertaking(FixtureFull[int, tuple[int, int, int, int]]):
+class FOvertaking(FixtureFull[int, int, int]):
     """Graph for testing all strategies with different gears. It can be used
     to create a distance overflow for distance values stored in an array of
-    byte. It contains no cycles, which is required for topological search."""
+    byte, even for a bidirectional search for shortest paths. It contains no
+    cycles, which is required for topological search."""
 
     def __init__(self) -> None:
         _enough_for_index_error = (1 + 128) * 8  # index error even for seq of bits
-        goal = 2 * _enough_for_index_error
-        limit = 3 * _enough_for_index_error
-        self.last_vertex = limit + 2  # todo: Goal? Remove?
+        goal = 3 * _enough_for_index_error
+        limit = 4 * _enough_for_index_error
+        self.last_vertex = limit + 2
 
         edges = []
         for v in range(0, limit, 2):
@@ -627,7 +648,7 @@ class FOvertaking(FixtureFull[int, tuple[int, int, int, int]]):
         super().__init__(edges, 0, goal, lambda v: 0, report=False)
 
 
-class FOvertakingDFSWithBackEdges(FixtureFull[int, tuple[int, int, int, int]]):
+class FOvertakingDFSWithBackEdges(FixtureFull[int, int, int]):
     """Graph for testing DFS with different gears. It can be used
     to create a distance overflow for distance values stored in an array of
     byte. And it has back edges, which is required for a full DFS test."""
@@ -636,7 +657,7 @@ class FOvertakingDFSWithBackEdges(FixtureFull[int, tuple[int, int, int, int]]):
         _enough_for_index_error = (1 + 128) * 8  # index error even for seq of bits
         goal = 2 * _enough_for_index_error
         limit = 3 * _enough_for_index_error
-        self.last_vertex = limit + 2  # todo: Goal? Remove?
+        self.last_vertex = limit + 2
 
         edges = []
         for v in range(0, limit, 2):
@@ -650,7 +671,7 @@ class FOvertakingDFSWithBackEdges(FixtureFull[int, tuple[int, int, int, int]]):
         super().__init__(edges, 0, goal, lambda v: 0, report=False)
 
 
-class FSequenceTo255(Fixture[int, tuple[int, int]]):
+class FSequenceTo255(Fixture[int, Any, Any]):
     """Graph with vertices from 0 to 255, edges from i to i+1, and 255 as goal.
     It can be used to create an infinity overflow of guessed distance (guess >= 255)
     for distance guess values stored in an array of byte.
@@ -669,7 +690,7 @@ class FSequenceTo255(Fixture[int, tuple[int, int]]):
         return 255 - vertex  # Create infinity overflow of guessed distance
 
 
-class FBinaryTreeFixedWeights(Fixture[int, tuple[int, int, int]]):
+class FBinaryTreeFixedWeights(Fixture[int, int, int]):
     """Graph for testing strategies with is_tree and different gears."""
 
     def __init__(self) -> None:
@@ -3232,8 +3253,8 @@ class MultipleOrNoneStartVerticesTraversalsWithOrWithoutLabels:
     >>> print(l, f.goal not in p)
     3 True
     >>> l, p = nog.BSearchBreadthFirst(fb.next_vertices_bi
-    ...     ).start_from(start_and_goal_vertices=[
-    ...                      iter(s) for s in fb.start_vertices_bi], build_path=True)
+    ...     ).start_from(start_and_goal_vertices=tuple(
+    ...                      iter(s) for s in fb.start_vertices_bi), build_path=True)
     ? 0: {'depth': 0, 'visited': {0, 5}, 'paths': {0: (0,)}}
     ? 5: {'depth': 0, 'visited': {0, 1, 5}, 'paths': {5: (5,)}}
     ?<4: {'depth': 0, 'visited': {4}, 'paths': {4: (4,)}}
@@ -3624,7 +3645,7 @@ class MultipleStartVerticesTraversalsWithWeights:
     >>> print(l, fb.goal not in p)
     4 True
     >>> l, p = search.start_from(
-    ...     start_and_goal_vertices = [iter(s) for s in fb.start_vertices_bi],
+    ...     start_and_goal_vertices = tuple(iter(s) for s in fb.start_vertices_bi),
     ...     build_path=True)
     ? 5: {}
     ?<4: {}
@@ -3802,135 +3823,6 @@ class IllegalParameters:
     Traceback (most recent call last):
     RuntimeError: Parameter *already_visited* not allowed when vertex indexes
     are demanded.
-    """
-
-
-class InitiationForgotten:
-    """Check if the library detects the mistake that start_from or one of the
-    go_... methods are called on a traversal class instead of an object, i.e., the
-    round brackets after the class name have been forgotten.
-
-    >>> nog.TraversalBreadthFirst.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalBreadthFirst.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalBreadthFirst.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalBreadthFirst.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-    >>> nog.TraversalBreadthFirst.go_for_depth_range(None, None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_depth_range can only be called on a Traversal object.
-
-    >>> nog.TraversalDepthFirst.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalDepthFirst.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalDepthFirst.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalDepthFirst.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-
-    >>> nog.TraversalNeighborsThenDepth.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalNeighborsThenDepth.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalNeighborsThenDepth.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalNeighborsThenDepth.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-
-    >>> nog.TraversalShortestPaths.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalShortestPaths.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalShortestPaths.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalShortestPaths.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-    >>> nog.TraversalShortestPaths.go_for_distance_range(None, None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_distance_range can only be called on a Traversal object.
-
-    >>> nog.TraversalShortestPathsInfBranchingSorted.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalShortestPathsInfBranchingSorted.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalShortestPathsInfBranchingSorted.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalShortestPathsInfBranchingSorted.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-    >>> nog.TraversalShortestPathsInfBranchingSorted.go_for_distance_range(
-    ...     None, None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_distance_range can only be called on a Traversal object.
-
-    >>> nog.TraversalAStar.start_from(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalAStar.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalAStar.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalAStar.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-
-    >>> nog.TraversalMinimumSpanningTree.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalMinimumSpanningTree.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalMinimumSpanningTree.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalMinimumSpanningTree.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-
-    >>> nog.TraversalTopologicalSort.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a Traversal object.
-    >>> nog.TraversalTopologicalSort.__iter__(None)
-    Traceback (most recent call last):
-    RuntimeError: Method go can only be called on a Traversal object.
-    >>> nog.TraversalTopologicalSort.go_to(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_to can only be called on a Traversal object.
-    >>> nog.TraversalTopologicalSort.go_for_vertices_in(None, None)
-    Traceback (most recent call last):
-    RuntimeError: Method go_for_vertices_in can only be called on a Traversal object.
-
-    >>> nog.BSearchBreadthFirst.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a search strategy object.
-
-    >>> nog.BSearchShortestPath.start_from(None)
-    Traceback (most recent call last):
-    RuntimeError: Method start_from can only be called on a search strategy object.
     """
 
 
@@ -4144,26 +4036,26 @@ class GearTestsTraversalsWithOrWithoutLabels:
     >>> for t in gear_test_traversals(nog.TraversalBreadthFirstFlex, f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
 
     >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
 
     For DFS without trace and events, we also test without paths, because this
     changes the process
@@ -4183,25 +4075,25 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...        f.start, build_paths=True, compute_on_trace=True),
     ...        paths_to=f.goal)
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f.next_edges):
     ...    print_partial_results(t.start_from(
     ...        f.start, build_paths=True, compute_index=True),
     ...        paths_to=f.goal)
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [9, 10, 5, 6, 1, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
 
     Now, we also report NON_TREE_EDGESs, since this enables and uses the
     functionality of options index and on_trace
@@ -4211,13 +4103,13 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...        report=nog.DFSEvent.ENTERING_SUCCESSOR | nog.DFSEvent.NON_TREE_EDGES),
     ...        paths_to=f.goal)
     [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
     [3, 4, 7, 8, 11] [6, 1, 2, 5, 3, 4]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
 
     >>> for t in gear_test_traversals(nog.TraversalDepthFirstFlex, f2.next_edges):
     ...    print_partial_results(t.start_from(
@@ -4238,48 +4130,48 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...                               f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
-    [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [1, 3, 6, 4, 5] [3093, 3095, 3098, 3096, 3097, 2]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [1, 3, 6, 4, 5] [4125, 4127, 4130, 4128, 4129, 2]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [1, 3, 6, 4, 5] [4125, 4127, 4130, 4128, 4129, 2]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [1, 3, 6, 4, 5] [4125, 4127, 4130, 4128, 4129, 2]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [1, 3, 6, 4, 5] [4125, 4127, 4130, 4128, 4129, 2]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
 
     >>> for t in gear_test_traversals(nog.TraversalTopologicalSortFlex,
     ...                               f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
-    [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
-    [3096, 3098, 3095, 3097, 3094] [5, 4, 3, 2, 1, 0]
-    ((0, 3, 3), (3, 4, 3)) ((2060, 2063, 3), (2063, 2064, 3))
+    [4128, 4130, 4127, 4129, 4126] [5, 4, 3, 2, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [4128, 4130, 4127, 4129, 4126] [5, 4, 3, 2, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [4128, 4130, 4127, 4129, 4126] [5, 4, 3, 2, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
+    [4128, 4130, 4127, 4129, 4126] [5, 4, 3, 2, 1, 0]
+    ((0, 3, 3), (3, 4, 3)) ((3092, 3095, 3), (3095, 3096, 3))
 
     >>> for t in gear_test_traversals(nog.TraversalShortestPathsFlex,
     ...                               f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
     >>> t = nog.TraversalShortestPathsFlex(
     ...     nog.vertex_as_id,
     ...     nog.GearForIntVerticesAndIDsAndCInts(),
     ...     next_labeled_edges=f.next_edges)
     >>> print_partial_results(t.start_from(f.start, build_paths=True),
     ...                       paths_to=f.goal)
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
     >>> t = nog.TraversalShortestPathsFlex(
     ...     nog.vertex_as_id,
     ...     nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B"),
@@ -4295,27 +4187,27 @@ class GearTestsTraversalsWithOrWithoutLabels:
     ...                               f.next_edges):
     ...    print_partial_results(t.start_from(f.start, build_paths=True),
     ...                          paths_to=f.goal)
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [1, 3, 4, 2, 6] [3092, 3094, 3096, 3095, 3097, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [1, 3, 4, 2, 6] [4124, 4126, 4128, 4127, 4129, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
 
     >>> for t in gear_test_traversals(nog.TraversalAStarFlex, f.next_edges):
     ...    print_partial_results(
     ...        t.start_from(f.heuristic, f.start, build_paths=True),
     ...        paths_to=f.goal)
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
     >>> t = nog.TraversalAStarFlex(
     ...     nog.vertex_as_id,
     ...     nog.GearForIntVerticesAndIDsAndCInts(),  # infinity overflow in distance
@@ -4323,8 +4215,8 @@ class GearTestsTraversalsWithOrWithoutLabels:
     >>> print_partial_results(
     ...     t.start_from(f.heuristic, f.start, build_paths=True),
     ...     paths_to=f.goal)
-    [3, 1, 2, 4, 6] [3092, 3094, 3096, 3097, 3095, 3098]
-    ((0, 3, 3), (3, 6, 1)) ((2058, 2061, 3), (2061, 2064, 1))
+    [3, 1, 2, 4, 6] [4124, 4126, 4128, 4129, 4127, 4130]
+    ((0, 3, 3), (3, 6, 1)) ((3090, 3093, 3), (3093, 3096, 1))
     >>> t = nog.TraversalAStarFlex(
     ...     nog.vertex_as_id,
     ...     nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B"),
@@ -4440,42 +4332,42 @@ class GearTestsTraversalsWithOrWithoutLabels:
     >>> v = t.start_from(f.start, build_paths=True).go_to(f.last_vertex)
     >>> path = t.paths[f.last_vertex]
     >>> print(t.depth, path[:5], path[-5:], f.last_vertex)
-    1034 (0, 1, 4, 5, 8) (3086, 3089, 3092, 3095, 3098) 3098
+    1378 (0, 1, 4, 5, 8) (4118, 4121, 4124, 4127, 4130) 4130
 
     >>> for g in test_gears:
     ...     test_for_gear(nog.BSearchBreadthFirstFlex, g)
     -- GearForHashableVertexIDsAndIntsMaybeFloats --
-    1034 (0, 1, 4, 5, 8) (3086, 3089, 3092, 3095, 3098)
-    (0, 1, 4) (3095, 3098)
-    (3098, 3095, 3092) (1, 0)
-    ((0, 1), (1, 4), (4, 5)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((1, 4), (0, 1))
-    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((1, 4, 1), (0, 1, 1))
+    1378 (0, 1, 4, 5, 8) (4118, 4121, 4124, 4127, 4130)
+    (0, 1, 4) (4127, 4130)
+    (4130, 4127, 4124) (1, 0)
+    ((0, 1), (1, 4), (4, 5)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((1, 4), (0, 1))
+    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((1, 4, 1), (0, 1, 1))
     -- GearForIntVertexIDsAndCFloats --
-    1034 (0, 1, 4, 5, 8) (3086, 3089, 3092, 3095, 3098)
-    (0, 1, 4) (3095, 3098)
-    (3098, 3095, 3092) (1, 0)
-    ((0, 1), (1, 4), (4, 5)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((1, 4), (0, 1))
-    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((1, 4, 1), (0, 1, 1))
+    1378 (0, 1, 4, 5, 8) (4118, 4121, 4124, 4127, 4130)
+    (0, 1, 4) (4127, 4130)
+    (4130, 4127, 4124) (1, 0)
+    ((0, 1), (1, 4), (4, 5)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((1, 4), (0, 1))
+    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((1, 4, 1), (0, 1, 1))
     -- GearForIntVerticesAndIDsAndCFloats --
-    1034 (0, 1, 4, 5, 8) (3086, 3089, 3092, 3095, 3098)
-    (0, 1, 4) (3095, 3098)
-    (3098, 3095, 3092) (1, 0)
-    ((0, 1), (1, 4), (4, 5)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((1, 4), (0, 1))
-    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((1, 4, 1), (0, 1, 1))
+    1378 (0, 1, 4, 5, 8) (4118, 4121, 4124, 4127, 4130)
+    (0, 1, 4) (4127, 4130)
+    (4130, 4127, 4124) (1, 0)
+    ((0, 1), (1, 4), (4, 5)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((1, 4), (0, 1))
+    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((1, 4, 1), (0, 1, 1))
     -- GearForIntVerticesAndIDsAndCFloats --
-    1034 (0, 1, 4, 5, 8) (3086, 3089, 3092, 3095, 3098)
-    (0, 1, 4) (3095, 3098)
-    (3098, 3095, 3092) (1, 0)
-    ((0, 1), (1, 4), (4, 5)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((1, 4), (0, 1))
-    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((1, 4, 1), (0, 1, 1))
+    1378 (0, 1, 4, 5, 8) (4118, 4121, 4124, 4127, 4130)
+    (0, 1, 4) (4127, 4130)
+    (4130, 4127, 4124) (1, 0)
+    ((0, 1), (1, 4), (4, 5)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((1, 4), (0, 1))
+    ((0, 1, 1), (1, 4, 1), (4, 5, 1)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((1, 4, 1), (0, 1, 1))
 
 
     For testing BidirectionalSearchShortestPath, we use the length of the
@@ -4484,53 +4376,53 @@ class GearTestsTraversalsWithOrWithoutLabels:
     >>> v = t.start_from(f.start, build_paths=True).go_to(f.last_vertex)
     >>> path = t.paths[f.last_vertex]
     >>> print(t.distance, path[:5], path[-5:], f.last_vertex)
-    1034 (0, 3, 6, 9, 12) (3088, 3091, 3092, 3095, 3098) 3098
+    1378 (0, 3, 6, 9, 12) (4120, 4123, 4124, 4127, 4130) 4130
 
     >>> for g in test_gears:
     ...     test_for_gear(nog.BSearchShortestPathFlex, g)
     -- GearForHashableVertexIDsAndIntsMaybeFloats --
-    1034 (0, 3, 6, 9, 12) (3086, 3089, 3092, 3095, 3098)
-    (0, 3, 6) (3095, 3098)
-    (3098, 3095, 3092) (3, 0)
-    ((0, 3), (3, 6), (6, 9)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((3, 6), (0, 3))
-    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((3, 6, 1), (0, 3, 3))
+    1378 (0, 3, 6, 9, 12) (4118, 4121, 4124, 4127, 4130)
+    (0, 3, 6) (4127, 4130)
+    (4130, 4127, 4124) (3, 0)
+    ((0, 3), (3, 6), (6, 9)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((3, 6), (0, 3))
+    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((3, 6, 1), (0, 3, 3))
     -- GearForIntVertexIDsAndCFloats --
-    1034.0 (0, 3, 6, 9, 12) (3086, 3089, 3092, 3095, 3098)
-    (0, 3, 6) (3095, 3098)
-    (3098, 3095, 3092) (3, 0)
-    ((0, 3), (3, 6), (6, 9)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((3, 6), (0, 3))
-    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((3, 6, 1), (0, 3, 3))
+    1378.0 (0, 3, 6, 9, 12) (4118, 4121, 4124, 4127, 4130)
+    (0, 3, 6) (4127, 4130)
+    (4130, 4127, 4124) (3, 0)
+    ((0, 3), (3, 6), (6, 9)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((3, 6), (0, 3))
+    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((3, 6, 1), (0, 3, 3))
     -- GearForIntVerticesAndIDsAndCFloats --
-    1034.0 (0, 3, 6, 9, 12) (3086, 3089, 3092, 3095, 3098)
-    (0, 3, 6) (3095, 3098)
-    (3098, 3095, 3092) (3, 0)
-    ((0, 3), (3, 6), (6, 9)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((3, 6), (0, 3))
-    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((3, 6, 1), (0, 3, 3))
+    1378.0 (0, 3, 6, 9, 12) (4118, 4121, 4124, 4127, 4130)
+    (0, 3, 6) (4127, 4130)
+    (4130, 4127, 4124) (3, 0)
+    ((0, 3), (3, 6), (6, 9)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((3, 6), (0, 3))
+    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((3, 6, 1), (0, 3, 3))
     -- GearForIntVerticesAndIDsAndCFloats --
-    1034.0 (0, 3, 6, 9, 12) (3086, 3089, 3092, 3095, 3098)
-    (0, 3, 6) (3095, 3098)
-    (3098, 3095, 3092) (3, 0)
-    ((0, 3), (3, 6), (6, 9)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((3, 6), (0, 3))
-    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((3, 6, 1), (0, 3, 3))
+    1378.0 (0, 3, 6, 9, 12) (4118, 4121, 4124, 4127, 4130)
+    (0, 3, 6) (4127, 4130)
+    (4130, 4127, 4124) (3, 0)
+    ((0, 3), (3, 6), (6, 9)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((3, 6), (0, 3))
+    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((3, 6, 1), (0, 3, 3))
 
     >>> test_for_gear(nog.BSearchShortestPathFlex,
     ...               nog.GearForIntVerticesAndIDsAndCInts())
     -- GearForIntVerticesAndIDsAndCInts --
-    1034 (0, 3, 6, 9, 12) (3086, 3089, 3092, 3095, 3098)
-    (0, 3, 6) (3095, 3098)
-    (3098, 3095, 3092) (3, 0)
-    ((0, 3), (3, 6), (6, 9)) ((3092, 3095), (3095, 3098))
-    ((3095, 3098), (3092, 3095), (3089, 3092)) ((3, 6), (0, 3))
-    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((3092, 3095, 3), (3095, 3098, 1))
-    ((3095, 3098, 1), (3092, 3095, 3), (3089, 3092, 1)) ((3, 6, 1), (0, 3, 3))
+    1378 (0, 3, 6, 9, 12) (4118, 4121, 4124, 4127, 4130)
+    (0, 3, 6) (4127, 4130)
+    (4130, 4127, 4124) (3, 0)
+    ((0, 3), (3, 6), (6, 9)) ((4124, 4127), (4127, 4130))
+    ((4127, 4130), (4124, 4127), (4121, 4124)) ((3, 6), (0, 3))
+    ((0, 3, 3), (3, 6, 1), (6, 9, 3)) ((4124, 4127, 3), (4127, 4130, 1))
+    ((4127, 4130, 1), (4124, 4127, 3), (4121, 4124, 1)) ((3, 6, 1), (0, 3, 3))
 
     >>> test_for_gear(nog.BSearchShortestPathFlex,
     ...               nog.GearForIntVerticesAndIDsAndCInts(distance_type_code="B")

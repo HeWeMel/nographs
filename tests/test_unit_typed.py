@@ -104,7 +104,7 @@ class TestWithTypes(unittest.TestCase):
 
     def test_dfs_throw(self) -> None:
         """DFS function iter() returns a Collections.Generator. Its type is tested
-        my the MyPy run here. And The behaviour of the throw, both for stops
+        by the MyPy run here. And The behaviour of the throw, both for stops
         at a start vertex and at other vertices."""
 
         def next_vertices(i: int, _: Any) -> Iterator[int]:
@@ -140,6 +140,10 @@ class TestWithTypes(unittest.TestCase):
         try:
             # noinspection PyUnresolvedReferences
             _ = it.throw(stop)
-        except RuntimeError:
+        # CPython and PyPy: Following peps.python.org/pep-0479, the StopIteration is
+        # converted to a RuntimeError.
+        # PyPyC: The StopIteration falls through. This is documented in the tutorial
+        # of NoGraphs.
+        except (RuntimeError, StopIteration):
             return
         self.fail("StopIteration, thrown at illegal moment, raises RuntimeError.")

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import itertools
 import operator
 from collections.abc import (
@@ -22,31 +20,35 @@ Vectors = Sequence[Vector]
 Limits = Sequence[tuple[int, int]]  # api.rst: documented manually
 
 
+# MyPyC: tuple[int] cannot be subclassed. But on CPython, storing the tuple
+# in an attribute makes indexed access much slower. Thus, this class is not
+# compiled with MyPyC.
 class Position(tuple[int]):
     """A position in an n-dimensional array. It is initialized
-    by a `Vector`."""
+    by a `Vector`.
+
+    It is quite slow, due to its n-dimensional character.
+    """
 
     @classmethod
-    def at(cls, *coordinates: int) -> Position:
+    def at(cls, *coordinates: int) -> "Position":
         """Factory method, that creates a position from coordinates given
         as separated parameters.
         """
         return Position(coordinates)
 
-    def __add__(self, other: Vector) -> Position:  # type: ignore[override]
+    def __add__(self, other: Vector) -> "Position":  # type: ignore[override]
         """Add the *other* `Vector` to the position"""
         return Position(map(sum, zip(self, other)))
 
-    def __sub__(self, other: Vector) -> Position:
+    def __sub__(self, other: Vector) -> "Position":
         """Subtract the *other* `Vector` from the position."""
         return Position(map(operator.sub, self, other))
 
-    def __mul__(self, multiple: SupportsIndex) -> Position:
+    def __mul__(self, multiple: SupportsIndex) -> "Position":
         """Multiply each coordinate by the multiple, typically an integer.
 
-        Attention: Since Position is a tuple, 3*p returns a tuple that
-        repeats the coordinates of p three times, whilst p*3 means
-        p.__mul__(3) and really multiplies each coordinate of p by 3.
+        Attention: 3*p means something else, see *__rmul__*.
         """
         i = int(multiple)
         return Position(coordinate * i for coordinate in self)
@@ -65,7 +67,7 @@ class Position(tuple[int]):
             for coordinate, (low_limit, high_limit) in zip(self, limits)
         )
 
-    def wrap_to_cuboid(self, limits: Limits) -> Position:
+    def wrap_to_cuboid(self, limits: Limits) -> "Position":
         """If a coordinate of the position is outside its respective
         limit range *(from, to)* of the *limits* sequence (see `Limits`),
         add or subtract the size (to - from + 1) of the limit range as often
@@ -126,7 +128,7 @@ class Position(tuple[int]):
         moves: Iterable[Vector],
         limits: Optional[Limits] = None,
         wrap: bool = False,
-    ) -> Iterator[Position]:
+    ) -> Iterator["Position"]:
         # noinspection PyShadowingNames
         """
         Iterate the positions that are reached by performing the given moves.
@@ -154,7 +156,7 @@ class Position(tuple[int]):
 
 
 class Array:
-    def __init__(self, nested_sequences: Sequence, dimensions: int = 2) -> None:
+    def __init__(self, nested_sequences: Sequence[Any], dimensions: int = 2) -> None:
         """An n-dimensional array.
 
         Based on *nested sequences* that, up to a given number of
@@ -189,10 +191,10 @@ class Array:
         in this dimension."""
         return [(0, upper) for upper in self.size()]
 
-    def mutable_copy(self) -> Array:
+    def mutable_copy(self) -> "Array":
         """Create a mutable copy of the array."""
 
-        def _writable(area: Sequence, dimensions: int) -> list:
+        def _writable(area: Sequence[Any], dimensions: int) -> list[Any]:
             if dimensions > 1:
                 return [_writable(sub_area, dimensions - 1) for sub_area in area]
             else:
@@ -225,7 +227,7 @@ class Array:
         field = self.content
         for coordinate in position[:-1]:
             field = field[coordinate]
-        cast(MutableSequence, field)[position[-1]] = content
+        cast(MutableSequence[Any], field)[position[-1]] = content
 
     def items(self) -> Iterator[tuple[Position, Any]]:
         """Iterate positions and content.
@@ -237,7 +239,7 @@ class Array:
         # evaluate the type parameters of tuple (whilst typing.Tuple works).
 
         def _items_in_dimension(
-            area: Sequence, dimensions: int
+            area: Sequence[Any], dimensions: int
         ) -> Iterator[tuple[tuple[int, ...], Any]]:
             if dimensions == 1:
                 for coordinate, sub_area in enumerate(area):
@@ -267,7 +269,7 @@ class Array:
         content_set = set(content)
 
         def find_in_dimension(
-            p_matrix: Sequence, p_dimensions: int
+            p_matrix: Sequence[Any], p_dimensions: int
         ) -> Iterator[tuple[int, ...]]:
             if p_dimensions == 1:
                 for coordinate, cell_content in enumerate(p_matrix):
@@ -287,7 +289,7 @@ class Array:
         forbidden: Iterable[Hashable],
         wrap: bool = False,
         diagonals: bool = False,
-    ) -> Callable:
+    ) -> Callable[[Any, Any], Any]:
         # noinspection PyShadowingNames
         """Return a `NextVertices` function for traversal strategies, based on
         given choice of when positions qualify as neighbors (goals of a

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import (
     Iterator,
     Iterable,
@@ -47,7 +45,7 @@ class StrRepr:
         self.s = s
 
     @classmethod
-    def from_iterable(cls, i: Iterable[tuple[Any, Any]]) -> StrRepr:
+    def from_iterable(cls, i: Iterable[tuple[Any, Any]]) -> "StrRepr":
         """
         Provides a string representation of an iterable of key/value tuples,
         that look like the output from a dict with these items.
@@ -57,7 +55,7 @@ class StrRepr:
         return cls("{" + ", ".join(repr(k) + ": " + repr(v) for k, v in i) + "}")
 
     @classmethod
-    def from_set(cls, c: MutableSet[Any]) -> StrRepr:
+    def from_set(cls, c: MutableSet[Any]) -> "StrRepr":
         """
         Provides a string representation of a *MutableSet*,
         that looks like the string representation of a *Set* with these items,

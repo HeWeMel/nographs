@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import collections
 import itertools
 from collections.abc import Sequence, Mapping, Callable, Iterable
@@ -55,8 +53,11 @@ def adapt_edge_index(
 
 
 def adapt_edge_index(
-    index: Union[Mapping, Sequence], *, add_inverted: bool, attributes: bool
-) -> Callable:
+    index: Union[Mapping[Any, Any], Sequence[Any]],
+    *,
+    add_inverted: bool,
+    attributes: bool,
+) -> Callable[[Any, Any], Any]:
     """
     Read a graph from a Mapping (e.g. a Dict) or from a Sequence (e.g. a tuple
     or list, if integers are used as the vertices) and provide a neighbor function
@@ -164,8 +165,8 @@ def adapt_edge_iterable(
 
 
 def adapt_edge_iterable(
-    edges: Iterable[Sequence], *, add_inverted: bool, attributes: bool
-) -> Callable:
+    edges: Iterable[Sequence[Any]], *, add_inverted: bool, attributes: bool
+) -> Callable[[Any, Any], Any]:
     """
     Read a graph from an Iterable of edges and provide a neighbor function
     (`NextVertices` or `NextEdges`) from that data. Typically only used for test
@@ -195,7 +196,9 @@ def adapt_edge_iterable(
     :return: Neighbor function that can be used as parameter for one of the traversal
         algorithms. See `OutEdge <outgoing_edges>` for the case of attributes.
     """
-    edge_dict: dict[Any, list[Any]] = collections.defaultdict(list)
+    # Cython: edge_dict was declared as dict[Any, list[Any]], but this fails
+    # on Cython, because Cython does not accept a defaultdict as dict.
+    edge_dict = collections.defaultdict[Any, list[Any]](list)
     if add_inverted:
         if attributes:
             # Labeled edges are provided and all data should be used
