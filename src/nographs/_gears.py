@@ -210,27 +210,6 @@ class GearWithoutDistances(Protocol[T_vertex, T_vertex_id, T_labels]):
         """
         raise NotImplementedError  # pragma: no cover  # Not reachable
 
-    @abstractmethod
-    def sequence_of_edge_labels(
-        self, initial_content: Iterable[T_labels]
-    ) -> MutableSequenceOfLabels[T_labels]:
-        """Factory for a sequence of edge attributes."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def vertex_id_to_number_mapping(
-        self, initial_content: Iterable[Tuple[T_vertex_id, int]]
-    ) -> VertexIdToNumberMapping[T_vertex_id]:
-        """Factory for a mapping from a vertex id to non-negative integers
-        starting at zero, that represent a numbering of some vertices.
-
-        If the returned mapping does not contain a value for some key,
-        its method __getitem__ needs to return 0.
-
-        :param initial_content: The collection is created with this initial content.
-        """
-        raise NotImplementedError
-
 
 class Gear(
     Generic[T_vertex, T_vertex_id, T_weight, T_labels],
@@ -635,21 +614,6 @@ class GearForIntVertexIDs(
             0,
             1024,
             True,
-            initial_content,
-        )
-
-    def vertex_id_to_number_mapping(
-        self, initial_content: Iterable[Tuple[IntVertexID, int]]
-    ) -> VertexIdToNumberMapping[IntVertexID]:
-        # This implementation is limited to 2^32 values, meaning 2^31 vertices
-        # when numbering enter and leave events, thus 2.147.483.648 vertices.
-        return VertexMappingWrappingSequenceWithoutNone[int](
-            lambda: array(
-                "L",
-                repeat(0, self._pre_allocate),
-            ),
-            0,
-            1024,
             initial_content,
         )
 
