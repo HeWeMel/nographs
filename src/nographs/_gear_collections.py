@@ -9,9 +9,12 @@ not in the API.
 
 import sys
 from collections.abc import Iterable, Hashable, Iterator, MutableSet, MutableMapping
-from typing import Protocol, TypeVar, Generic, Callable, Union, Optional, cast
+from typing import Protocol, TypeVar, Callable, Union, Optional, cast
 from itertools import repeat
 from abc import ABC, abstractmethod
+
+# MyPyC
+from ._compatibility import trait
 
 
 T_hashable_key = TypeVar("T_hashable_key", bound=Hashable)
@@ -123,13 +126,14 @@ class GettableSettableForGearProto(
         """Get the value that is stored for key *item*. If *item* exceeds the
         internal size of the container, an IndexError is raised.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def __setitem__(self, item: T_hashable_key_contra, value: T_value_contra) -> None:
         """Store *value* for key *item* in the container. If *item* exceeds the
         internal size of the container, an IndexError is raised.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
 class SequenceForGearProto(
@@ -154,28 +158,33 @@ class SequenceForGearProto(
     with suitable type restrictions.
     """
 
+    @abstractmethod
     def __len__(self) -> int:
         """Return the size of the collection."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def append(self, value: T_value_contra) -> None:
         """Store *value* at the end of the collection. The size of the
         collection raises by 1."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def extend(self, values: Iterable[T_value_contra]) -> None:
         """Store *values* at the end of the collection. The size of the
         collection raises accordingly."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def __iter__(self) -> Iterator[T_value_co]:
         """Return an iterator that iterates the contained values."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
 # --- Protocols for the used kind of wrappers
 
 
+@trait
 class VertexSequenceWrapperProto(
     Protocol[T_hashable_key_contra, T_value_contra, T_value_co]
 ):
@@ -208,6 +217,7 @@ class VertexSequenceWrapperProto(
     VertexSequenceWrapperProto and the concrete implementation had to be separated.)
     """
 
+    @abstractmethod
     def sequence(
         self,
     ) -> GettableSettableForGearProto[
@@ -216,15 +226,17 @@ class VertexSequenceWrapperProto(
         """Return the wrapped sequence. Allows NoGraphs' traversal algorithms
         to directly read from and write to the sequence.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def default(self) -> T_value_co:
         """Return the default value. When NoGraphs' traversal algorithms
         retrieve this value for some key, they need to interpret this as if
         no value is assigned to the key.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def extend_and_set(self, key: T_hashable_key_contra, value: T_value_contra) -> None:
         """Extend the underlying sequence in order to store *value* for *key*.
         For new keys "below" *key* and, for better overall performance, also
@@ -237,32 +249,36 @@ class VertexSequenceWrapperProto(
         the call to the method is not as performance critical as the direct accesses
         to the underlying sequence.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
+@trait
 class VertexSequenceWrapperForSetProto(
     VertexSequenceWrapperProto[T_hashable_key, T_value_contra, T_value_co], Protocol
 ):
     """VertexSequenceWrapperProto for a wrapper that emulates a VertexSet"""
 
+    @abstractmethod
     def update_from_keys(self, elements: Iterable[T_hashable_key]) -> None:
         """Store the elements."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def index_and_bit_method(
         self,
     ) -> Optional[Callable[[T_hashable_key, int], tuple[T_hashable_key, int]]]:
         """Return a function that computes the integer index and the bit number for
         the given *key* and the given number of bits that each integer can handle.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def _from_iterable(
         self, elements: Iterable[T_hashable_key]
-    ) -> "VertexSequenceWrapperForSetProto":
+    ) -> "VertexSequenceWrapperForSetProto[T_hashable_key, T_value_contra, T_value_co]":
         """Return a new VertexSequenceWrapperForSetProto with the *elements*
         as content."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
 class VertexSequenceWrapperForMappingProto(
@@ -271,14 +287,16 @@ class VertexSequenceWrapperForMappingProto(
 ):
     """VertexSequenceWrapperProto for a wrapper that emulates a VertexMapping"""
 
+    @abstractmethod
     def update_from_keys_values(
         self, elements: Iterable[tuple[T_hashable_key_contra, T_value_contra]]
     ) -> None:
         """For each pair of key and value given by *elements*, assign
         the value to the key.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
+    @abstractmethod
     def update_default(
         self, elements: Iterable[tuple[T_hashable_key_contra, T_value_contra]]
     ) -> None:
@@ -286,7 +304,7 @@ class VertexSequenceWrapperForMappingProto(
         the value to the key if the collection does not already store a value (other
         than the default value) for the key.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover  # Not reachable
 
 
 # --- ABCs and helper functions to allow for type-save down casts
@@ -367,17 +385,23 @@ class _VertexSequenceWrapperAssertNoCall(
 
     def _from_iterable(
         self, elements: Iterable[T_hashable_key]
-    ) -> "_VertexSequenceWrapperAssertNoCall":
+    ) -> (
+        "_VertexSequenceWrapperAssertNoCall[T_hashable_key, T_value_contra, T_value_co]"
+    ):
         raise AssertionError(called_by_mistake)
 
 
 # - Set
 
 
+@trait
 class _VertexSetByWrapper(
     VertexSequenceWrapperForSetProto[T_hashable_key, int, int],
     VertexSet[T_hashable_key],
-    ABC,
+    # MyPyC: Prevent the following error:
+    #   TypeError: Cannot create a consistent method resolution
+    #   order (MRO) for bases ABC, Generic
+    # ABC,
 ):
     """
     A VertexSet that is implemented based on a sequence-like internal container
@@ -454,6 +478,7 @@ def access_to_vertex_set(
 # - Mapping (without None)
 
 
+@trait
 class _VertexMappingByWrapper(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value],
     VertexMapping[T_hashable_key, T_value],
@@ -470,7 +495,7 @@ class _VertexMappingByWrapper(
 
 
 def get_wrapper_from_vertex_mapping(
-    vertex_mapping: VertexMapping[T_hashable_key, T_value]
+    vertex_mapping: VertexMapping[T_hashable_key, T_value],
 ) -> Optional[VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, T_value]]:
     """If *vertex_mapping* is implemented by a _VertexMappingByWrapper,
     return its wrapper, otherwise return None. The class encapsulates the
@@ -489,7 +514,7 @@ def get_wrapper_from_vertex_mapping(
 
 
 def access_to_vertex_mapping(
-    vertex_mapping: VertexMapping[T_hashable_key, T_value]
+    vertex_mapping: VertexMapping[T_hashable_key, T_value],
 ) -> tuple[
     bool,
     GettableSettableForGearProto[T_hashable_key, T_value, T_value],
@@ -531,6 +556,7 @@ def access_to_vertex_mapping(
 # - Mapping with None
 
 
+@trait
 class _VertexMappingByWrapperWithNone(
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, Optional[T_value]],
     VertexMapping[T_hashable_key, T_value],
@@ -547,7 +573,7 @@ class _VertexMappingByWrapperWithNone(
 
 
 def get_wrapper_from_vertex_mapping_with_none(
-    vertex_mapping: VertexMapping[T_hashable_key, T_value]
+    vertex_mapping: VertexMapping[T_hashable_key, T_value],
 ) -> Optional[
     VertexSequenceWrapperForMappingProto[T_hashable_key, T_value, Optional[T_value]]
 ]:
@@ -570,7 +596,7 @@ def get_wrapper_from_vertex_mapping_with_none(
 
 
 def access_to_vertex_mapping_expect_none(
-    vertex_mapping: VertexMapping[T_hashable_key, T_value]
+    vertex_mapping: VertexMapping[T_hashable_key, T_value],
 ) -> tuple[
     bool,
     GettableSettableForGearProto[T_hashable_key, T_value, Optional[T_value]],
@@ -616,7 +642,7 @@ NonNegativeDenseInt = int
 
 
 class VertexSequenceWrapper(
-    Generic[T_value, T_default_value],
+    # Generic[T_value, T_default_value],
     VertexSequenceWrapperProto[
         NonNegativeDenseInt, T_value, Union[T_value, T_default_value]
     ],
@@ -639,7 +665,23 @@ class VertexSequenceWrapper(
 
     :param default: The default value.
 
-    :param extend_size: Number of pre-allocated item slots when the collection grows
+    :param extend_size: Minimal number of item slots added each time when the
+        collection grows. A size other than 1 can be used to ensure that
+        the collection does not need to grow too often, since growing is
+        expensive (the strategies of NoGraphs cannot do it on their own but
+        need to call extend_and_set() - and this should not happen too often.
+
+        Note: The collection itself needs to optimize the growing
+        process by growing more than *extend_size*, e.g., if a
+        linear-time amortized behavior over a long sequence of appends()
+        is wanted. (for example, list and array.array do this).
+
+    :param extend_by_template: Create a sequence using sequence_factory
+        that is used as template for extending the wrapped sequence
+        base on this template collection. Typically used if the collection
+        is an array, because collection.extend(repeat(<value>, <size>))
+        requires unboxing each value, while collection.extend(template)
+        just copies the native values.
     """
 
     def __init__(
@@ -654,6 +696,7 @@ class VertexSequenceWrapper(
         ],
         default: T_default_value,
         extend_size: int,
+        extend_by_template: bool,
     ) -> None:
         self._sequence_factory: Callable[
             [],
@@ -670,6 +713,23 @@ class VertexSequenceWrapper(
         ] = self._sequence_factory()
         self._default = default
         self._extend_size = extend_size
+        self._extend_by_template = extend_by_template
+
+        # If demanded, create an empty collection that can be used as
+        # template for extending the wrapped collection
+        expansion_template: Optional[
+            SequenceForGearProto[
+                NonNegativeDenseInt,
+                Union[T_value, T_default_value],
+                Union[T_value, T_default_value],
+            ]
+        ]
+        if extend_by_template:
+            expansion_template = sequence_factory()
+            expansion_template.extend(repeat(default, extend_size))
+        else:
+            expansion_template = None
+        self._expansion_template = expansion_template
 
     def sequence(
         self,
@@ -688,8 +748,8 @@ class VertexSequenceWrapper(
 
     def extend_and_set(self, key: NonNegativeDenseInt, value: T_value) -> None:
         """Extend the underlying sequence in order to store *value* for *key*.
-        For new keys "below" *key* and, for better overall performance, also
-        for many keys "above" *key*, the *default* value is stored.
+        For new keys "below" *key* and, for better overall performance, maybe also
+        for some keys "above" *key*, the *default* value is stored.
 
         The method is called by NoGraphs if writing to the underlying sequence
         raised an IndexError for some key. It allows NoGraphs to handle such
@@ -698,11 +758,21 @@ class VertexSequenceWrapper(
         call to the method is not as performance critical as the direct accesses
         to the underlying sequence.
         """
-        default = self._default
         collection = self._sequence
-        collection.extend(repeat(default, key - len(collection)))
-        collection.append(value)
-        collection.extend(repeat(default, self._extend_size))
+        extend_size = self._extend_size
+        target_len = (key + 1) + extend_size
+        expansion_template = self._expansion_template
+        if expansion_template is None:
+            # The following is typically fast and does not require an
+            # expansion template
+            collection.extend(repeat(self._default, target_len - len(collection)))
+        else:
+            # For collections with native (unboxed) elements, the following is
+            # better, because it avoids unboxing each element for storing it
+            collection_extend = collection.extend
+            while len(collection) < target_len:
+                collection_extend(expansion_template)
+        collection[key] = value
 
 
 # --- Implementations of VertexSet(...ByWrapper) and
@@ -718,9 +788,14 @@ class VertexSetWrappingSequence(
     """A VertexSequenceWrapper that emulates a VertexSet for
     non-negative dense integer keys based on an underlying SequenceForGearProto.
 
-    It must be initialized with a factory function for the SequenceForGearProto
-    to be wrapped, the number of elements the sequence should be extended when
-    more space is needed, and an iterable of keys with initial content.
+    It must be initialized with
+    a factory function for the SequenceForGearProto to be wrapped,
+    the number of elements the sequence should be extended when
+    more space is needed,
+    a bool flag that controls if an extension template
+    should be used to extend the sequence
+    (see *VertexSequenceWrapper* for details),
+    and an iterable of keys with initial content.
 
     In performance critical cases, NoGraphs does not call the methods of this
     class (emulation of a set), but directly accesses the underlying sequence.
@@ -732,9 +807,10 @@ class VertexSetWrappingSequence(
             [], SequenceForGearProto[NonNegativeDenseInt, int, int]
         ],
         extend_size: int,
+        extend_by_template: bool,
         keys: Iterable[NonNegativeDenseInt],
     ):
-        super().__init__(sequence_factory, 0, extend_size)
+        super().__init__(sequence_factory, 0, extend_size, extend_by_template)
         self.update_from_keys(keys)
 
     def __repr__(self) -> str:
@@ -746,13 +822,13 @@ class VertexSetWrappingSequence(
         """Return an iterator that iterates the "officially" contained keys.
         Keys with *default* as value are omitted and interpreted as key gap.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def __len__(self) -> int:
         """Return number of keys stored in the collection. Time complexity of
         O(n), needs to iterate through the collection."""
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def _from_iterable(
@@ -763,12 +839,12 @@ class VertexSetWrappingSequence(
 
         See section "Examples and Recipes" of collections.abc about the Set mixin.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def update_from_keys(self, keys: Iterable[NonNegativeDenseInt]) -> None:
         """Add all the keys to the collection"""
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
     def index_and_bit_method(
@@ -779,7 +855,7 @@ class VertexSetWrappingSequence(
         """For cases where a sequence of bytes is used to emulate a bit array:
         return function that computes the byte index and the bit number for *key*
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover  # Not reachable
 
 
 class VertexSetWrappingSequenceNoBitPacking(VertexSetWrappingSequence):
@@ -831,7 +907,7 @@ class VertexSetWrappingSequenceNoBitPacking(VertexSetWrappingSequence):
         # sorted values, but there is no guarantee. So, we do not assume this.
         # So, we create an empty sequence and add our values to it.
         new_collection = VertexSetWrappingSequenceNoBitPacking(
-            self._sequence_factory, self._extend_size, ()
+            self._sequence_factory, self._extend_size, self._extend_by_template, ()
         )
         new_collection.update_from_keys(elements)
         return new_collection
@@ -910,7 +986,7 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
         # sorted values, but there is no guarantee. So, we do not assume this.
         # So, we create an empty sequence and add our values to it.
         new_collection = VertexSetWrappingSequenceBitPacking(
-            self._sequence_factory, self._extend_size, ()
+            self._sequence_factory, self._extend_size, self._extend_by_template, ()
         )
         new_collection.update_from_keys(elements)
         return new_collection
@@ -928,11 +1004,15 @@ class VertexMappingWrappingSequence(VertexSequenceWrapper[T_value, T_default_val
     """A VertexSequenceSwapper that emulates a VertexMapping for
     non-negative dense integer keys based on an underlying SequenceForGearProto.
 
-    It must be initialized with a factory function for the SequenceForGearProto
-    to be wrapped, the number of elements the sequence should be extended when
-    more space is needed,
+    It must be initialized with
+    a factory function for the SequenceForGearProto to be wrapped,
     a default value of type T_value that is suitable for the use case,
-    and an iterable of keys with initial content.
+    the number of elements the sequence should be extended when
+    more space is needed,
+    a bool flag that controls if an extension template
+    should be used to extend the sequence
+    (see *VertexSequenceWrapper* for details),
+    and an iterable of keys and values with initial content.
 
     In performance critical cases, NoGraphs does not call the methods of this
     class (emulation of a set), but directly accesses the underlying sequence.
@@ -950,9 +1030,10 @@ class VertexMappingWrappingSequence(VertexSequenceWrapper[T_value, T_default_val
         ],
         default: T_default_value,
         extend_size: int,
+        extend_by_template: bool,
         items: Iterable[tuple[NonNegativeDenseInt, T_value]],
     ):
-        super().__init__(sequence_factory, default, extend_size)
+        super().__init__(sequence_factory, default, extend_size, extend_by_template)
         self.update_from_keys_values(items)
 
     def __getitem__(self, key: NonNegativeDenseInt) -> T_value:

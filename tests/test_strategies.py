@@ -15,50 +15,52 @@ class MethodsOfDummyCollectionClasses:
 
     >>> # noinspection PyProtectedMember
     >>> from nographs._strategies.utils import NoVisitedSet
-    >>> NoVisitedSet.__contains__(None, None)
+    >>> s = NoVisitedSet()
+    >>> s.__contains__(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoVisitedSet.__iter__(None)
+    >>> s.__iter__()
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoVisitedSet.__len__(None)
+    >>> s.__len__()
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoVisitedSet.discard(None, None)
+    >>> s.discard(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoVisitedSet.add(None, None)
+    >>> s.add(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
 
     >>> # noinspection PyProtectedMember
     >>> from nographs._strategies.utils import NoDistancesMapping
-    >>> NoDistancesMapping.__getitem__(None, None)
+    >>> m = NoDistancesMapping()
+    >>> m.__getitem__(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoDistancesMapping.__delitem__(None, None)
+    >>> m.__delitem__(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoDistancesMapping.__iter__(None)
+    >>> m.__iter__()
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoDistancesMapping.__len__(None)
+    >>> m.__len__()
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoDistancesMapping.__contains__(None, None)
+    >>> m.__contains__(None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
 
-    >>> NoDistancesMapping.__setitem__(None, None, None)
+    >>> m.__setitem__(None, None)
     Traceback (most recent call last):
     RuntimeError: Traversal not started, no data to be accessed
     """

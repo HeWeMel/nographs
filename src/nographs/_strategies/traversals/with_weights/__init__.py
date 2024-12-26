@@ -1,1 +1,1 @@
-""" Traversal strategies for weighted edges """
+"""Traversal strategies for weighted edges"""

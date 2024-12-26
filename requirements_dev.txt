@@ -12,8 +12,14 @@ coverage>=6.3
 flake8
 flake8-bugbear
 mypy
+# -- For building a package with C-extensions compiled by MyPyC (optional)--
+# mypy[mypyc]
+# mypy-extensions
+# -- For building a package with C-extensions compiled by Cython (optional) --
+# cython
 # -- source consistency checking --
 pymacros4py>=0.8.2 ; python_version >= "3.10"
 # -- additional packages for tests using them --
 mpmath
-intbitset ; python_version < "3.13" and implementation_name == "cpython"  # missing on PyPy and often on new CPython-versions
+# The following is missing on PyPy and often on new CPython-versions
+intbitset ; python_version < "3.13" and implementation_name == "cpython"

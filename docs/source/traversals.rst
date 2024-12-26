@@ -659,8 +659,10 @@ If such an event occurs, **no vertex has been entered, and**
 it is therefor
 **not allowed to signal to the traversal to skip the entered (!) vertex**.
 If you do this anyway, the traversal intentionally won’t catch the
-*StopIteration* you throw, and a *RuntimeError* will be raised
-(according to `PEP 497 <//peps.python.org/pep-0479>`_).
+*StopIteration* you throw, and an exception will be raised
+(CPython and PyPy will raise a *RuntimeError* according to
+`PEP 497 <//peps.python.org/pep-0479>`_, and with NoGraphs as extension module
+compiled by MyPyC, the StopException will fall through.).
 
 This also means, that it is always save to ignore the return value of
 throwing the *StopIteration* into the generator: it can only be the entered
@@ -680,7 +682,7 @@ by the generator and the generator skips expanding the vertex.
 
 Then, vertex *A* is reported with event *SKIPPING_START*.
 This means, *A* it is not entered. Here, throwing *StopIteration* is not
-accepted and a *RuntimeError* is raised.
+accepted and an exception is raised.
 
 .. code-block:: python
 
@@ -694,9 +696,11 @@ accepted and a *RuntimeError* is raised.
     'A'
     >>> next(generator), str(traversal.event)
     ('A', 'DFSEvent.SKIPPING_START')
-    >>> generator.throw(StopIteration())
-    Traceback (most recent call last):
-    RuntimeError: generator raised StopIteration
+    >>> try:
+    ...     generator.throw(StopIteration())
+    ... except (RuntimeError, StopIteration):
+    ...     print("Exception caught")
+    Exception caught
 
 .. _is_tree:
 

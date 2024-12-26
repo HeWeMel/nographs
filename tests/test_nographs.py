@@ -2,15 +2,23 @@ if __name__ == "__main__":
     """Test functionality and documentation of NoGraphs. With parameter *fast*,
     slow tests are skipped.
     """
+
+    # First, we ensure that we test the right thing by showing sys.path
+    import sys
+
+    print(">> sys.path used for the tests:")
+    for p in sys.path:
+        print(p)
+    print()
+
     import doctest
     import unittest
-    import coverage  # type: ignore
+    import coverage
     import importlib
     import pathlib
     from utils import DocTestFinderSkippingSlowTests, DocTestParserSkippingSlowTests
-    import sys
 
-    # detect if we have package pymacros4py
+    # Detect if we have package pymacros4py
     skip_macro_consistency_check = False
     try:
         import pymacros4py  # noqa: F401
@@ -24,10 +32,15 @@ if __name__ == "__main__":
     # test coverage. During CI, the flag needs to be set to FALSE in order to
     # fully test everything, e.g., also long-running examples of the tutorial.)
     skip_slow_tests = False
+    compute_coverage = True
     print(">>", sys.argv)
-    if len(sys.argv) > 1 and sys.argv[1] == "fast":
-        skip_slow_tests = True
-        print("Executing only fast tests")
+    for arg in sys.argv[1:]:
+        if arg == "fast":
+            skip_slow_tests = True
+            print("Executing only fast tests!")
+        elif arg == "no_coverage":
+            compute_coverage = False
+            print("Coverage not computed!")
     test_finder = (
         DocTestFinderSkippingSlowTests() if skip_slow_tests else doctest.DocTestFinder()
     )
@@ -36,8 +49,9 @@ if __name__ == "__main__":
     )
 
     # Start recording coverage
-    cov = coverage.Coverage(source_pkgs=["nographs"])
-    cov.start()
+    if compute_coverage:
+        cov = coverage.Coverage(source_pkgs=["nographs"])
+        cov.start()
 
     # Create empty TestSuite
     test_suite = unittest.TestSuite()
@@ -80,11 +94,13 @@ if __name__ == "__main__":
         )
 
     verbosity = 1  # 1 normal, 2 for more details
-    failfast = True  # True
+    failfast = False  # True
     unittest.TextTestRunner(verbosity=verbosity, failfast=failfast).run(test_suite)
 
     # Stop recording coverage, create HTML from results
-    cov.stop()
-    cov.save()
-    cov.xml_report()
-    cov.html_report()
+    if compute_coverage:
+        cov.stop()
+        cov.save()
+        cov.xml_report()
+        cov.html_report()
+    sys.exit()

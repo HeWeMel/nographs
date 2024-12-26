@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, Any
+from typing import Optional, Any, Union
 
 from nographs._types import (
     T_vertex,
@@ -22,7 +20,10 @@ from ..type_aliases import (
 # --------------- internal support functions -------------
 
 
-def _search_needs_search_object(obj: Any, needed_class: type) -> None:
+# Cython needs Any here, because if needed_class is a subclass of ABCMeta,
+# it does not recognize that this is a type, but only that it is such a subclass.
+# MyPy is fine with that, because the signature of isinstance is only roughly typed.
+def _search_needs_search_object(obj: Any, needed_class: Union[type, Any]) -> None:
     if not isinstance(obj, needed_class):
         raise RuntimeError(
             "Method start_from can only be called on a search strategy object."

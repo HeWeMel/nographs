@@ -47,16 +47,22 @@ class MVertexSet:
                 + "with collection {collection2}"
             )
             {combined}_uses_sequence = {collection1}_uses_sequence
-            del {collection1}_uses_sequence, {collection2}_uses_sequence
+            # MyPyC: Deleting local variables is not allowed. It has been deleted
+            #   to ensure that it is not used from here on.
+            # del {collection1}_uses_sequence, {collection2}_uses_sequence
             {combined}_uses_bits = {collection1}_uses_bits
-            del {collection1}_uses_bits, {collection2}_uses_bits
+            # MyPyC: Deleting local variables is not allowed. It has been deleted
+            #   to ensure that it is not used from here on.
+            # del {collection1}_uses_bits, {collection2}_uses_bits
             if {combined}_uses_sequence and {combined}_uses_bits:
                 assert {collection1}_index_and_bit_method is {collection2}_index_and_bit_method, (
                     "Collection {collection1} is incompatible "
                     + "with collection {collection2}"
                 )
             {combined}_index_and_bit_method = {collection1}_index_and_bit_method
-            del {collection1}_index_and_bit_method, {collection2}_index_and_bit_method
+            # MyPyC: Deleting local variables is not allowed. It has been deleted
+            #   to ensure that it is not used from here on.
+            # del {collection1}_index_and_bit_method, {collection2}_index_and_bit_method
 """
         )
 

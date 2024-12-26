@@ -10,16 +10,7 @@ from nographs import GearDefault  # NOQA F401 (import needed by doc tests)  # ._
 # noinspection PyProtectedMember
 from nographs._extra_tsp import (  # NOQA F401 (import needed by doc tests)
     _traveling_salesman_int_vertices,
-    GettableProto,
 )
-
-
-class GettableProtoTest:
-    """
-    >>> GettableProto.__getitem__(None, None)
-    Traceback (most recent call last):
-    NotImplementedError
-    """
 
 
 class TspTestsGeneral:
@@ -240,7 +231,9 @@ def read_tsp_problem(s: str) -> tuple[dict[str, str], dict[int, dict[int, int]]]
 
 def solve(
     test_name: str,
-    function: Callable[[], Union[tuple[int, Iterable], tuple[float, Iterable]]],
+    function: Callable[
+        [], Union[tuple[int, Iterable[T_vertex]], tuple[float, Iterable[T_vertex]]]
+    ],
     correct_length: T_weight,
     graph: Mapping[T_vertex, Mapping[T_vertex, T_weight]],
     time_stats: bool = False,

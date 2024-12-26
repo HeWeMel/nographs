@@ -1,6 +1,4 @@
-""" Traversal strategies for unweighted graphs with or without edge labels """
-
-from __future__ import annotations
+"""Traversal strategies for unweighted graphs with or without edge labels"""
 
 from abc import abstractmethod
 from collections.abc import (
@@ -9,7 +7,7 @@ from collections.abc import (
     Generator,
     Collection,
 )
-from typing import Optional, Any, cast, overload, Literal
+from typing import Optional, Any, cast, overload, Literal, ClassVar
 
 from nographs._gears import (
     GearWithoutDistances,
@@ -43,16 +41,21 @@ def no_generator() -> Generator[Any, None, None]:
     """
     raise RuntimeError("Traversal not started, iteration not possible")
     # noinspection PyUnreachableCode
-    yield None
+    yield None  # type: ignore[unreachable]
 
 
-class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable):
+class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable[T_vertex]):
     """
     Abstract Class. Its subclasses provide methods to iterate through vertices
     and edges using some specific traversal strategies.
     """
 
-    @abstractmethod
+    _state_attrs: ClassVar = Strategy._state_attrs + ["paths"]
+
+    # MyPyC: @abstractmethod commented out in order to avoid the following error:
+    #   error C2198: "CPyDef_traversal___Traversal_____init__":
+    #   Nicht genügend Argumente für Aufruf.
+    # @abstractmethod
     def __init__(
         self,
         labeled_edges: bool,

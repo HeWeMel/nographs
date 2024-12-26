@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import itertools
 from collections.abc import Iterator, Callable
 from typing import Generic, Any, Union, TypeVar
@@ -40,9 +38,10 @@ def _get_empty_iter() -> Iterator[Any]:
 
 
 def reverse_edges(
-    edges: Iterator[UnweightedLabeledFullEdge[T_vertex, T_labels]]
+    edges: Iterator[UnweightedLabeledFullEdge[T_vertex, T_labels]],
 ) -> Iterator[UnweightedLabeledFullEdge[T_vertex, T_labels]]:
-    return ((w, v, l) for v, w, l in edges)
+    for v, w, l in edges:
+        yield w, v, l
 
 
 SelfPath = TypeVar("SelfPath", bound="Path[Any, Any, Any]")
@@ -156,11 +155,11 @@ class Path(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
         )
 
     @classmethod
-    def of_nothing(cls: type[SelfPath]) -> Path[T_vertex, T_vertex_id, T_labels]:
+    def of_nothing(cls: type[SelfPath]) -> "Path[T_vertex, T_vertex_id, T_labels]":
         return cls(_get_empty_iter, _get_empty_iter, _get_empty_iter, _get_empty_iter)
 
     @classmethod
-    def from_vertex(cls, vertex: T_vertex) -> Path[T_vertex, T_vertex_id, T_labels]:
+    def from_vertex(cls, vertex: T_vertex) -> "Path[T_vertex, T_vertex_id, T_labels]":
         def get_iter_of_one_vertex() -> Iterator[T_vertex]:
             return iter((vertex,))
 
@@ -185,7 +184,8 @@ class Path(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
 
     def iter_edges_to_start(self) -> Iterator[UnweightedUnlabeledFullEdge[T_vertex]]:
         """Iterate the edges of the path from the last to the first."""
-        return ((v, w) for w, v in pairwise(self._get_vertex_backwards_iter()))
+        for w, v in pairwise(self._get_vertex_backwards_iter()):
+            yield v, w
 
     def iter_labeled_edges_to_start(
         self,

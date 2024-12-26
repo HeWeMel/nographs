@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 import itertools
-from typing import Optional, Iterable, Generic
+from typing import Optional, Iterable, Generic, ClassVar
 
 from nographs._types import (
     T_vertex,
@@ -77,6 +75,8 @@ class BSearchBreadthFirstFlex(Strategy[T_vertex, T_vertex_id, T_labels]):
     TraversalBreadthFirst(<something>).start_at(v).go_to(v) fails.
     """
 
+    _state_attrs: ClassVar = Strategy._state_attrs
+
     def __init__(
         self,
         vertex_to_id: VertexToID[T_vertex, T_vertex_id],
@@ -91,14 +91,14 @@ class BSearchBreadthFirstFlex(Strategy[T_vertex, T_vertex_id, T_labels]):
             BNextEdges[
                 T_vertex,
                 TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels],
-            ],
+            ]
         ] = None,
         next_labeled_edges: Optional[
             BNextLabeledEdges[
                 T_vertex,
                 TraversalBreadthFirstFlex[T_vertex, T_vertex_id, T_labels],
                 T_labels,
-            ],
+            ]
         ] = None,
     ) -> None:
         self._vertex_to_id = vertex_to_id
@@ -224,7 +224,7 @@ class BSearchBreadthFirstFlex(Strategy[T_vertex, T_vertex_id, T_labels]):
         # ----- Initialize method specific bookkeeping -----
 
         # Get the right class for storing a path (labeled or not)
-        path_cls: type[Path]
+        path_cls: type[Path[T_vertex, T_vertex_id, T_labels]]
         if self._labeled_edges:
             path_cls = PathOfLabeledEdges[T_vertex, T_vertex_id, T_labels]
         else:
@@ -380,14 +380,14 @@ class BSearchBreadthFirst(
             BNextEdges[
                 T_vertex,
                 TraversalBreadthFirstFlex[T_vertex, T_vertex, T_labels],
-            ],
+            ]
         ] = None,
         next_labeled_edges: Optional[
             BNextLabeledEdges[
                 T_vertex,
                 TraversalBreadthFirstFlex[T_vertex, T_vertex, T_labels],
                 T_labels,
-            ],
+            ]
         ] = None,
     ) -> None:
         super().__init__(

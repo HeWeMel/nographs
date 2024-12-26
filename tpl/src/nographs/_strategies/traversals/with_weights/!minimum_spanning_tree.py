@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import itertools
 from heapq import heapify, heappop, heappush
-from typing import Optional, Any, Generic, Union
+from typing import Optional, Any, Generic, Union, ClassVar
 from collections.abc import Iterable, Generator
 
 from nographs._types import (
@@ -60,6 +58,8 @@ class TraversalMinimumSpanningTreeFlex(
     *edge* and *paths*.
     """
 
+    _state_attrs: ClassVar = _TraversalWithWeights._state_attrs + ["edge"]
+
     def __init__(
         self,
         # $$ MStrategyWithWeights.init_signature('TraversalMinimumSpanningTreeFlex')
@@ -78,7 +78,7 @@ class TraversalMinimumSpanningTreeFlex(
     def start_from(
         self,
         # $$ insert_from('$$/method_start_from/signature_standard.py')
-    ) -> TraversalMinimumSpanningTreeFlex[T_vertex, T_vertex_id, T_weight, T_labels]:
+    ) -> "TraversalMinimumSpanningTreeFlex[T_vertex, T_vertex_id, T_weight, T_labels]":
         """
         Start the traversal at a vertex or a set of vertices and set parameters.
         If you provide more than one start vertex, the result consists of several

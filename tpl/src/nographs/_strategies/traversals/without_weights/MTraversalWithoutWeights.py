@@ -31,19 +31,19 @@ class MStrategyWithoutWeights:
             gear: GearWithoutDistances[T_vertex, T_vertex_id, T_labels],
             next_vertices: Optional[
                 NextVertices[
-                    T_vertex, {traversal_type}[T_vertex, T_vertex_id, T_labels]
+                    T_vertex, "{traversal_type}[T_vertex, T_vertex_id, T_labels]"
                 ]
             ] = None,
             *,
             next_edges: Optional[
                 NextEdges[
-                    T_vertex, {traversal_type}[T_vertex, T_vertex_id, T_labels]
+                    T_vertex, "{traversal_type}[T_vertex, T_vertex_id, T_labels]"
                 ]
             ] = None,
             next_labeled_edges: Optional[
                 NextLabeledEdges[
                     T_vertex,
-                    {traversal_type}[T_vertex, T_vertex_id, T_labels],
+                    "{traversal_type}[T_vertex, T_vertex_id, T_labels]",
                     T_labels,
                 ]
             ] = None,
@@ -128,6 +128,8 @@ class MStrategyWithoutWeights:
                 - `GearDefault` is used, see there how it and its superclass work
                 - T_vertex is bound to Hashable (T_vertex is used as `T_vertex_id`, see there)
                 """
+
+                _state_attrs: ClassVar = {class_name}Flex._state_attrs
 
                 def __init__(
                     self,

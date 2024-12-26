@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Sequence, Iterator, MutableMapping
 from typing import Optional, Any, Generic, cast, Union
 from abc import ABC, abstractmethod
@@ -412,7 +410,10 @@ class PathsOfLabeledEdges(Paths[T_vertex, T_vertex_id, T_labels]):
         ) = access_to_vertex_mapping_expect_none(labels)
 
     def append_edge(
-        self, from_vertex: T_vertex, to_vertex_id: T_vertex_id, to_edge: LabeledOutEdge
+        self,
+        from_vertex: T_vertex,
+        to_vertex_id: T_vertex_id,
+        to_edge: LabeledOutEdge[T_vertex, Any, T_labels],
     ) -> None:
         """Create a new path that starts with the existing path to
         from_vertex and ends with the given vertex (resp. id). The additional

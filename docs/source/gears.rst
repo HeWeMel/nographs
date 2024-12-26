@@ -253,6 +253,11 @@ Side note about the implementation:
 Defining your own gear
 ~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+    The functionality described in this section cannot be used when NoGraphs
+    is compiled by MyPyC.
+
 You can define your own gear by subclassing one of the gear classes
 described in the previous section and overwriting one of more of the
 factory methods.
@@ -291,11 +296,21 @@ id set for given vertices, by an implementation that returns an *intbitset*.
 
 .. code-block:: python
 
-   >>> class GearBitsetAndArrayForIntVerticesAndCFloats(
-   ...     nog.GearForIntVerticesAndIDsAndCFloats
-   ... ):
-   ...    def vertex_id_set(self, vertices):
-   ...       return intbitset(list(vertices))
+   >>> def is_mypyc_compiled() -> bool:
+   ...     """
+   ...     Recognize by the file extension whether MyPyC-compiled code is running.
+   ...     """
+   ...     return not __file__.endswith(".py")
+   >>> if is_mypyc_compiled():
+   ...     # If NoGraphs is compiled by MyPyC, skip this example
+   ...     GearBitsetAndArrayForIntVerticesAndCFloats = \
+   ...         nog.GearForIntVerticesAndIDsAndCFloats
+   ... else:
+   ...     class GearBitsetAndArrayForIntVerticesAndCFloats(
+   ...         nog.GearForIntVerticesAndIDsAndCFloats
+   ...     ):
+   ...        def vertex_id_set(self, vertices):
+   ...           return intbitset(list(vertices))
 
 We can use the new gear just like the predefined ones:
 
@@ -304,9 +319,9 @@ We can use the new gear just like the predefined ones:
    >>> our_gear = GearBitsetAndArrayForIntVerticesAndCFloats()
    >>> traversal = nog.TraversalBreadthFirstFlex(
    ...     next_edges=next_edges, gear=our_gear, vertex_to_id=nog.vertex_as_id)
-   >>> traversal.start_from(0).go_to(1200000)  #doctest:+SLOW_TEST
+   >>> print(traversal.start_from(0).go_to(1200000))  #doctest:+SLOW_TEST
    1200000
-   >>> traversal.depth  #doctest:+SLOW_TEST
+   >>> print(traversal.depth)  #doctest:+SLOW_TEST
    200000
 
 Section `Comparison of NoGraphs gears <performance_gears>` shows the

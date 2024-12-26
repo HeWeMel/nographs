@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import array
 import itertools
-from typing import Optional, Any, Generic
+from typing import Optional, Any, Generic, ClassVar
 from collections.abc import Iterable, Generator
 
 from nographs._types import (
@@ -70,6 +68,11 @@ class TraversalTopologicalSortFlex(
     *depth*, *paths*, and *visited*.
     """
 
+    _state_attrs: ClassVar = (
+            _TraversalWithoutWeightsWithVisited._state_attrs
+            + ["depth", "cycle_from_start"]
+    )
+
     def __init__(
         self,
         # $$ MStrategyWithoutWeights.init_signature('TraversalTopologicalSortFlex')
@@ -83,7 +86,7 @@ class TraversalTopologicalSortFlex(
     def start_from(
         self,
         # $$ insert_from('$$/method_start_from/signature.py')
-    ) -> TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]:
+    ) -> "TraversalTopologicalSortFlex[T_vertex, T_vertex_id, T_labels]":
         """
         # $$ insert_from('$$/method_start_from/doc_start.rst')
         # $$ insert_from('$$/method_start_from/doc_already_visited_compatible.txt')
