@@ -1,6 +1,10 @@
 ChangeLog
 ---------
 
+**v.3.4.2** (2025-06-08)
+
+  - Adaption to MyPy1.16.0
+
 **v3.4.1** (2024-12-26)
 
   - Python 3.13 officially supported.
