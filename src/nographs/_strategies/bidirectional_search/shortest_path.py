@@ -402,13 +402,19 @@ class BSearchShortestPathFlex(
                 return self._search_failed(path_cls, infinity, fail_silently)
 
             # Visit path with the lowest distance first
+            # (MyPy in V1.16.0. does not understand here that vertex is T_vertex and
+            # assumes type Any. So, currently, it does not report an assignment error
+            # in the assignment to v_id. Previous versions understood this, and
+            # hopefully, future versions also will. Thus, we do not want to remove the
+            # ignore[assignment]. Instead, we ignore that the expected error is
+            # temporarily not reported.)
             path_weight, _, vertex = heappop(to_visit)
 
             # A vertex can get added to the heap multiple times. We want to process
             # it only once, the first time it is removed from the heap, because this
             # is the case with the shortest distance from start.
             v_id: T_vertex_id = (
-                maybe_vertex_to_id(vertex)  # type: ignore[assignment]
+                maybe_vertex_to_id(vertex)  # type: ignore[unused-ignore, assignment]
                 if maybe_vertex_to_id
                 else vertex
             )
