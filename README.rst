@@ -15,7 +15,7 @@
 .. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
    :target: https://github.com/HeWeMel/nographs/blob/main/LICENSE
 
-.. |CI| image:: https://github.com/hewemel/nographs/workflows/CI%20(tests,%20flake8,%20mypy)/badge.svg?branch=main
+.. |CI| image:: https://github.com/hewemel/nographs/workflows/CI%20(tests,%20flake8,%20mypy)/badge.svg
    :target: https://github.com/hewemel/nographs/actions?query=workflow%3ACI%20(pip)
 
 .. |CodeCov| image:: https://img.shields.io/codecov/c/gh/HeWeMel/NoGraphs/main
