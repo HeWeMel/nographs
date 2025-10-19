@@ -1,6 +1,10 @@
 ChangeLog
 ---------
 
+**v.3.4.3** (2025-10-19)
+
+  - Python 3.14 officially supported.
+
 **v.3.4.2** (2025-06-08)
 
   - Adaption to MyPy1.16.0

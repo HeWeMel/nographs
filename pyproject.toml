@@ -1,12 +1,12 @@
 [project]
 name = "nographs"
-version = "3.4.2"
+version = "3.4.3"
 authors = [
   { name="Dr. Helmut Melcher", email="HeWeMel@web.de" },
 ]
 description = """\
     Graph analysis – the lazy (evaluation) way: Analysis on the fly, \
-    for graphs, that are computed and/or adapted on the fly.\
+    for implicit graphs, that are computed and/or adapted on the fly.\
     """
 readme = "README.rst"
 requires-python = ">=3.9"
