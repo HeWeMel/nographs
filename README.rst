@@ -12,10 +12,9 @@
 .. |PyPy versions| image:: https://img.shields.io/badge/PyPy-3.11-blue
    :target: https://pypi.python.org/pypi/nographs/
 
-.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
-   :target: https://github.com/HeWeMel/nographs/blob/main/LICENSE
+.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs?labelColor=GREY&color=BRIGHTGREEN
 
-.. |CI| image:: https://github.com/hewemel/nographs/workflows/CI%20(tests,%20flake8,%20mypy)/badge.svg
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/hewemel/nographs/continuous-integration-pip.yml?branch=main&label=CI%20(tests%2C%20flake8%2C%20mypy)&labelColor=GREY&color=BRIGHTGREEN
    :target: https://github.com/hewemel/nographs/actions?query=workflow%3ACI%20(pip)
 
 .. |CodeCov| image:: https://img.shields.io/codecov/c/gh/HeWeMel/NoGraphs/main
@@ -30,7 +29,7 @@
 .. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
    :target: https://GitHub.com/HeWeMel/nographs/issues/
 
-.. |PyPI downloads| image:: https://static.pepy.tech/personalized-badge/nographs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads
+.. |PyPI downloads| image:: https://static.pepy.tech/personalized-badge/nographs?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BRIGHTGREEN&left_text=downloads
    :target: https://pypi.python.org/pypi/nographs/
 
 .. |PyPI per month| image:: https://img.shields.io/pypi/dm/nographs
