@@ -36,7 +36,6 @@
    :target: https://pypi.python.org/pypi/nographs/
 
 
-
 NoGraphs: Graph analysis on the fly
 ===================================
 
