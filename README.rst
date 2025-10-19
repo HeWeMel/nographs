@@ -30,6 +30,13 @@
 .. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
    :target: https://GitHub.com/HeWeMel/nographs/issues/
 
+.. |PyPI downloads| image:: https://static.pepy.tech/personalized-badge/nographs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads
+   :target: https://pypi.python.org/pypi/nographs/
+
+.. |PyPI per month| image:: https://img.shields.io/pypi/dm/nographs
+   :target: https://pypi.python.org/pypi/nographs/
+
+
 
 NoGraphs: Graph analysis on the fly
 ===================================
