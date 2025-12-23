@@ -317,7 +317,8 @@ if __name__ == "__main__":
                     # fmt: off
                     range(len(graph)), graph,  # noqa: B023  # fmt: skip
                     GearForIntVerticesAndIDsAndCFloats[Any](),
-                    find_longest=find_longest,  # noqa: B023  # fmt: skip
+                    find_longest=find_longest,
+  # noqa: B023  # fmt: skip
                 ),
                 correct_length=correct_result,
                 graph=graph,  # noqa: B023
