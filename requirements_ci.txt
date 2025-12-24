@@ -1,11 +1,31 @@
-# -- packages needed for ci pipeline for qa --
+# -- QA Packages for the ci pipeline --
+
+# - Packages for checks done on each platform:
+
+# Source formatting
 black
+
+# Test coverage computation and checking
 coverage>=6.3
+
+# Sanity checks
 flake8
 flake8-bugbear
-mypy
-# -- source consistency checking --
+
+# - Packages that only some platforms support:
+
+# Type checking
+# (since 1.19.0., PyPy is temporarily not supported anymore)
+mypy ; implementation_name == "cpython"
+
+# Source consistency checking
 pymacros4py>=0.8.2 ; python_version >= "3.10"
+
 # -- additional packages for tests using them --
+
+# For tests with arbitrary-precision floats
 mpmath
-intbitset ; python_version < "3.13" and implementation_name == "cpython"  # missing on PyPy and often on new CPython-versions
+
+# For tests with fast set operations on sorted unsigned integers
+# (missing on PyPy and often on new CPython-versions)
+intbitset ; python_version < "3.13" and implementation_name == "cpython"

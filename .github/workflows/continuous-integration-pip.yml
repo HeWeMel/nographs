@@ -61,6 +61,7 @@ jobs:
           # stop the build if there are flake8 errors
           flake8 src tests --count --show-source --statistics
       - name: Type check package source with mypy
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
         run: |
           mypy src/nographs
       - name: Check source code formatting with Black
