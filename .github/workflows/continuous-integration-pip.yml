@@ -60,11 +60,12 @@ jobs:
         run: |
           # stop the build if there are flake8 errors
           flake8 src tests --count --show-source --statistics
-      - name: Type check package source with mypy
+      - name: Type check package source with mypy (except pypy)
         if: ${{ !startsWith(matrix.python-version, 'pypy') }}
         run: |
           mypy src/nographs
-      - name: Check source code formatting with Black
+      - name: Check source code formatting with Black (except python 3.9)
+        if: ${{ !contains(matrix.python-version, '3.9') }}
         run: |
           black src/nographs tests --check --verbose --diff
       - name: Install from source (required for the pre-commit tests)
