@@ -16,7 +16,6 @@ from abc import ABC, abstractmethod
 # MyPyC
 from ._compatibility import trait
 
-
 T_hashable_key = TypeVar("T_hashable_key", bound=Hashable)
 T_hashable_key_contra = TypeVar(
     "T_hashable_key_contra", bound=Hashable, contravariant=True

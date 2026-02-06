@@ -12,7 +12,6 @@ from ._types import (
     AnyFullEdge,
 )
 
-
 # ---------- functions for handling test data given as some kind of edges -------------
 
 

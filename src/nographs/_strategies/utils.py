@@ -34,7 +34,6 @@ from nographs._types import (
     vertex_as_id,
 )
 
-
 # --------------- classes -------------
 
 

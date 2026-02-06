@@ -5,7 +5,6 @@ from collections.abc import (
 from typing import TypeVar, Union, Protocol
 from abc import abstractmethod
 
-
 """Basic types used in NoGraphs."""
 
 T = TypeVar("T")

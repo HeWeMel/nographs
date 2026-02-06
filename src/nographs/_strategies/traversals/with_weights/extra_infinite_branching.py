@@ -22,7 +22,6 @@ from .shortest_paths import (
     TraversalShortestPathsFlex,
 )
 
-
 State = tuple[T_vertex_id, int]
 
 

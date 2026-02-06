@@ -3,7 +3,6 @@ from collections.abc import Iterator, Iterable
 
 from ._types import T
 
-
 # --- Solve 3.9 compatibility issue
 
 

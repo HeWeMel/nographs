@@ -17,7 +17,6 @@ from nographs._types import (
 )
 from .strategy import Strategy
 
-
 T_strategy = TypeVar("T_strategy", bound=Strategy[Any, Any, Any])
 
 
