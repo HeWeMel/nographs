@@ -335,19 +335,15 @@ if __name__ == "__main__":
         tsp_is_symmetric = tsp_type != "ATSP"
         tsp_text = "{} ({}sym.), ".format(tsp_name, "" if tsp_is_symmetric else "a")
 
-        solve(
-            tsp_text + "traveling_salesman, shortest",
-            lambda: traveling_salesman(
-                range(len(graph)), graph),  # noqa: B023  # fmt: skip
+        solve(tsp_text + "traveling_salesman, shortest", lambda: traveling_salesman(
+            range(len(graph)), graph),  # noqa: B023  # fmt: skip
             shortest,
             graph,  # noqa: B023
             print_only_on_error=True,
         )
 
-        solve(
-            tsp_text + "traveling_salesman, longest",
-            lambda: traveling_salesman(
-                range(len(graph)), graph, find_longest=True),  # noqa: B023  # fmt: skip
+        solve(tsp_text + "traveling_salesman, longest", lambda: traveling_salesman(
+            range(len(graph)), graph, find_longest=True),  # noqa: B023  # fmt: skip
             longest,
             graph,
             print_only_on_error=True,

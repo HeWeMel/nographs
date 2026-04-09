@@ -74,7 +74,9 @@ class Paths(ABC, Generic[T_vertex, T_vertex_id, T_labels]):
             self._predecessor_collection,
             self._predecessor_wrapper,
         ) = access_to_vertex_mapping_expect_none(predecessor)
-        self._vertex_to_id = None if vertex_to_id is vertex_as_id else vertex_to_id
+        self._vertex_to_id: Optional[VertexToID[T_vertex, T_vertex_id]] = (
+            None if vertex_to_id is vertex_as_id else vertex_to_id
+        )
 
     def __contains__(self, vertex: T_vertex) -> bool:
         """Return whether a path to *vertex* exists in the *Paths*

@@ -16,7 +16,6 @@ from ..type_aliases import (
     BNextWeightedLabeledEdges,
 )
 
-
 # --------------- internal support functions -------------
 
 

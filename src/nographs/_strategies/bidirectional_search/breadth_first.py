@@ -201,7 +201,7 @@ class BSearchBreadthFirstFlex(Strategy[T_vertex, T_vertex_id, T_labels]):
 
         # Copy Traversal attributes into method scope (faster access)
         # labeled_edges = self._labeled_edges
-        maybe_vertex_to_id = (
+        maybe_vertex_to_id: Optional[VertexToID[T_vertex, T_vertex_id]] = (
             None if self._vertex_to_id == vertex_as_id else self._vertex_to_id
         )  # Case vertex_as_id: not apply; T_vertex_id > T_vertex
 

@@ -36,7 +36,6 @@ from ._gear_collections import (
     VertexMappingWrappingSequenceWithNone,
 )
 
-
 # --- ABCs for the needed collection kinds for NoGraphs ---
 
 # The following type aliases are not documented as part of the API documentation.

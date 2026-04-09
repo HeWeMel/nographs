@@ -1,4 +1,4 @@
-|PyPI version| |PyPI status| |PyPI pyversions| |PyPI license| |CI| |CodeCov| |Documentation Status| |Code style| |GitHub issues|
+|PyPI version| |PyPI status| |PyPI pyversions| |PyPI license| |CI| |CodeCov| |Documentation Status| |Code style| |GitHub issues| |PyPI downloads| |PyPI per month|
 
 .. |PyPI version| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
@@ -12,10 +12,9 @@
 .. |PyPy versions| image:: https://img.shields.io/badge/PyPy-3.11-blue
    :target: https://pypi.python.org/pypi/nographs/
 
-.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs.svg
-   :target: https://github.com/HeWeMel/nographs/blob/main/LICENSE
+.. |PyPI license| image:: https://img.shields.io/pypi/l/nographs?labelColor=GREY&color=BRIGHTGREEN
 
-.. |CI| image:: https://github.com/hewemel/nographs/workflows/CI%20(tests,%20flake8,%20mypy)/badge.svg?branch=main
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/hewemel/nographs/continuous-integration-pip.yml?branch=main&label=CI%20(tests%2C%20flake8%2C%20mypy)&labelColor=GREY&color=BRIGHTGREEN
    :target: https://github.com/hewemel/nographs/actions?query=workflow%3ACI%20(pip)
 
 .. |CodeCov| image:: https://img.shields.io/codecov/c/gh/HeWeMel/NoGraphs/main
@@ -29,6 +28,12 @@
 
 .. |GitHub issues| image:: https://img.shields.io/github/issues/HeWeMel/nographs.svg
    :target: https://GitHub.com/HeWeMel/nographs/issues/
+
+.. |PyPI downloads| image:: https://static.pepy.tech/personalized-badge/nographs?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BRIGHTGREEN&left_text=downloads
+   :target: https://pypi.python.org/pypi/nographs/
+
+.. |PyPI per month| image:: https://img.shields.io/pypi/dm/nographs
+   :target: https://pypi.python.org/pypi/nographs/
 
 
 NoGraphs: Graph analysis on the fly
@@ -109,7 +114,7 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   Bookkeeping data can be
   pre-initialized and accessed during computations.
 - Typing: The API can be used fully typed (optionally).
-- Implementation: Pure Python (>=3.9). It introduces no further dependencies.
+- Implementation: Pure Python (>=3.10). It introduces no further dependencies.
 - CI tests: For all supported versions of Python and both supported interpreters
   CPython and PyPy, both code and docs, 100% code coverage.
 - Runtime and memory performance: Have been goals (CPython). In its domain, it often

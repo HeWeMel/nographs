@@ -3,9 +3,9 @@ pip>=22.0.4
 build>=0.7.0
 twine>=3.7.1
 # -- documentation (RTD req. sphinx<6, then docutils<=0.18.1) --
-docutils==0.18.1
-sphinx==6.2.1
-sphinx-rtd-theme==1.2.2
+docutils==0.20
+sphinx==7.4.7
+sphinx-rtd-theme==3.1.0
 # -- source formatting, testing, type checking --
 black
 coverage>=6.3

@@ -1,7 +1,6 @@
 import unittest
 import nographs as nog
 
-
 # --- Tests ---
 
 

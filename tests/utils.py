@@ -11,7 +11,6 @@ import doctest
 from typing import Any, Union
 import types
 
-
 SLOW_TEST = doctest.register_optionflag("SLOW_TEST")
 
 

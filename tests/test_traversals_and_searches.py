@@ -9,7 +9,7 @@ import nographs as nog
 from nographs import T, Strategy, T_vertex, T_vertex_id, T_labels, T_weight
 
 # noinspection PyProtectedMember
-from nographs._compatibility import pairwise
+from itertools import pairwise
 
 # noinspection PyProtectedMember
 from nographs._strategies.utils import StrRepr  # NOQA F401 (import needed by doc tests)

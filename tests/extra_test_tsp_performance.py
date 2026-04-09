@@ -311,8 +311,10 @@ if __name__ == "__main__":
                 mem_stats=True,
             )
 
+            # fmt: off
             solve(
-                tsp_text + "traveling_salesman_flex IntVerticesAndIDs, " + mode_text,
+                tsp_text + "traveling_salesman_flex IntVerticesAndIDs, "
+                + mode_text,
                 lambda: traveling_salesman_flex(
                     # fmt: off
                     range(len(graph)), graph,  # noqa: B023  # fmt: skip

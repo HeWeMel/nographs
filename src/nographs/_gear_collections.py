@@ -16,7 +16,6 @@ from abc import ABC, abstractmethod
 # MyPyC
 from ._compatibility import trait
 
-
 T_hashable_key = TypeVar("T_hashable_key", bound=Hashable)
 T_hashable_key_contra = TypeVar(
     "T_hashable_key_contra", bound=Hashable, contravariant=True
@@ -395,7 +394,12 @@ class _VertexSequenceWrapperAssertNoCall(
 
 
 @trait
-class _VertexSetByWrapper(
+class _VertexSetByWrapper(  # type: ignore[misc]
+    # About the type ignore above:
+    # The instance method _from_iterable shadows the classmethod in AbstractSet.
+    # This can be seen as a violation of Liskov Substitution Principle, but
+    # _from_iterable is a semi-private ABC hook and the behavior is correct
+    # at runtime.
     VertexSequenceWrapperForSetProto[T_hashable_key, int, int],
     VertexSet[T_hashable_key],
     # MyPyC: Prevent the following error:
@@ -831,7 +835,7 @@ class VertexSetWrappingSequence(
         raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
-    def _from_iterable(
+    def _from_iterable(  # type: ignore[override]
         self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequence":
         """Create a new instance with the same sequence factory and default
@@ -899,7 +903,7 @@ class VertexSetWrappingSequenceNoBitPacking(VertexSetWrappingSequence):
             except IndexError:
                 self.extend_and_set(key, True)
 
-    def _from_iterable(
+    def _from_iterable(  # type: ignore[override]
         self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequenceNoBitPacking":
         # Although the set mixin likely gives an iterable that is based
@@ -978,7 +982,7 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
             except IndexError:
                 self.extend_and_set(sequence_key, bit_mask)
 
-    def _from_iterable(
+    def _from_iterable(  # type: ignore[override]
         self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequenceBitPacking":
         # Although the set mixin likely gives an iterable that is based

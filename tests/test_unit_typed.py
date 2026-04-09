@@ -14,7 +14,6 @@ from mpmath import mp, mpf  # type: ignore
 # noinspection PyProtectedMember
 from nographs._extra_tsp import GettableProto
 
-
 # --- Types ---
 
 T_any_typical_weight_type = TypeVar("T_any_typical_weight_type", float, Decimal, mpf)

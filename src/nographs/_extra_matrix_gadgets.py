@@ -14,7 +14,6 @@ from typing import Optional, Any, SupportsIndex, cast
 
 from ._types import T_weight
 
-
 Vector = Sequence[int]  # api.rst: documented manually
 Vectors = Sequence[Vector]
 Limits = Sequence[tuple[int, int]]  # api.rst: documented manually
