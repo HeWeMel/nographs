@@ -836,7 +836,7 @@ class VertexSetWrappingSequence(
 
     @abstractmethod
     def _from_iterable(  # type: ignore[override]
-            self, elements: Iterable[NonNegativeDenseInt]
+        self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequence":
         """Create a new instance with the same sequence factory and default
         value, but a new content.
@@ -904,7 +904,7 @@ class VertexSetWrappingSequenceNoBitPacking(VertexSetWrappingSequence):
                 self.extend_and_set(key, True)
 
     def _from_iterable(  # type: ignore[override]
-            self, elements: Iterable[NonNegativeDenseInt]
+        self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequenceNoBitPacking":
         # Although the set mixin likely gives an iterable that is based
         # on the results of the __iter__ of our class, and thus, it yields
@@ -983,7 +983,7 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
                 self.extend_and_set(sequence_key, bit_mask)
 
     def _from_iterable(  # type: ignore[override]
-            self, elements: Iterable[NonNegativeDenseInt]
+        self, elements: Iterable[NonNegativeDenseInt]
     ) -> "VertexSetWrappingSequenceBitPacking":
         # Although the set mixin likely gives an iterable that is based
         # on the results of the __iter__ of our class, and thus, it yields
