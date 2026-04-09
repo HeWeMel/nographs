@@ -394,7 +394,12 @@ class _VertexSequenceWrapperAssertNoCall(
 
 
 @trait
-class _VertexSetByWrapper(  # type: ignore[misc]  # instance method _from_iterable shadows classmethod in AbstractSet
+class _VertexSetByWrapper(  # type: ignore[misc]
+    # About the type ignore above:
+    # The instance method _from_iterable shadows the classmethod in AbstractSet.
+    # This can be seen as a violation of Liskov Substitution Principle, but
+    # _from_iterable is a semi-private ABC hook and the behavior is correct
+    # at runtime.
     VertexSequenceWrapperForSetProto[T_hashable_key, int, int],
     VertexSet[T_hashable_key],
     # MyPyC: Prevent the following error:
@@ -830,7 +835,9 @@ class VertexSetWrappingSequence(
         raise NotImplementedError()  # pragma: no cover  # Not reachable
 
     @abstractmethod
-    def _from_iterable(self, elements: Iterable[NonNegativeDenseInt]) -> "VertexSetWrappingSequence":  # type: ignore[override]
+    def _from_iterable(  # type: ignore[override]
+            self, elements: Iterable[NonNegativeDenseInt]
+    ) -> "VertexSetWrappingSequence":
         """Create a new instance with the same sequence factory and default
         value, but a new content.
 
@@ -896,7 +903,9 @@ class VertexSetWrappingSequenceNoBitPacking(VertexSetWrappingSequence):
             except IndexError:
                 self.extend_and_set(key, True)
 
-    def _from_iterable(self, elements: Iterable[NonNegativeDenseInt]) -> "VertexSetWrappingSequenceNoBitPacking":  # type: ignore[override]
+    def _from_iterable(  # type: ignore[override]
+            self, elements: Iterable[NonNegativeDenseInt]
+    ) -> "VertexSetWrappingSequenceNoBitPacking":
         # Although the set mixin likely gives an iterable that is based
         # on the results of the __iter__ of our class, and thus, it yields
         # sorted values, but there is no guarantee. So, we do not assume this.
@@ -973,7 +982,9 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
             except IndexError:
                 self.extend_and_set(sequence_key, bit_mask)
 
-    def _from_iterable(self, elements: Iterable[NonNegativeDenseInt]) -> "VertexSetWrappingSequenceBitPacking":  # type: ignore[override]
+    def _from_iterable(  # type: ignore[override]
+            self, elements: Iterable[NonNegativeDenseInt]
+    ) -> "VertexSetWrappingSequenceBitPacking":
         # Although the set mixin likely gives an iterable that is based
         # on the results of the __iter__ of our class, and thus, it yields
         # sorted values, but there is no guarantee. So, we do not assume this.
