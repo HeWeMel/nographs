@@ -64,7 +64,8 @@ jobs:
         if: ${{ !startsWith(matrix.python-version, 'pypy') }}
         run: |
           mypy src/nographs
-      - name: Check source code formatting with Black
+      - name: Check source code formatting with Black (except pypy3.9)
+        if: ${{ !contains(matrix.python-version, 'pypy3.9') }}
         run: |
           black src/nographs tests --check --verbose --diff
       - name: Install from source (required for the pre-commit tests)
