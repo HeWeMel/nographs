@@ -212,7 +212,11 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable[T_vertex]):
         def my_generator() -> Iterator[T_vertex]:
             vertex_to_id = self._vertex_to_id
             if vertex_to_id == vertex_as_id:
-                vertex_set = set(cast(Iterable[T_vertex_id], vertices))
+                vertex_set = set(cast(Iterable[T_vertex_id], vertices))  # type: ignore[unreachable]
+                # The type ignore above is temporary, as a workaround for
+                # the following issue of mypy 1.20:
+                # https://github.com/python/mypy/issues/21182
+
                 v_count = len(vertex_set)
                 if v_count:
                     for v in self._generator:
@@ -274,7 +278,10 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable[T_vertex]):
 
         vertex_to_id = self._vertex_to_id
         if vertex_to_id == vertex_as_id:
-            for v in self._generator:
+            for v in self._generator:  # type: ignore[unreachable]
+                # The type ignore above is temporary, as a workaround for
+                # the following issue of mypy 1.20:
+                # https://github.com/python/mypy/issues/21182
                 if v != vertex:
                     continue
                 return v

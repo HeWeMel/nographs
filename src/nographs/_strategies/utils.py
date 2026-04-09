@@ -83,7 +83,10 @@ def iter_start_ids(
         # T_vertex is a subtype of T_vertex_id (typically: identical).
         # So, instead of applying the function, we could just cast the vertices
         # to vertex ids. For improved performance, we cast the whole iterator.
-        return cast(Iterable[T_vertex_id], start_vertices)
+        return cast(Iterable[T_vertex_id], start_vertices)  # type: ignore[unreachable]
+        # The type ignore above is temporary, as a workaround for
+        # the following issue of mypy 1.20:
+        # https://github.com/python/mypy/issues/21182
 
     return (vertex_to_id(vertex) for vertex in start_vertices)
 
@@ -99,7 +102,10 @@ def iter_start_vertices_and_ids(
         # T_vertex is a subtype of T_vertex_id (typically: identical).
         # So, instead of applying the function, we could just cast the vertices
         # to vertex ids. For improved performance, we cast the whole iterator.
-        vertices_and_vertices = ((vertex, vertex) for vertex in start_vertices)
+        vertices_and_vertices = ((vertex, vertex) for vertex in start_vertices)  # type: ignore[unreachable]
+        # The type ignore above is temporary, as a workaround for
+        # the following issue of mypy 1.20:
+        # https://github.com/python/mypy/issues/21182
         vertices_and_ids = cast(
             Iterator[tuple[T_vertex, T_vertex_id]], vertices_and_vertices
         )
