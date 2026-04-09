@@ -16,7 +16,7 @@ from ._paths import (
     Paths,
 )
 
-from ._compatibility import (
+from itertools import (
     pairwise,
 )
 

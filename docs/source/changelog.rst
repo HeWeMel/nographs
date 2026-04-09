@@ -1,6 +1,10 @@
 ChangeLog
 ---------
 
+Preparations for the next version
+
+  - Python 3.9 is not supported anymore
+
 **v.3.4.3** (2025-10-19)
 
   - Python 3.14 officially supported.
