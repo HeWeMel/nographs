@@ -7,7 +7,7 @@ from collections.abc import (
     Generator,
     Collection,
 )
-from typing import Optional, Any, cast, overload, Literal, ClassVar
+from typing import Optional, Any, overload, Literal, ClassVar
 
 from nographs._gears import (
     GearWithoutDistances,
@@ -211,8 +211,9 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable[T_vertex]):
 
         def my_generator() -> Iterator[T_vertex]:
             vertex_to_id = self._vertex_to_id
+            v: T_vertex
             if vertex_to_id == vertex_as_id:
-                vertex_set = set(cast(Iterable[T_vertex_id], vertices))
+                vertex_set = set(vertices)
                 v_count = len(vertex_set)
                 if v_count:
                     for v in self._generator:
@@ -223,11 +224,11 @@ class Traversal(Strategy[T_vertex, T_vertex_id, T_labels], Iterable[T_vertex]):
                         if v_count == 0:
                             break
             else:
-                vertex_set = set(vertex_to_id(vertex) for vertex in vertices)
-                v_count = len(vertex_set)
+                vertex_id_set = set(vertex_to_id(vertex) for vertex in vertices)
+                v_count = len(vertex_id_set)
                 if v_count:
                     for v in self._generator:
-                        if vertex_to_id(v) not in vertex_set:
+                        if vertex_to_id(v) not in vertex_id_set:
                             continue
                         yield v
                         v_count -= 1
