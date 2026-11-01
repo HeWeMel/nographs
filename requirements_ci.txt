@@ -8,11 +8,12 @@ black
 # Test coverage computation and checking
 coverage>=6.3
 
-# Sanity checks
-flake8
-flake8-bugbear
-
 # - Packages that only some platforms support:
+
+# Sanity checks
+# (flake8-bugbear needs module _symtable, which PyPy does not provide)
+flake8 ; implementation_name == "cpython"
+flake8-bugbear ; implementation_name == "cpython"
 
 # Type checking
 # (since 1.19.0., PyPy is temporarily not supported anymore)
