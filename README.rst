@@ -9,7 +9,7 @@
 .. |PyPI pyversions| image:: https://img.shields.io/pypi/pyversions/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
 
-.. |PyPy versions| image:: https://img.shields.io/badge/PyPy-3.11-blue
+.. |PyPy versions| image:: https://img.shields.io/badge/PyPy-3.11%7C3.12-blue
    :target: https://pypi.python.org/pypi/nographs/
 
 .. |PyPI license| image:: https://img.shields.io/pypi/l/nographs?labelColor=GREY&color=BRIGHTGREEN
