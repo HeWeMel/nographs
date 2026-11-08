@@ -126,7 +126,7 @@ def results_with_visited(
         print_filled(traversal.state_to_str(reported_and_start_vertices))
     else:
         print("Final state for the visited vertices:")
-        print_filled(traversal.state_to_str(traversal.visited))
+        print_filled(traversal.state_to_str(sorted(traversal.visited)))
 
 
 def results_with_distances(
