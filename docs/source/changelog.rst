@@ -3,7 +3,8 @@ ChangeLog
 
 Preparations for the next version
 
-  - Python 3.9 and PyPy 3.9 are not supported anymore
+  - Python 3.9 and 3.10 and PyPy 3.9 and PyPy 3.10 are not supported anymore.
+  - Python 3.15 is supported.
 
 **v.3.4.3** (2025-10-19)
 
