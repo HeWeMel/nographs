@@ -1,25 +1,40 @@
-# -- build and upload --
+# -- build --
 pip>=22.0.4
 build>=0.7.0
-twine>=3.7.1
+
+# -- upload (not under pypy)
+twine>=3.7.1; implementation_name != "pypy"
+
 # -- documentation (RTD req. sphinx<6, then docutils<=0.18.1) --
 docutils==0.20
 sphinx==7.4.7
 sphinx-rtd-theme==3.1.0
-# -- source formatting, testing, type checking --
+
+# -- source formatting --
 black
+
+# Test coverage computation and checking
 coverage>=6.3
-flake8
-flake8-bugbear
-mypy
+
+# (flake8-bugbear needs module _symtable, which PyPy does not provide)
+flake8 ; implementation_name == "cpython"
+flake8-bugbear ; implementation_name == "cpython"
+
+# Type checking
+# (since 1.19.0., PyPy is temporarily not supported anymore)
+mypy ; implementation_name == "cpython"
+
 # -- For building a package with C-extensions compiled by MyPyC (optional)--
 # mypy[mypyc]
 # mypy-extensions
 # -- For building a package with C-extensions compiled by Cython (optional) --
 # cython
+
 # -- source consistency checking --
 pymacros4py>=0.8.2 ; python_version >= "3.10"
+
 # -- additional packages for tests using them --
 mpmath
+
 # The following is missing on PyPy and often on new CPython-versions
 intbitset ; python_version < "3.13" and implementation_name == "cpython"
