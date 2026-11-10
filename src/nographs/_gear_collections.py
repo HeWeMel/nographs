@@ -7,7 +7,6 @@ definition. And the classes are only used internally by other classes, and
 not in the API.
 """
 
-import sys
 from collections.abc import Iterable, Hashable, Iterator, MutableSet, MutableMapping
 from typing import Protocol, TypeVar, Callable, Union, Optional, cast
 from itertools import repeat
@@ -949,10 +948,7 @@ class VertexSetWrappingSequenceBitPacking(VertexSetWrappingSequence):
             value_high += 8
 
     def __len__(self) -> int:
-        if sys.version_info >= (3, 10):  # pragma: no cover
-            return sum(value.bit_count() for value in self._sequence)
-        else:  # pragma: no cover
-            return sum(bin(value).count("1") for value in self._sequence)
+        return sum(value.bit_count() for value in self._sequence)
 
     def add(self, key: NonNegativeDenseInt) -> None:
         sequence = self._sequence
