@@ -31,7 +31,7 @@ mypy ; implementation_name == "cpython"
 # cython
 
 # -- source consistency checking --
-pymacros4py>=0.8.2 ; python_version >= "3.10"
+pymacros4py>=0.8.2
 
 # -- additional packages for tests using them --
 mpmath

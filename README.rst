@@ -1,4 +1,4 @@
-|PyPI version| |PyPI status| |PyPI pyversions| |PyPI license| |CI| |CodeCov| |Documentation Status| |Code style| |GitHub issues| |PyPI downloads| |PyPI per month|
+|PyPI version| |PyPI status| |PyPI pyversions| |PyPy versions| |PyPI license| |CI| |CodeCov| |Documentation Status| |Code style| |GitHub issues| |PyPI downloads| |PyPI per month|
 
 .. |PyPI version| image:: https://badge.fury.io/py/nographs.svg
    :target: https://pypi.python.org/pypi/nographs/
@@ -114,7 +114,7 @@ Think of it as *graph analysis - the lazy (evaluation) way*.
   Bookkeeping data can be
   pre-initialized and accessed during computations.
 - Typing: The API can be used fully typed (optionally).
-- Implementation: Pure Python (>=3.10). It introduces no further dependencies.
+- Implementation: Pure Python (>=3.11). It introduces no further dependencies.
 - CI tests: For all supported versions of Python and both supported interpreters
   CPython and PyPy, both code and docs, 100% code coverage.
 - Runtime and memory performance: Have been goals (CPython). In its domain, it often
